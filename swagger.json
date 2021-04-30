@@ -14,7 +14,7 @@
     }
   },
   "host": "v2.api.swissfaucet.io",
-  "basePath": "/v2",
+  "basePath": "/",
   "tags": [
     {
       "name": "Status",
@@ -22,7 +22,8 @@
     }
   ],
   "schemes": [
-    "https"
+    "https",
+    "http"
   ],
   "paths": {
     "/ping": {
