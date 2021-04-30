@@ -21,4 +21,29 @@ class IndexController extends AbstractActionController
         }
         return new ViewModel();
     }
+
+    /**
+     * Load and check JSON from Request Body
+     *
+     * @param array $aRequiredFields
+     * @return false|mixed
+     * @since 1.1.1
+     */
+    public static function loadJSONFromRequestBody($aRequiredFields = [],$sContent)
+    {
+        $oJSON = json_decode($sContent);
+
+        if(!is_object($oJSON)) {
+            return false;
+        } else {
+            if(count($aRequiredFields) > 0) {
+                foreach($aRequiredFields as $sField) {
+                    if(!property_exists($oJSON,$sField)) {
+                        return false;
+                    }
+                }
+            }
+            return $oJSON;
+        }
+    }
 }
