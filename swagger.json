@@ -1,0 +1,102 @@
+{
+  "swagger": "2.0",
+  "info": {
+    "description": "This is the onePlace XI API Core Server. You can find out more about onePlace at [https://oneplace.io](https://oneplace.io). For this example you can use `special-key` to test the authorization filters.",
+    "version": "1.1.0",
+    "title": "onePlace XI Core",
+    "termsOfService": "https://oneplace.io/terms/",
+    "contact": {
+      "email": "api-admin@oneplace.io"
+    },
+    "license": {
+      "name": "Apache 2.0",
+      "url": "http://www.apache.org/licenses/LICENSE-2.0.html"
+    }
+  },
+  "host": "v2.api.swissfaucet.io",
+  "basePath": "/v2",
+  "tags": [
+    {
+      "name": "Status",
+      "description": "Basic Status Operations"
+    }
+  ],
+  "schemes": [
+    "https"
+  ],
+  "paths": {
+    "/ping": {
+      "get": {
+        "tags": [
+          "Status"
+        ],
+        "summary": "Ping API to see if its up and running",
+        "description": "",
+        "operationId": "getUserByName",
+        "produces": [
+          "application/json",
+          "application/xml"
+        ],
+        "responses": {
+          "200": {
+            "description": "successful operation",
+            "schema": {
+              "$ref": "#/definitions/Ping"
+            }
+          }
+        }
+      }
+    }
+  },
+  "securityDefinitions": {
+    "api_key": {
+      "type": "apiKey",
+      "name": "api_key",
+      "in": "header"
+    },
+    "petstore_auth": {
+      "type": "oauth2",
+      "authorizationUrl": "https://petstore.swagger.io/oauth/authorize",
+      "flow": "implicit",
+      "scopes": {
+        "read:pets": "read your pets",
+        "write:pets": "modify pets in your account"
+      }
+    }
+  },
+  "definitions": {
+    "ApiResponse": {
+      "type": "object",
+      "properties": {
+        "code": {
+          "type": "integer",
+          "format": "int32"
+        },
+        "type": {
+          "type": "string"
+        },
+        "message": {
+          "type": "string"
+        }
+      }
+    },
+    "Ping": {
+      "type": "object",
+      "properties": {
+        "ack": {
+          "type": "integer",
+          "format": "int32",
+          "default": 1619754239,
+          "description": "timestamp"
+        }
+      },
+      "xml": {
+        "name": "Ping"
+      }
+    }
+  },
+  "externalDocs": {
+    "description": "Find out more about oneplace",
+    "url": "http://oneplace.io"
+  }
+}
