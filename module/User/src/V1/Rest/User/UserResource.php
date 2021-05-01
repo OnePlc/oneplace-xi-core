@@ -23,8 +23,27 @@ use Laminas\Session\Container;
 
 class UserResource extends AbstractResourceListener
 {
+    /**
+     * User Table
+     *
+     * @var TableGateway $mapper
+     * @since 1.0.0
+     */
     protected $mapper;
+
+    /**
+     * User XP Level Table
+     *
+     * @var TableGateway $mXPLvlTbl
+     */
     protected $mXPLvlTbl;
+
+    /**
+     * User Session
+     *
+     * @var Container $mSession
+     * @since 1.0.0
+     */
     protected $mSession;
 
     /**
