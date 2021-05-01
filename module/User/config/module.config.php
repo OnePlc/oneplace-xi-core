@@ -1,19 +1,8 @@
 <?php
 return [
     'service_manager' => [
-        'aliases' => [
-            'Laminas\\ApiTools\\ApiProblem\\ApiProblemListener' => \Laminas\ApiTools\ApiProblem\Listener\ApiProblemListener::class,
-            'Laminas\\ApiTools\\ApiProblem\\RenderErrorListener' => \Laminas\ApiTools\ApiProblem\Listener\RenderErrorListener::class,
-            'Laminas\\ApiTools\\ApiProblem\\ApiProblemRenderer' => \Laminas\ApiTools\ApiProblem\View\ApiProblemRenderer::class,
-            'Laminas\\ApiTools\\ApiProblem\\ApiProblemStrategy' => \Laminas\ApiTools\ApiProblem\View\ApiProblemStrategy::class,
-        ],
         'factories' => [
             \User\V1\Rest\User\UserResource::class => \User\V1\Rest\User\UserResourceFactory::class,
-            \Laminas\ApiTools\ApiProblem\Listener\ApiProblemListener::class => \Laminas\ApiTools\ApiProblem\Factory\ApiProblemListenerFactory::class,
-            \Laminas\ApiTools\ApiProblem\Listener\RenderErrorListener::class => \Laminas\ApiTools\ApiProblem\Factory\RenderErrorListenerFactory::class,
-            \Laminas\ApiTools\ApiProblem\Listener\SendApiProblemResponseListener::class => \Laminas\ApiTools\ApiProblem\Factory\SendApiProblemResponseListenerFactory::class,
-            \Laminas\ApiTools\ApiProblem\View\ApiProblemRenderer::class => \Laminas\ApiTools\ApiProblem\Factory\ApiProblemRendererFactory::class,
-            \Laminas\ApiTools\ApiProblem\View\ApiProblemStrategy::class => \Laminas\ApiTools\ApiProblem\Factory\ApiProblemStrategyFactory::class,
         ],
     ],
     'view_manager' => [
@@ -30,11 +19,33 @@ return [
                     ],
                 ],
             ],
+            'user.rpc.login' => [
+                'type' => 'Segment',
+                'options' => [
+                    'route' => '/login',
+                    'defaults' => [
+                        'controller' => 'User\\V1\\Rpc\\Login\\Controller',
+                        'action' => 'login',
+                    ],
+                ],
+            ],
+            'user.rpc.logout' => [
+                'type' => 'Segment',
+                'options' => [
+                    'route' => '/logout',
+                    'defaults' => [
+                        'controller' => 'User\\V1\\Rpc\\Logout\\Controller',
+                        'action' => 'logout',
+                    ],
+                ],
+            ],
         ],
     ],
     'api-tools-versioning' => [
         'uri' => [
             0 => 'user.rest.user',
+            1 => 'user.rpc.login',
+            2 => 'user.rpc.logout',
         ],
     ],
     'api-tools-rest' => [
@@ -50,8 +61,8 @@ return [
                 3 => 'DELETE',
             ],
             'collection_http_methods' => [
-                0 => 'GET',
-                1 => 'POST',
+                0 => 'POST',
+                1 => 'GET',
             ],
             'collection_query_whitelist' => [],
             'page_size' => 25,
@@ -64,6 +75,8 @@ return [
     'api-tools-content-negotiation' => [
         'controllers' => [
             'User\\V1\\Rest\\User\\Controller' => 'HalJson',
+            'User\\V1\\Rpc\\Login\\Controller' => 'Json',
+            'User\\V1\\Rpc\\Logout\\Controller' => 'Json',
         ],
         'accept_whitelist' => [
             'User\\V1\\Rest\\User\\Controller' => [
@@ -71,9 +84,27 @@ return [
                 1 => 'application/hal+json',
                 2 => 'application/json',
             ],
+            'User\\V1\\Rpc\\Login\\Controller' => [
+                0 => 'application/vnd.user.v1+json',
+                1 => 'application/json',
+                2 => 'application/*+json',
+            ],
+            'User\\V1\\Rpc\\Logout\\Controller' => [
+                0 => 'application/vnd.user.v1+json',
+                1 => 'application/json',
+                2 => 'application/*+json',
+            ],
         ],
         'content_type_whitelist' => [
             'User\\V1\\Rest\\User\\Controller' => [
+                0 => 'application/vnd.user.v1+json',
+                1 => 'application/json',
+            ],
+            'User\\V1\\Rpc\\Login\\Controller' => [
+                0 => 'application/vnd.user.v1+json',
+                1 => 'application/json',
+            ],
+            'User\\V1\\Rpc\\Logout\\Controller' => [
                 0 => 'application/vnd.user.v1+json',
                 1 => 'application/json',
             ],
@@ -96,23 +127,40 @@ return [
         ],
     ],
     'controllers' => [
-        'factories' => [],
+        'factories' => [
+            'User\\V1\\Rpc\\Login\\Controller' => \User\V1\Rpc\Login\LoginControllerFactory::class,
+            'User\\V1\\Rpc\\Logout\\Controller' => \User\V1\Rpc\Logout\LogoutControllerFactory::class,
+        ],
     ],
-    'api-tools-rpc' => [],
-    'api-tools-content-validation' => [],
+    'api-tools-rpc' => [
+        'User\\V1\\Rpc\\Login\\Controller' => [
+            'service_name' => 'Login',
+            'http_methods' => [
+                0 => 'POST',
+            ],
+            'route_name' => 'user.rpc.login',
+        ],
+        'User\\V1\\Rpc\\Logout\\Controller' => [
+            'service_name' => 'Logout',
+            'http_methods' => [
+                0 => 'GET',
+            ],
+            'route_name' => 'user.rpc.logout',
+        ],
+    ],
+    'api-tools-content-validation' => [
+        'User\\V1\\Rest\\User\\Controller' => [
+            'input_filter' => 'User\\V1\\Rest\\User\\Validator',
+        ],
+        'User\\V1\\Rpc\\Login\\Controller' => [
+            'input_filter' => 'User\\V1\\Rpc\\Login\\Validator',
+        ],
+    ],
     'input_filter_specs' => [
         'User\\V1\\Rpc\\Login\\Validator' => [
             0 => [
                 'required' => true,
-                'validators' => [
-                    0 => [
-                        'name' => \Laminas\Validator\StringLength::class,
-                        'options' => [
-                            'min' => '3',
-                            'max' => '100',
-                        ],
-                    ],
-                ],
+                'validators' => [],
                 'filters' => [
                     0 => [
                         'name' => \Laminas\Filter\StringTrim::class,
@@ -120,8 +168,8 @@ return [
                     ],
                 ],
                 'name' => 'username',
-                'description' => 'Username for User you want to login',
-                'error_message' => 'A valid username must only contain letters, numbers and _',
+                'description' => 'Name or E-Mail for User',
+                'error_message' => 'You must provide a valid email or username',
             ],
             1 => [
                 'required' => true,
@@ -133,8 +181,61 @@ return [
                     ],
                 ],
                 'name' => 'password',
-                'description' => 'Password for the user',
-                'error_message' => 'A valid password in cleartext.',
+                'description' => 'Password for user',
+                'error_message' => 'You must provide a valid password',
+            ],
+        ],
+        'User\\V1\\Rest\\User\\Validator' => [
+            0 => [
+                'required' => true,
+                'validators' => [
+                    0 => [
+                        'name' => \Laminas\Validator\Regex::class,
+                        'options' => [
+                            'pattern' => '/^[A-Za-z][A-Za-z0-9]$/',
+                        ],
+                    ],
+                ],
+                'filters' => [
+                    0 => [
+                        'name' => \Laminas\Filter\StringTrim::class,
+                        'options' => [],
+                    ],
+                ],
+                'name' => 'user',
+                'description' => 'The user submitting the status message.',
+                'error_message' => 'You must provide a valid user',
+            ],
+        ],
+    ],
+    'api-tools-mvc-auth' => [
+        'authorization' => [
+            'User\\V1\\Rest\\User\\Controller' => [
+                'collection' => [
+                    'GET' => false,
+                    'POST' => false,
+                    'PUT' => false,
+                    'PATCH' => false,
+                    'DELETE' => false,
+                ],
+                'entity' => [
+                    'GET' => true,
+                    'POST' => false,
+                    'PUT' => false,
+                    'PATCH' => false,
+                    'DELETE' => false,
+                ],
+            ],
+            'User\\V1\\Rpc\\Logout\\Controller' => [
+                'actions' => [
+                    'logout' => [
+                        'GET' => true,
+                        'POST' => false,
+                        'PUT' => false,
+                        'PATCH' => false,
+                        'DELETE' => false,
+                    ],
+                ],
             ],
         ],
     ],

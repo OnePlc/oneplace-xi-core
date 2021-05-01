@@ -19,11 +19,13 @@ use Laminas\ApiTools\ApiProblem\ApiProblem;
 use Laminas\ApiTools\Rest\AbstractResourceListener;
 use Laminas\ApiTools\ContentNegotiation\ViewModel;
 use Laminas\Db\TableGateway\TableGateway;
+use Laminas\Session\Container;
 
 class UserResource extends AbstractResourceListener
 {
     protected $mapper;
     protected $mXPLvlTbl;
+    protected $mSession;
 
     /**
      * Constructor
@@ -36,6 +38,7 @@ class UserResource extends AbstractResourceListener
     {
         $this->mapper = new TableGateway('user', $mapper);
         $this->mXPLvlTbl = new TableGateway('user_xp_level', $mapper);
+        $this->mSession = new Container('webauth');
     }
 
     /**
@@ -83,6 +86,7 @@ class UserResource extends AbstractResourceListener
      */
     public function fetch($id)
     {
+
         # get user from db
         $user = $this->mapper->select(['User_ID' => $id])->current();
 
@@ -96,6 +100,7 @@ class UserResource extends AbstractResourceListener
         # only send public fields
         return (object)[
             'id' => $user->User_ID,
+            'session_user' => $this->mSession->auth->username,
             'username' => $user->username,
             'token_balance' => $user->token_balance,
             'xp_level' => $user->xp_level,
@@ -112,7 +117,27 @@ class UserResource extends AbstractResourceListener
      */
     public function fetchAll($params = [])
     {
-        return new ApiProblem(405, 'The GET method has not been defined for collections');
+        if(!isset($this->mSession->auth)) {
+            return new ApiProblem(401, 'Not logged in');
+        }
+        # get user from db
+        $user = $this->mapper->select(['User_ID' => $this->mSession->auth->User_ID])->current();
+
+        # get user next level xp
+        $oNextLvl = $this->mXPLvlTbl->select(['Level_ID' => ($user->xp_level + 1)])->current();
+        $dPercent = 0;
+        if ($user->xp_current != 0) {
+            $dPercent = round((100 / ($oNextLvl->xp_total / $user->xp_current)), 2);
+        }
+
+        # only send public fields
+        return (object)[
+            'id' => $user->User_ID,
+            'username' => $user->username,
+            'token_balance' => $user->token_balance,
+            'xp_level' => $user->xp_level,
+            'xp_percent' => $dPercent,
+        ];
     }
 
     /**

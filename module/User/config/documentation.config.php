@@ -8,7 +8,9 @@ return [
    "username": "Username for User you want to login",
    "password": "Password for the user"
 }',
-            'response' => '',
+            'response' => '{
+    "user_id": "1"
+}',
         ],
     ],
 ];

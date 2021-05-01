@@ -5,6 +5,11 @@
     "version": "1",
     "description": "This is the onePlace XI Core API Server for Swissfaucet.io"
   },
+  "schemes": [
+    "https",
+    "http"
+  ],
+  "host": "xi.api.swissfaucet.io",
   "tags": [
     {
       "name": "Status",
@@ -12,6 +17,13 @@
     },
     {
       "name": "Ping"
+    },
+    {
+      "name": "User"
+    },
+    {
+      "name": "Login",
+      "description": "Login with Username and Password"
     }
   ],
   "securityDefinitions": {
@@ -328,9 +340,126 @@
           }
         }
       }
+    },
+    "/user": {
+      "get": {
+        "summary": "Get User Info",
+        "tags": [
+          "User"
+        ],
+        "security": [
+          {"OAuth2" : []}
+        ],
+        "produces": [
+          "application/vnd.user.v1+json",
+          "application/hal+json",
+          "application/json"
+        ],
+        "responses": {
+          "406": {
+            "description": "Not Acceptable"
+          },
+          "415": {
+            "description": "Unsupported Media Type"
+          },
+          "200": {
+            "description": "OK",
+            "schema": {
+              "$ref": "#/definitions/UserInfo"
+            }
+          }
+        }
+      }
+    },
+    "/login": {
+      "post": {
+        "tags": [
+          "Login"
+        ],
+        "description": "Perform Login Action",
+        "parameters": [
+          {
+            "in": "body",
+            "name": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/Login"
+            }
+          }
+        ],
+        "produces": [
+          "application/vnd.user.v1+json",
+          "application/json",
+          "application/*+json"
+        ],
+        "responses": {
+          "406": {
+            "description": "Not Acceptable"
+          },
+          "415": {
+            "description": "Unsupported Media Type"
+          },
+          "201": {
+            "description": "Created",
+            "schema": {
+              "type": "object",
+              "properties": {
+                "user_id": {
+                  "type": "string"
+                }
+              },
+              "example": {
+                "user_id": "1"
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found"
+          },
+          "400": {
+            "description": "Client Error"
+          },
+          "422": {
+            "description": "Unprocessable Entity"
+          }
+        }
+      }
     }
   },
   "definitions": {
+    "User": {
+      "type": "object",
+      "properties": {
+        "user": {
+          "type": "string",
+          "description": "The user submitting the status message."
+        }
+      },
+      "required": [
+        "user"
+      ]
+    },
+    "Login": {
+      "type": "object",
+      "properties": {
+        "username": {
+          "type": "string",
+          "description": "Name or E-Mail for User"
+        },
+        "password": {
+          "type": "string",
+          "description": "Password for user"
+        }
+      },
+      "required": [
+        "username",
+        "password"
+      ],
+      "example": {
+        "username": "Username for User you want to login",
+        "password": "Password for the user"
+      }
+    },
     "Status": {
       "type": "object",
       "properties": {
@@ -351,6 +480,38 @@
         "message",
         "user"
       ]
+    },
+    "UserInfo": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "integer",
+          "description": "Client ID for the User."
+        },
+        "username": {
+          "type": "string",
+          "description": "The username for the User."
+        },
+        "token_balance": {
+          "type": "number",
+          "description": "The current token balance for the User."
+        },
+        "xp_level": {
+          "type": "integer",
+          "description": "Current XP Level for the User."
+        },
+        "xp_percent": {
+          "type": "integer",
+          "description": "Current % for next XP Level for the User."
+        }
+      },
+      "example": {
+        "id": 1,
+        "username": "testuser",
+        "token_balance": 50.00,
+        "xp_level": 1,
+        "xp_percent": 85
+      }
     }
   }
 }
