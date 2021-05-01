@@ -1,16 +1,49 @@
 <?php
+/**
+ * UserResource.php - User Resource
+ *
+ * Main Resource for User API
+ *
+ * @category Resource
+ * @package User
+ * @author Praesidiarius
+ * @copyright (C) 2021 Praesidiarius <admin@1plc.ch>
+ * @license https://opensource.org/licenses/BSD-3-Clause
+ * @version 1.0.0
+ * @since 1.1.1
+ */
+
 namespace User\V1\Rest\User;
 
 use Laminas\ApiTools\ApiProblem\ApiProblem;
 use Laminas\ApiTools\Rest\AbstractResourceListener;
+use Laminas\ApiTools\ContentNegotiation\ViewModel;
+use Laminas\Db\TableGateway\TableGateway;
 
 class UserResource extends AbstractResourceListener
 {
+    protected $mapper;
+    protected $mXPLvlTbl;
+
+    /**
+     * Constructor
+     *
+     * UserResource constructor.
+     * @param $mapper
+     * @since 1.0.0
+     */
+    public function __construct($mapper)
+    {
+        $this->mapper = new TableGateway('user', $mapper);
+        $this->mXPLvlTbl = new TableGateway('user_xp_level', $mapper);
+    }
+
     /**
      * Create a resource
      *
      * @param  mixed $data
      * @return ApiProblem|mixed
+     * @since 1.0.0
      */
     public function create($data)
     {
@@ -22,6 +55,7 @@ class UserResource extends AbstractResourceListener
      *
      * @param  mixed $id
      * @return ApiProblem|mixed
+     * @since 1.0.0
      */
     public function delete($id)
     {
@@ -33,6 +67,7 @@ class UserResource extends AbstractResourceListener
      *
      * @param  mixed $data
      * @return ApiProblem|mixed
+     * @since 1.0.0
      */
     public function deleteList($data)
     {
@@ -44,10 +79,28 @@ class UserResource extends AbstractResourceListener
      *
      * @param  mixed $id
      * @return ApiProblem|mixed
+     * @since 1.0.0
      */
     public function fetch($id)
     {
-        return new ApiProblem(405, 'The GET method has not been defined for individual resources');
+        # get user from db
+        $user = $this->mapper->select(['User_ID' => $id])->current();
+
+        # get user next level xp
+        $oNextLvl = $this->mXPLvlTbl->select(['Level_ID' => ($user->xp_level + 1)])->current();
+        $dPercent = 0;
+        if ($user->xp_current != 0) {
+            $dPercent = round((100 / ($oNextLvl->xp_total / $user->xp_current)), 2);
+        }
+
+        # only send public fields
+        return (object)[
+            'id' => $user->User_ID,
+            'username' => $user->username,
+            'token_balance' => $user->token_balance,
+            'xp_level' => $user->xp_level,
+            'xp_percent' => $dPercent,
+        ];
     }
 
     /**
@@ -55,6 +108,7 @@ class UserResource extends AbstractResourceListener
      *
      * @param  array $params
      * @return ApiProblem|mixed
+     * @since 1.0.0
      */
     public function fetchAll($params = [])
     {
@@ -67,6 +121,7 @@ class UserResource extends AbstractResourceListener
      * @param  mixed $id
      * @param  mixed $data
      * @return ApiProblem|mixed
+     * @since 1.0.0
      */
     public function patch($id, $data)
     {
@@ -78,6 +133,7 @@ class UserResource extends AbstractResourceListener
      *
      * @param  mixed $data
      * @return ApiProblem|mixed
+     * @since 1.0.0
      */
     public function patchList($data)
     {
@@ -89,6 +145,7 @@ class UserResource extends AbstractResourceListener
      *
      * @param  mixed $data
      * @return ApiProblem|mixed
+     * @since 1.0.0
      */
     public function replaceList($data)
     {
@@ -101,6 +158,7 @@ class UserResource extends AbstractResourceListener
      * @param  mixed $id
      * @param  mixed $data
      * @return ApiProblem|mixed
+     * @since 1.0.0
      */
     public function update($id, $data)
     {

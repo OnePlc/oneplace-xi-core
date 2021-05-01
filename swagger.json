@@ -1,8 +1,9 @@
 {
   "swagger": "2.0",
   "info": {
-    "title": "Status",
-    "version": "1"
+    "title": "onePlace XI Core",
+    "version": "1",
+    "description": "This is the onePlace XI Core API Server for Swissfaucet.io"
   },
   "tags": [
     {
@@ -13,6 +14,21 @@
       "name": "Ping"
     }
   ],
+  "securityDefinitions": {
+    "OAuth2" : {
+      "type" : "oauth2",
+      "authorizationUrl": "http://xi.api.swissfaucet.io/oauth/authorize",
+      "tokenUrl": "http://xi.api.swissfaucet.io/oauth",
+      "flow": "accessCode",
+      "name": "token",
+      "in": "header",
+      "scopes": {
+        "read": "Grants read access",
+        "write": "Grants write access",
+        "admin": "Grants read and write access to administrative information"
+      }
+    }
+  },
   "paths": {
     "/status": {
       "get": {
@@ -51,6 +67,9 @@
               "$ref": "#/definitions/Status"
             }
           }
+        ],
+        "security": [
+          {"OAuth2" : []}
         ],
         "produces": [
           "application/vnd.status.v1+json",
@@ -123,6 +142,9 @@
         "tags": [
           "Status"
         ],
+        "security": [
+          {"OAuth2" : []}
+        ],
         "description": "Update a status message.",
         "parameters": [
           {
@@ -178,6 +200,9 @@
       "put": {
         "tags": [
           "Status"
+        ],
+        "security": [
+          {"OAuth2" : []}
         ],
         "description": "Replace a status message.",
         "parameters": [
@@ -235,6 +260,9 @@
         "tags": [
           "Status"
         ],
+        "security": [
+          {"OAuth2" : []}
+        ],
         "description": "Delete a status message.",
         "parameters": [
           {
@@ -279,6 +307,7 @@
         "tags": [
           "Ping"
         ],
+        "summary": "Check alive",
         "produces": [
           "application/vnd.status.v1+json",
           "application/json",
