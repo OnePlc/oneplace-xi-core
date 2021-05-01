@@ -133,7 +133,8 @@ class UserResource extends AbstractResourceListener
         # only send public fields
         return (object)[
             'id' => $user->User_ID,
-            'username' => $user->username,
+            'name' => $user->username,
+            'email' => $user->email,
             'token_balance' => $user->token_balance,
             'xp_level' => $user->xp_level,
             'xp_percent' => $dPercent,

@@ -6,6 +6,8 @@ All notable changes to this project will be documented in this file, in reverse 
 
 ### Added
 - StatusMessage API /status
+- Login, Logout
+- User Info
 
 ### Fixed
 - nothing

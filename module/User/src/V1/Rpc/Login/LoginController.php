@@ -89,6 +89,14 @@ class LoginController extends AbstractActionController
         # return user_id so client can get token
         return new ViewModel([
             'user_id' => $oUser->User_ID,
+            'name' => $oUser->username,
+            'photo' => 'media/users/300_21.jpg',
+            'surname' => 'Herr',
+            'company_name' => 'Swissfaucet',
+            'job' => 'Member',
+            'email' => $oUser->email,
+            'phone' => '+00 000 00 00',
+            'company_site' => 'swissfaucet',
         ]);
     }
 }
