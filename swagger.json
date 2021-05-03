@@ -22,6 +22,10 @@
       "name": "User"
     },
     {
+      "name": "Faucet",
+      "description": "Faucet API"
+    },
+    {
       "name": "Login",
       "description": "Login with Username and Password"
     }
@@ -424,9 +428,418 @@
           }
         }
       }
+    },
+    "/achievement": {
+      "get": {
+        "tags": [
+          "Faucet"
+        ],
+        "parameters": [
+          {
+            "in": "query",
+            "name": "platform",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/platform"
+            }
+          }
+        ],
+        "security": [
+          {"OAuth2" : []}
+        ],
+        "description": "Get a List of all available Achievements",
+        "produces": [
+          "application/vnd.faucet.v1+json",
+          "application/hal+json",
+          "application/json"
+        ],
+        "responses": {
+          "406": {
+            "description": "Not Acceptable"
+          },
+          "415": {
+            "description": "Unsupported Media Type"
+          },
+          "200": {
+            "description": "OK",
+            "schema": {
+              "$ref": "#/definitions/AchievementList"
+            }
+          },
+          "401": {
+            "description": "Unauthorized"
+          },
+          "403": {
+            "description": "Forbidden"
+          }
+        }
+      }
+    },
+    "/achievement/{achievement_id}": {
+      "put": {
+        "tags": [
+          "Faucet"
+        ],
+        "security": [
+          {"OAuth2" : []}
+        ],
+        "description": "Claim a complete Achievement for a User",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "achievement_id",
+            "description": "URL parameter achievement_id",
+            "type": "string",
+            "required": true,
+            "minimum": 0,
+            "maximum": 1
+          },
+          {
+            "in": "body",
+            "name": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/Achievement"
+            }
+          }
+        ],
+        "produces": [
+          "application/vnd.faucet.v1+json",
+          "application/hal+json",
+          "application/json"
+        ],
+        "responses": {
+          "406": {
+            "description": "Not Acceptable"
+          },
+          "415": {
+            "description": "Unsupported Media Type"
+          },
+          "200": {
+            "description": "OK"
+          },
+          "404": {
+            "description": "Not Found"
+          },
+          "400": {
+            "description": "Client Error"
+          },
+          "422": {
+            "description": "Unprocessable Entity"
+          },
+          "401": {
+            "description": "Unauthorized"
+          },
+          "403": {
+            "description": "Forbidden"
+          }
+        }
+      }
+    },
+    "/dailytask": {
+      "get": {
+        "tags": [
+          "Faucet"
+        ],
+        "parameters": [
+          {
+            "in": "query",
+            "name": "platform",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/platform"
+            }
+          }
+        ],
+        "security": [
+          {"OAuth2" : []}
+        ],
+        "description": "Get a List of all Dailytasks",
+        "produces": [
+          "application/vnd.faucet.v1+json",
+          "application/hal+json",
+          "application/json"
+        ],
+        "responses": {
+          "406": {
+            "description": "Not Acceptable"
+          },
+          "415": {
+            "description": "Unsupported Media Type"
+          },
+          "200": {
+            "description": "OK",
+            "schema": {
+              "$ref": "#/definitions/DailytaskList"
+            }
+          },
+          "401": {
+            "description": "Unauthorized"
+          },
+          "403": {
+            "description": "Forbidden"
+          }
+        }
+      }
+    },
+    "/dailytask/{dailytask_id}": {
+      "put": {
+        "tags": [
+          "Faucet"
+        ],
+        "security": [
+          {"OAuth2" : []}
+        ],
+        "description": "Claim a complete dailytask for a user",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "dailytask_id",
+            "description": "URL parameter dailytask_id",
+            "type": "string",
+            "required": true,
+            "minimum": 0,
+            "maximum": 1
+          },
+          {
+            "in": "body",
+            "name": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/Dailytask"
+            }
+          }
+        ],
+        "produces": [
+          "application/vnd.faucet.v1+json",
+          "application/hal+json",
+          "application/json"
+        ],
+        "responses": {
+          "406": {
+            "description": "Not Acceptable"
+          },
+          "415": {
+            "description": "Unsupported Media Type"
+          },
+          "200": {
+            "description": "OK",
+            "schema": {
+              "type": "object",
+              "properties": [],
+              "example": []
+            }
+          },
+          "404": {
+            "description": "Not Found"
+          },
+          "400": {
+            "description": "Client Error"
+          },
+          "422": {
+            "description": "Unprocessable Entity"
+          }
+        }
+      }
+    },
+    "/claim": {
+      "get": {
+        "tags": [
+          "Faucet"
+        ],
+        "security": [
+          {"OAuth2" : []}
+        ],
+        "description": "Get Timer for next Claim",
+        "produces": [
+          "application/vnd.faucet.v1+json",
+          "application/json",
+          "application/*+json"
+        ],
+        "responses": {
+          "406": {
+            "description": "Not Acceptable"
+          },
+          "415": {
+            "description": "Unsupported Media Type"
+          },
+          "200": {
+            "description": "OK"
+          },
+          "404": {
+            "description": "Not Found"
+          },
+          "401": {
+            "description": "Unauthorized"
+          },
+          "403": {
+            "description": "Forbidden"
+          }
+        }
+      },
+      "post": {
+        "tags": [
+          "Faucet"
+        ],
+        "security": [
+          {"OAuth2" : []}
+        ],
+        "description": "Request Claim",
+        "parameters": [
+          {
+            "in": "body",
+            "name": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/Claim"
+            }
+          }
+        ],
+        "produces": [
+          "application/vnd.faucet.v1+json",
+          "application/json",
+          "application/*+json"
+        ],
+        "responses": {
+          "406": {
+            "description": "Not Acceptable"
+          },
+          "415": {
+            "description": "Unsupported Media Type"
+          },
+          "201": {
+            "description": "Created"
+          },
+          "404": {
+            "description": "Not Found"
+          },
+          "401": {
+            "description": "Unauthorized"
+          },
+          "403": {
+            "description": "Forbidden"
+          }
+        }
+      }
     }
   },
   "definitions": {
+    "platform": {
+      "type": "string",
+      "description": "Desired Platform (website|app)",
+      "required": [
+        "platform"
+      ]
+    },
+    "Achievement": {
+      "type": "object",
+      "properties": {
+        "platform": {
+          "type": "string",
+          "description": "The Platform for the Dailytasks"
+        }
+      },
+      "required": [
+        "platform"
+      ]
+    },
+    "AchievementList": {
+      "type": "object",
+      "properties": {
+        "platform": {
+          "type": "string",
+          "description": "The Platform for the Dailytasks"
+        }
+      },
+      "example": {
+        "_links": {
+          "self": {
+            "href": "http://xi.api.swissfaucet.io/achievement"
+          }
+        },
+        "_embedded": {
+          "achievement": [
+            {
+              "Achievement_ID": "1",
+              "label": "Reach Level 10",
+              "goal": "10",
+              "reward": "100",
+              "type": "xplevel",
+              "mode": "global"
+            },
+            {
+              "Achievement_ID": "2",
+              "label": "Reach Level 25",
+              "goal": "25",
+              "reward": "250",
+              "type": "xplevel",
+              "mode": "global"
+            }
+          ]
+        },
+        "total_items": 2
+      },
+      "required": [
+        "platform"
+      ]
+    },
+    "Dailytask": {
+      "type": "object",
+      "properties": {
+        "platform": {
+          "type": "string",
+          "description": "The Platform for the Dailytasks"
+        }
+      },
+      "required": [
+        "platform"
+      ]
+    },
+    "DailytaskList": {
+      "type": "object",
+      "properties": {
+        "platform": {
+          "type": "string",
+          "description": "The Platform for the Dailytasks"
+        }
+      },
+      "example": {
+        "_links": {
+          "self": {
+            "href": "http://xi.api.swissfaucet.io/dailytask"
+          }
+        },
+        "_embedded": {
+          "dailytask": [
+            {
+              "Dailytask_ID": "1",
+              "label": "Complete 5 Shortlinks",
+              "goal": "5",
+              "reward": "10",
+              "type": "shortlink",
+              "sort_id": "0",
+              "mode": "website"
+            },
+            {
+              "Dailytask_ID": "2",
+              "label": "Complete 10 Shortlinks",
+              "goal": "10",
+              "reward": "20",
+              "type": "shortlink",
+              "sort_id": "1",
+              "mode": "website"
+            }
+          ]
+        },
+        "total_items": 2
+      },
+      "required": [
+        "platform"
+      ]
+    },
+    "Claim": {
+      "type": "object"
+    },
     "User": {
       "type": "object",
       "properties": {
