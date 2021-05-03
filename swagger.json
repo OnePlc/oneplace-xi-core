@@ -40,6 +40,7 @@
       "authorizationUrl": "http://xi.api.swissfaucet.io/oauth/authorize",
       "tokenUrl": "http://xi.api.swissfaucet.io/oauth",
       "flow": "accessCode",
+      "description": "You have to use /login first to get a user session. Then get code from Authorization and finally the Token with the Code.",
       "name": "token",
       "in": "header",
       "scopes": {
