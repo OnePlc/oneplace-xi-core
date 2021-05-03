@@ -158,8 +158,8 @@ return [
             'collection_name' => 'status',
             'entity_http_methods' => [
                 0 => 'GET',
-                1 => 'PATCH',
-                2 => 'PUT',
+                1 => 'PUT',
+                2 => 'PATCH',
                 3 => 'DELETE',
             ],
             'collection_http_methods' => [

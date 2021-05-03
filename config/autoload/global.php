@@ -14,6 +14,7 @@ return [
             'map' => [
                 'Status\\V1' => 'oneplace',
                 'User\\V1' => 'oneplace',
+                'Faucet\\V1' => 'oneplace',
             ],
         ],
     ],

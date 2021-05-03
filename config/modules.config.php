@@ -30,4 +30,5 @@ return [
     'Application',
     'Status',
     'User',
+    'Faucet',
 ];
