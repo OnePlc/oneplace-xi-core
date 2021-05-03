@@ -61,7 +61,7 @@ class DailytaskResource extends AbstractResourceListener
     /**
      * Constructor
      *
-     * UserResource constructor.
+     * DailytaskResource constructor.
      * @param $mapper
      * @since 1.0.0
      */
