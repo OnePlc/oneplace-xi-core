@@ -1,4 +1,17 @@
 <?php
+/**
+ * AchievementResource.php - Achievement Resource
+ *
+ * Main Resource for Faucet Achievements
+ *
+ * @category Resource
+ * @package Faucet
+ * @author Praesidiarius
+ * @copyright (C) 2021 Praesidiarius <admin@1plc.ch>
+ * @license https://opensource.org/licenses/BSD-3-Clause
+ * @version 1.0.0
+ * @since 1.1.1
+ */
 namespace Faucet\V1\Rest\Achievement;
 
 use Faucet\Transaction\TransactionHelper;
@@ -67,6 +80,7 @@ class AchievementResource extends AbstractResourceListener
      *
      * @param  mixed $data
      * @return ApiProblem|mixed
+     * @since 1.0.0
      */
     public function create($data)
     {
@@ -78,6 +92,7 @@ class AchievementResource extends AbstractResourceListener
      *
      * @param  mixed $id
      * @return ApiProblem|mixed
+     * @since 1.0.0
      */
     public function delete($id)
     {
@@ -89,6 +104,7 @@ class AchievementResource extends AbstractResourceListener
      *
      * @param  mixed $data
      * @return ApiProblem|mixed
+     * @since 1.0.0
      */
     public function deleteList($data)
     {
@@ -100,6 +116,7 @@ class AchievementResource extends AbstractResourceListener
      *
      * @param  mixed $id
      * @return ApiProblem|mixed
+     * @since 1.0.0
      */
     public function fetch($id)
     {
@@ -111,6 +128,7 @@ class AchievementResource extends AbstractResourceListener
      *
      * @param  array $params
      * @return ApiProblem|mixed
+     * @since 1.0.0
      */
     public function fetchAll($params = [])
     {
@@ -151,6 +169,7 @@ class AchievementResource extends AbstractResourceListener
      * @param  mixed $id
      * @param  mixed $data
      * @return ApiProblem|mixed
+     * @since 1.0.0
      */
     public function patch($id, $data)
     {
@@ -162,6 +181,7 @@ class AchievementResource extends AbstractResourceListener
      *
      * @param  mixed $data
      * @return ApiProblem|mixed
+     * @since 1.0.0
      */
     public function patchList($data)
     {
@@ -173,6 +193,7 @@ class AchievementResource extends AbstractResourceListener
      *
      * @param  mixed $data
      * @return ApiProblem|mixed
+     * @since 1.0.0
      */
     public function replaceList($data)
     {
@@ -185,6 +206,7 @@ class AchievementResource extends AbstractResourceListener
      * @param  mixed $id
      * @param  mixed $data
      * @return ApiProblem|mixed
+     * @since 1.0.0
      */
     public function update($id, $data)
     {
@@ -206,7 +228,6 @@ class AchievementResource extends AbstractResourceListener
             $achievement = $achievement->current();
 
             # Check if achievement is already claimed today
-            $sDate = date('Y-m-d', time());
             $oWh = new Where();
             $oWh->equalTo('user_idfs', $me->User_ID);
             $oWh->equalTo('achievement_idfs', $achievementId);
@@ -224,13 +245,13 @@ class AchievementResource extends AbstractResourceListener
                         $shareSel->where(['user_idfs' => $me->User_ID,'pool' => 'nanopool']);
                         $shareSel->order('date DESC');
                         $myShares = $this->mMinerTbl->selectWith($shareSel);
-                        $fTotalShares = 0;
+                        $totalShares = 0;
                         if(count($myShares) > 0) {
                             foreach($myShares as $sh) {
-                                $fTotalShares+=$sh->shares;
+                                $totalShares+=$sh->shares;
                             }
                         }
-                        $achievement->done = $fTotalShares;
+                        $achievement->done = $totalShares;
                         break;
                     default:
                         $achievement->done = 0;

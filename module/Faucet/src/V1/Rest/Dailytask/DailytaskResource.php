@@ -1,4 +1,17 @@
 <?php
+/**
+ * DailytaskResource.php - Dailytask Resource
+ *
+ * Main Resource for Faucet Dailytasks
+ *
+ * @category Resource
+ * @package Faucet
+ * @author Praesidiarius
+ * @copyright (C) 2021 Praesidiarius <admin@1plc.ch>
+ * @license https://opensource.org/licenses/BSD-3-Clause
+ * @version 1.0.0
+ * @since 1.1.1
+ */
 namespace Faucet\V1\Rest\Dailytask;
 
 use Faucet\Transaction\TransactionHelper;
@@ -80,6 +93,7 @@ class DailytaskResource extends AbstractResourceListener
      *
      * @param  mixed $data
      * @return ApiProblem|mixed
+     * @since 1.0.0
      */
     public function create($data)
     {
@@ -91,6 +105,7 @@ class DailytaskResource extends AbstractResourceListener
      *
      * @param  mixed $id
      * @return ApiProblem|mixed
+     * @since 1.0.0
      */
     public function delete($id)
     {
@@ -102,6 +117,7 @@ class DailytaskResource extends AbstractResourceListener
      *
      * @param  mixed $data
      * @return ApiProblem|mixed
+     * @since 1.0.0
      */
     public function deleteList($data)
     {
@@ -113,6 +129,7 @@ class DailytaskResource extends AbstractResourceListener
      *
      * @param  mixed $id
      * @return ApiProblem|mixed
+     * @since 1.0.0
      */
     public function fetch($id)
     {
@@ -124,6 +141,7 @@ class DailytaskResource extends AbstractResourceListener
      *
      * @param  array $params
      * @return ApiProblem|mixed
+     * @since 1.0.0
      */
     public function fetchAll($params = [])
     {
@@ -158,6 +176,7 @@ class DailytaskResource extends AbstractResourceListener
      * @param  mixed $id
      * @param  mixed $data
      * @return ApiProblem|mixed
+     * @since 1.0.0
      */
     public function patch($id, $data)
     {
@@ -169,6 +188,7 @@ class DailytaskResource extends AbstractResourceListener
      *
      * @param  mixed $data
      * @return ApiProblem|mixed
+     * @since 1.0.0
      */
     public function patchList($data)
     {
@@ -180,6 +200,7 @@ class DailytaskResource extends AbstractResourceListener
      *
      * @param  mixed $data
      * @return ApiProblem|mixed
+     * @since 1.0.0
      */
     public function replaceList($data)
     {
@@ -192,6 +213,7 @@ class DailytaskResource extends AbstractResourceListener
      * @param  mixed $id
      * @param  mixed $data
      * @return ApiProblem|mixed
+     * @since 1.0.0
      */
     public function update($id, $data)
     {

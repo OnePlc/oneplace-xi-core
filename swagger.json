@@ -26,6 +26,10 @@
       "description": "Faucet API"
     },
     {
+      "name": "Shortlink",
+      "description": "Shortlink API"
+    },
+    {
       "name": "Login",
       "description": "Login with Username and Password"
     }
@@ -721,6 +725,137 @@
           }
         }
       }
+    },
+    "/shortlink": {
+      "get": {
+        "tags": [
+          "Shortlink"
+        ],
+        "security": [
+          {"OAuth2" : []}
+        ],
+        "description": "Get a List of all Shortlink Providers",
+        "produces": [
+          "application/vnd.shortlink.v1+json",
+          "application/hal+json",
+          "application/json"
+        ],
+        "responses": {
+          "406": {
+            "description": "Not Acceptable"
+          },
+          "415": {
+            "description": "Unsupported Media Type"
+          },
+          "200": {
+            "description": "OK",
+            "schema": {
+              "$ref": "#/definitions/ShortlinkList"
+            }
+          },
+          "401": {
+            "description": "Unauthorized"
+          },
+          "403": {
+            "description": "Forbidden"
+          }
+        }
+      }
+    },
+    "/shortlink/{shortlink_id}": {
+      "put": {
+        "tags": [
+          "Shortlink"
+        ],
+        "security": [
+          {"OAuth2" : []}
+        ],
+        "description": "Claim a complete Shortlink",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "shortlink_id",
+            "description": "URL parameter shortlink_id",
+            "type": "string",
+            "required": true,
+            "minimum": 0,
+            "maximum": 1
+          }
+        ],
+        "produces": [
+          "application/vnd.shortlink.v1+json",
+          "application/hal+json",
+          "application/json"
+        ],
+        "responses": {
+          "406": {
+            "description": "Not Acceptable"
+          },
+          "415": {
+            "description": "Unsupported Media Type"
+          },
+          "200": {
+            "description": "OK",
+          },
+          "404": {
+            "description": "Not Found"
+          },
+          "401": {
+            "description": "Unauthorized"
+          },
+          "403": {
+            "description": "Forbidden"
+          }
+        }
+      },
+      "get": {
+        "tags": [
+          "Shortlink"
+        ],
+        "security": [
+          {"OAuth2" : []}
+        ],
+        "description": "Get the basic information and links for a shortlink provider",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "shortlink_id",
+            "description": "URL parameter shortlink_id",
+            "type": "string",
+            "required": true,
+            "minimum": 0,
+            "maximum": 1
+          }
+        ],
+        "produces": [
+          "application/vnd.shortlink.v1+json",
+          "application/hal+json",
+          "application/json"
+        ],
+        "responses": {
+          "406": {
+            "description": "Not Acceptable"
+          },
+          "415": {
+            "description": "Unsupported Media Type"
+          },
+          "200": {
+            "description": "OK",
+            "schema": {
+              "$ref": "#/definitions/ShortlinkLink"
+            }
+          },
+          "404": {
+            "description": "Not Found"
+          },
+          "401": {
+            "description": "Unauthorized"
+          },
+          "403": {
+            "description": "Forbidden"
+          }
+        }
+      }
     }
   },
   "definitions": {
@@ -836,6 +971,75 @@
       "required": [
         "platform"
       ]
+    },
+    "ShortlinkLink": {
+      "type": "object",
+      "example": {
+        "Shortlink_ID": "2",
+        "label": "Exe.io",
+        "url": "exe-io",
+        "description": "",
+        "reward": "25",
+        "cpm": "1.5",
+        "active": "1",
+        "link": {
+          "shortlink_idfs": "2",
+          "href": "https://exe.io/CgS1B",
+          "link_id": "HoEUCWmcDEf2YK4fR0S81ej2PDNmTqrm3OgZe39ico66HCuxbOy"
+        },
+        "_links": {
+          "self": {
+            "href": "http://xi.api.swissfaucet.io/shortlink/2"
+          }
+        }
+      }
+    },
+    "ShortlinkList": {
+      "type": "object",
+      "example": {
+        "_links": {
+          "self": {
+            "href": "http://xi.api.swissfaucet.io/shortlink"
+          }
+        },
+        "_embedded": {
+          "shortlink": [
+            {
+              "provider": [
+                {
+                  "Shortlink_ID": "1",
+                  "label": "FC.lc",
+                  "url": "fc-lc",
+                  "description": "",
+                  "reward": "15",
+                  "cpm": "3",
+                  "active": "1",
+                  "linksTotal": 1,
+                  "linksDone": 0,
+                  "count_complete": 13353,
+                  "count_started": 2267
+                },
+                {
+                  "Shortlink_ID": "2",
+                  "label": "Exe.io",
+                  "url": "exe-io",
+                  "description": "",
+                  "reward": "25",
+                  "cpm": "1.5",
+                  "active": "1",
+                  "linksTotal": 1,
+                  "linksDone": 0,
+                  "count_complete": 8509,
+                  "count_started": 853
+                },
+              ],
+              "total_reward": 40,
+              "total_links": 2
+            }
+          ]
+        },
+        "total_items": 1
+      }
     },
     "Claim": {
       "type": "object"
