@@ -40,8 +40,7 @@ return [
         'Lottery\\V1\\Rpc\\Tickets\\Controller' => [
             'service_name' => 'Tickets',
             'http_methods' => [
-                0 => 'GET',
-                1 => 'POST',
+                0 => 'POST',
             ],
             'route_name' => 'lottery.rpc.tickets',
         ],
@@ -102,7 +101,7 @@ return [
                 'error_message' => 'You must specify a valid lottery round',
             ],
             1 => [
-                'required' => false,
+                'required' => true,
                 'validators' => [],
                 'filters' => [
                     0 => [

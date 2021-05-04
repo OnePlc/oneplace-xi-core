@@ -900,6 +900,61 @@
           }
         }
       }
+    },
+    "/lottery/tickets": {
+      "post": {
+        "tags": [
+          "Lottery"
+        ],
+        "security": [
+          {"OAuth2" : []}
+        ],
+        "description": "Buy Lottery Tickets",
+        "parameters": [
+          {
+            "in": "body",
+            "name": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/Tickets"
+            }
+          }
+        ],
+        "produces": [
+          "application/vnd.lottery.v1+json",
+          "application/json",
+          "application/*+json"
+        ],
+        "responses": {
+          "406": {
+            "description": "Not Acceptable"
+          },
+          "415": {
+            "description": "Unsupported Media Type"
+          },
+          "201": {
+            "description": "Created",
+            "schema": {
+              "$ref": "#/definitions/TicketsResponse"
+            }
+          },
+          "404": {
+            "description": "Not Found"
+          },
+          "400": {
+            "description": "Client Error"
+          },
+          "422": {
+            "description": "Unprocessable Entity"
+          },
+          "401": {
+            "description": "Unauthorized"
+          },
+          "403": {
+            "description": "Forbidden"
+          }
+        }
+      }
     }
   },
   "definitions": {
@@ -909,6 +964,39 @@
       "required": [
         "platform"
       ]
+    },
+    "Tickets": {
+      "type": "object",
+      "properties": {
+        "round": {
+          "type": "integer",
+          "description": "Lottery Round ID"
+        },
+        "tickets": {
+          "type": "integer",
+          "description": "Amount of tickets to buy"
+        }
+      },
+      "required": [
+        "round",
+        "tickets"
+      ],
+      "example": {
+        "round": 1,
+        "tickets": 10
+      }
+    },
+    "TicketsResponse": {
+      "type": "object",
+      "example": {
+        "state": "success",
+        "message": "10 bought for round 1",
+        "user": {
+          "name": "Testuser",
+          "balance": 100,
+          "tickets": 10
+        }
+      }
     },
     "Achievement": {
       "type": "object",

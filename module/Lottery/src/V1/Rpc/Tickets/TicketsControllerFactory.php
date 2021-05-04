@@ -5,6 +5,6 @@ class TicketsControllerFactory
 {
     public function __invoke($controllers)
     {
-        return new TicketsController();
+        return new TicketsController($controllers->get('faucetdev'));
     }
 }
