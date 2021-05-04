@@ -34,6 +34,10 @@
       "description": "Lottery API"
     },
     {
+      "name": "Guild",
+      "description": "Guild AP"
+    },
+    {
       "name": "Login",
       "description": "Login with Username and Password"
     }
@@ -800,7 +804,7 @@
             "description": "Unsupported Media Type"
           },
           "200": {
-            "description": "OK",
+            "description": "OK"
           },
           "404": {
             "description": "Not Found"
@@ -955,6 +959,42 @@
           }
         }
       }
+    },
+    "/guild": {
+      "get": {
+        "tags": [
+          "Guild"
+        ],
+        "security": [
+          {"OAuth2" : []}
+        ],
+        "description": "Get List of all Guilds",
+        "produces": [
+          "application/vnd.guild.v1+json",
+          "application/hal+json",
+          "application/json"
+        ],
+        "responses": {
+          "406": {
+            "description": "Not Acceptable"
+          },
+          "415": {
+            "description": "Unsupported Media Type"
+          },
+          "200": {
+            "description": "OK",
+            "schema": {
+              "$ref": "#/definitions/Guild"
+            }
+          },
+          "401": {
+            "description": "Unauthorized"
+          },
+          "403": {
+            "description": "Forbidden"
+          }
+        }
+      }
     }
   },
   "definitions": {
@@ -964,6 +1004,47 @@
       "required": [
         "platform"
       ]
+    },
+    "Guild": {
+      "type": "object",
+      "example": {
+        "_links": {
+          "self": {
+            "href": "http://xi.api.swissfaucet.io/guild"
+          }
+        },
+        "_embedded": {
+          "guild": [
+            {
+              "Guild_ID": "1",
+              "label": "Founder Edition",
+              "owner_idfs": "335874988",
+              "created_date": "2021-04-08 01:50:20",
+              "xp_level": "1",
+              "xp_current": "142",
+              "xp_total": "0",
+              "icon": "fas fa-crown",
+              "is_vip": "1",
+              "token_balance": "0",
+              "members": 120
+            },
+            {
+              "Guild_ID": "2",
+              "label": "infiniteLife",
+              "owner_idfs": "335874994",
+              "created_date": "2021-04-09 04:01:52",
+              "xp_level": "1",
+              "xp_current": "0",
+              "xp_total": "0",
+              "icon": "fas fa-shield-alt",
+              "is_vip": "0",
+              "token_balance": "0",
+              "members": 4
+            }
+          ]
+        },
+        "total_items": 2
+      }
     },
     "Tickets": {
       "type": "object",
@@ -1198,7 +1279,7 @@
                   "linksDone": 0,
                   "count_complete": 8509,
                   "count_started": 853
-                },
+                }
               ],
               "total_reward": 40,
               "total_links": 2
