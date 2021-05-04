@@ -30,6 +30,10 @@
       "description": "Shortlink API"
     },
     {
+      "name": "Lottery",
+      "description": "Lottery API"
+    },
+    {
       "name": "Login",
       "description": "Login with Username and Password"
     }
@@ -857,6 +861,45 @@
           }
         }
       }
+    },
+    "/lottery/round": {
+      "get": {
+        "tags": [
+          "Lottery"
+        ],
+        "security": [
+          {"OAuth2" : []}
+        ],
+        "description": "Current lottery round",
+        "produces": [
+          "application/vnd.lottery.v1+json",
+          "application/json",
+          "application/*+json"
+        ],
+        "responses": {
+          "406": {
+            "description": "Not Acceptable"
+          },
+          "415": {
+            "description": "Unsupported Media Type"
+          },
+          "200": {
+            "description": "OK",
+            "schema": {
+              "$ref": "#/definitions/LotteryRound"
+            }
+          },
+          "404": {
+            "description": "Not Found"
+          },
+          "401": {
+            "description": "Unauthorized"
+          },
+          "403": {
+            "description": "Forbidden"
+          }
+        }
+      }
     }
   },
   "definitions": {
@@ -878,6 +921,41 @@
       "required": [
         "platform"
       ]
+    },
+    "LotteryRound": {
+      "type": "object",
+      "example": {
+        "Round_ID": "3",
+        "server_hash": "",
+        "date_started": "2021-04-25 18:00:01",
+        "date_end": "2021-05-02 18:00:01",
+        "winners_last_round": [
+          {
+            "name": "hamazi",
+            "id": "335878708",
+            "rank": "1",
+            "coins_won": "128744",
+            "tickets": "87"
+          },
+          {
+            "name": "Mizie",
+            "id": "335877443",
+            "rank": "2",
+            "coins_won": "36784",
+            "tickets": "100"
+          },
+          {
+            "name": "antia",
+            "id": "335878903",
+            "rank": "3",
+            "coins_won": "18392",
+            "tickets": "1477"
+          }
+        ],
+        "my_tickets": 0,
+        "my_chance": 0,
+        "tickets": 4108
+      }
     },
     "AchievementList": {
       "type": "object",
