@@ -1239,6 +1239,129 @@
         }
       }
     },
+    "/guild/update": {
+      "patch": {
+        "tags": [
+          "Guild"
+        ],
+        "security": [
+          {"OAuth2" : []}
+        ],
+        "summary": "Update Guild",
+        "description": "Update Guild. You can update all settings or only one at a time, all parameters are optional",
+        "parameters": [
+          {
+            "in": "body",
+            "name": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/GuildUpdate"
+            }
+          }
+        ],
+        "produces": [
+          "application/vnd.guild.v1+json",
+          "application/hal+json",
+          "application/json"
+        ],
+        "responses": {
+          "406": {
+            "description": "Not Acceptable"
+          },
+          "415": {
+            "description": "Unsupported Media Type"
+          },
+          "200": {
+            "description": "OK",
+            "schema": {
+              "type": "object",
+              "properties": {
+                "Guild_ID": {
+                  "type": "integer"
+                },
+                "label": {
+                  "type": "string"
+                },
+                "owner_idfs": {
+                  "type": "integer"
+                },
+                "created_date": {
+                  "type": "string"
+                },
+                "xp_level": {
+                  "type": "integer"
+                },
+                "xp_current": {
+                  "type": "integer"
+                },
+                "xp_total": {
+                  "type": "integer"
+                },
+                "icon": {
+                  "type": "string"
+                },
+                "is_vip": {
+                  "type": "integer"
+                },
+                "token_balance": {
+                  "type": "integer"
+                },
+                "_links": {
+                  "type": "object",
+                  "properties": {
+                    "self": {
+                      "type": "object",
+                      "properties": {
+                        "href": {
+                          "type": "string"
+                        }
+                      }
+                    }
+                  }
+                }
+              },
+              "example": {
+                "label": "Praesis Castle",
+                "created_date": "2021-05-04 23:15:12",
+                "xp_level": 1,
+                "xp_current": 0,
+                "xp_total": 0,
+                "icon": "some-icon",
+                "is_vip": 0,
+                "token_balance": 0,
+                "owner": {
+                  "id": "335874987",
+                  "name": "Praesidiarius",
+                  "token_balance": 65836
+                },
+                "_links": {
+                  "self": {
+                    "href": "http://xi.api.swissfaucet.io/guild/update"
+                  }
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found",
+            "examples": {
+              "application/json": {
+                "type": "http://www.w3.org/Protocols/rfc2616/rfc2616-sec10.html",
+                "title": "Not Found",
+                "status": 404,
+                "detail": "You are not guildmaster of any guild"
+              }
+            }
+          },
+          "400": {
+            "description": "Client Error"
+          },
+          "422": {
+            "description": "Unprocessable Entity"
+          }
+        }
+      }
+    },
     "/guild/{guild_id}": {
       "get": {
         "tags": [
@@ -1305,6 +1428,22 @@
       },
       "example": {
         "guild": 1
+      }
+    },
+    "GuildUpdate": {
+      "type": "object",
+      "properties": {
+        "name": {
+          "type": "string",
+          "description": "Name of Guild"
+        },
+        "icon": {
+          "type": "string",
+          "description": "Guild Icon"
+        }
+      },
+      "example": {
+        "name": "Praesis Castle"
       }
     },
     "GuildNew": {

@@ -259,7 +259,9 @@ class GuildResource extends AbstractResourceListener
     }
 
     /**
-     * Patch (partial in-place update) a resource
+     * Update Guild Information
+     *
+     * Only available for Guildmaster
      *
      * @param  mixed $id
      * @param  mixed $data
@@ -268,6 +270,50 @@ class GuildResource extends AbstractResourceListener
      */
     public function patch($id, $data)
     {
+        # Check if user is logged in
+        if(!isset($this->mSession->auth)) {
+            return new ApiProblem(401, 'Not logged in');
+        }
+        $me = $this->mSession->auth;
+
+        # check if user is guildmaster of a guild
+        $checkWh = new Where();
+        $checkWh->equalTo('user_idfs', $me->User_ID);
+        $checkWh->equalTo('rank', 0);
+        $checkWh->notLike('date_joined', '0000-00-00 00:00:00');
+        $userHasGuild = $this->mGuildUserTbl->select($checkWh);
+
+        if(count($userHasGuild) == 0) {
+            return new ApiProblem(404, 'You are not guildmaster of any guild');
+        } else {
+            $userGuildRole = $userHasGuild->current();
+            # double check we have no 0 guild id
+            if($userGuildRole->guild_idfs == 0) {
+                return new ApiProblem(400, 'Seems like you are guildmaster of an invalid guild. Please contact admin.');
+            }
+            # check if name should be updated
+            if(isset($data->name)) {
+                $newName = filter_var($data->name, FILTER_SANITIZE_STRING);
+                $this->mGuildTbl->update([
+                    'label' => $newName,
+                ],[
+                    'Guild_ID' => $userGuildRole->guild_idfs,
+                ]);
+            }
+            # check if name should be updated
+            if(isset($data->icon)) {
+                $newIcon = filter_var($data->icon, FILTER_SANITIZE_STRING);
+                $this->mGuildTbl->update([
+                    'icon' => $newIcon,
+                ],[
+                    'Guild_ID' => $userGuildRole->guild_idfs,
+                ]);
+            }
+
+            return $this->mGuildTbl->select(['Guild_ID' => $userGuildRole->guild_idfs])->current();
+
+        }
+
         return new ApiProblem(405, 'The PATCH method has not been defined for individual resources');
     }
 
