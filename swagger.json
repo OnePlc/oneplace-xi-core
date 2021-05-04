@@ -995,6 +995,213 @@
           }
         }
       }
+    },
+    "/guild/{guild_id}": {
+      "get": {
+        "tags": [
+          "Guild"
+        ],
+        "security": [
+          {"OAuth2" : []}
+        ],
+        "description": "Get Guild Information",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "guild_id",
+            "description": "URL parameter guild_id",
+            "type": "string",
+            "required": true,
+            "minimum": 0,
+            "maximum": 1
+          }
+        ],
+        "produces": [
+          "application/vnd.guild.v1+json",
+          "application/hal+json",
+          "application/json"
+        ],
+        "responses": {
+          "406": {
+            "description": "Not Acceptable"
+          },
+          "415": {
+            "description": "Unsupported Media Type"
+          },
+          "200": {
+            "description": "OK"
+          },
+          "404": {
+            "description": "Not Found"
+          },
+          "401": {
+            "description": "Unauthorized"
+          },
+          "403": {
+            "description": "Forbidden"
+          }
+        }
+      },
+      "delete": {
+        "tags": [
+          "Guild"
+        ],
+        "description": "Remove Guild",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "guild_id",
+            "description": "URL parameter guild_id",
+            "type": "string",
+            "required": true,
+            "minimum": 0,
+            "maximum": 1
+          }
+        ],
+        "produces": [
+          "application/vnd.guild.v1+json",
+          "application/hal+json",
+          "application/json"
+        ],
+        "responses": {
+          "406": {
+            "description": "Not Acceptable"
+          },
+          "415": {
+            "description": "Unsupported Media Type"
+          },
+          "204": {
+            "description": "No Content"
+          },
+          "404": {
+            "description": "Not Found"
+          },
+          "401": {
+            "description": "Unauthorized"
+          },
+          "403": {
+            "description": "Forbidden"
+          }
+        }
+      },
+      "post": {
+        "tags": [
+          "Guild"
+        ],
+        "security": [
+          {"OAuth2" : []}
+        ],
+        "description": "Create a new Guild",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "guild_id",
+            "description": "URL parameter guild_id. Set it to 'create' for new guild",
+            "type": "string",
+            "required": true,
+            "minimum": 0,
+            "maximum": 1
+          },
+          {
+            "in": "body",
+            "name": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/GuildNew"
+            }
+          }
+        ],
+        "produces": [
+          "application/vnd.guild.v1+json",
+          "application/hal+json",
+          "application/json"
+        ],
+        "responses": {
+          "406": {
+            "description": "Not Acceptable"
+          },
+          "415": {
+            "description": "Unsupported Media Type"
+          },
+          "201": {
+            "description": "Created",
+            "schema": {
+              "type": "object",
+              "properties": {
+                "label": {
+                  "type": "string"
+                },
+                "owner_idfs": {
+                  "type": "string"
+                },
+                "created_date": {
+                  "type": "string"
+                },
+                "xp_level": {
+                  "type": "integer"
+                },
+                "xp_current": {
+                  "type": "integer"
+                },
+                "xp_total": {
+                  "type": "integer"
+                },
+                "icon": {
+                  "type": "string"
+                },
+                "is_vip": {
+                  "type": "integer"
+                },
+                "token_balance": {
+                  "type": "integer"
+                },
+                "_links": {
+                  "type": "object",
+                  "properties": {
+                    "self": {
+                      "type": "object",
+                      "properties": {
+                        "href": {
+                          "type": "string"
+                        }
+                      }
+                    }
+                  }
+                }
+              },
+              "example": {
+                "label": "Praesis Castle",
+                "created_date": "2021-05-04 23:15:12",
+                "xp_level": 1,
+                "xp_current": 0,
+                "xp_total": 0,
+                "icon": "some-icon",
+                "is_vip": 0,
+                "token_balance": 0,
+                "owner": {
+                  "id": "335874987",
+                  "name": "Praesidiarius",
+                  "token_balance": 65836
+                },
+                "_links": {
+                  "self": {
+                    "href": "http://xi.api.swissfaucet.io/guild/create"
+                  }
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found"
+          },
+          "400": {
+            "description": "Client Error"
+          },
+          "422": {
+            "description": "Unprocessable Entity"
+          }
+        }
+      }
     }
   },
   "definitions": {
@@ -1004,6 +1211,27 @@
       "required": [
         "platform"
       ]
+    },
+    "GuildNew": {
+      "type": "object",
+      "properties": {
+        "guild": {
+          "type": "string",
+          "description": "Guild ID"
+        },
+        "name": {
+          "type": "string",
+          "description": "Name of Guild"
+        },
+        "icon": {
+          "type": "string",
+          "description": "Guild Icon"
+        }
+      },
+      "example": {
+        "name": "Praesis Castle",
+        "icon": "fas fa-crown"
+      }
     },
     "Guild": {
       "type": "object",
