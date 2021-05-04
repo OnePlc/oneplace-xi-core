@@ -996,68 +996,16 @@
         }
       }
     },
-    "/guild/{guild_id}": {
-      "get": {
+    "/guild/leave": {
+      "delete": {
         "tags": [
           "Guild"
         ],
         "security": [
           {"OAuth2" : []}
         ],
-        "description": "Get Guild Information",
-        "parameters": [
-          {
-            "in": "path",
-            "name": "guild_id",
-            "description": "URL parameter guild_id",
-            "type": "string",
-            "required": true,
-            "minimum": 0,
-            "maximum": 1
-          }
-        ],
-        "produces": [
-          "application/vnd.guild.v1+json",
-          "application/hal+json",
-          "application/json"
-        ],
-        "responses": {
-          "406": {
-            "description": "Not Acceptable"
-          },
-          "415": {
-            "description": "Unsupported Media Type"
-          },
-          "200": {
-            "description": "OK"
-          },
-          "404": {
-            "description": "Not Found"
-          },
-          "401": {
-            "description": "Unauthorized"
-          },
-          "403": {
-            "description": "Forbidden"
-          }
-        }
-      },
-      "delete": {
-        "tags": [
-          "Guild"
-        ],
-        "description": "Remove Guild",
-        "parameters": [
-          {
-            "in": "path",
-            "name": "guild_id",
-            "description": "URL parameter guild_id",
-            "type": "string",
-            "required": true,
-            "minimum": 0,
-            "maximum": 1
-          }
-        ],
+        "description": "Leave Guild",
+
         "produces": [
           "application/vnd.guild.v1+json",
           "application/hal+json",
@@ -1074,16 +1022,113 @@
             "description": "No Content"
           },
           "404": {
-            "description": "Not Found"
+            "description": "Not Found",
+            "examples": {
+              "application/json": {
+                "type": "http://www.w3.org/Protocols/rfc2616/rfc2616-sec10.html",
+                "title": "Not Found",
+                "status": 404,
+                "detail": "User is not part of any guild."
+              }
+            }
           },
           "401": {
             "description": "Unauthorized"
           },
           "403": {
-            "description": "Forbidden"
+            "description": "Forbidden",
+            "examples": {
+              "application/json": {
+                "type": "http://www.w3.org/Protocols/rfc2616/rfc2616-sec10.html",
+                "title": "Forbidden",
+                "status": 403,
+                "detail": "You cannot leave the guild as guildmaster. Please promote a new guildmaster first"
+              }
+            }
           }
         }
-      },
+      }
+    },
+    "/guild/join": {
+      "put": {
+        "tags": [
+          "Guild"
+        ],
+        "security": [
+          {"OAuth2" : []}
+        ],
+        "description": "Join a guild",
+        "parameters": [
+          {
+            "in": "body",
+            "name": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/GuildJoin"
+            }
+          }
+        ],
+        "produces": [
+          "application/vnd.guild.v1+json",
+          "application/hal+json",
+          "application/json"
+        ],
+        "responses": {
+          "406": {
+            "description": "Not Acceptable"
+          },
+          "415": {
+            "description": "Unsupported Media Type"
+          },
+          "200": {
+            "description": "OK",
+            "examples": {
+              "application/json": {
+                "state": "success",
+                "message": "Successfully sent a join request to guild Custom Miners. Please wait for approval by guild.",
+                "_links": {
+                  "self": {
+                    "href": "http://xi.api.swissfaucet.io/guild/join"
+                  }
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found",
+            "examples": {
+              "application/json": {
+                "type": "http://www.w3.org/Protocols/rfc2616/rfc2616-sec10.html",
+                "title": "Not Found",
+                "status": 404,
+                "detail": "The guild you want to join does not exist"
+              }
+            }
+          },
+          "400": {
+            "description": "Client Error"
+          },
+          "422": {
+            "description": "Unprocessable Entity"
+          },
+          "401": {
+            "description": "Unauthorized"
+          },
+          "403": {
+            "description": "Forbidden",
+            "examples": {
+              "application/json": {
+                "type": "http://www.w3.org/Protocols/rfc2616/rfc2616-sec10.html",
+                "title": "Forbidden",
+                "status": 403,
+                "detail": "You have reached the limit of 5 guild join requests. Wait for approval or cancel requests."
+              }
+            }
+          }
+        }
+      }
+    },
+    "/guild/create": {
       "post": {
         "tags": [
           "Guild"
@@ -1093,15 +1138,6 @@
         ],
         "description": "Create a new Guild",
         "parameters": [
-          {
-            "in": "path",
-            "name": "guild_id",
-            "description": "URL parameter guild_id. Set it to 'create' for new guild",
-            "type": "string",
-            "required": true,
-            "minimum": 0,
-            "maximum": 1
-          },
           {
             "in": "body",
             "name": "body",
@@ -1202,6 +1238,53 @@
           }
         }
       }
+    },
+    "/guild/{guild_id}": {
+      "get": {
+        "tags": [
+          "Guild"
+        ],
+        "security": [
+          {"OAuth2" : []}
+        ],
+        "description": "Get Guild Information",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "guild_id",
+            "description": "URL parameter guild_id",
+            "type": "string",
+            "required": true,
+            "minimum": 0,
+            "maximum": 1
+          }
+        ],
+        "produces": [
+          "application/vnd.guild.v1+json",
+          "application/hal+json",
+          "application/json"
+        ],
+        "responses": {
+          "406": {
+            "description": "Not Acceptable"
+          },
+          "415": {
+            "description": "Unsupported Media Type"
+          },
+          "200": {
+            "description": "OK"
+          },
+          "404": {
+            "description": "Not Found"
+          },
+          "401": {
+            "description": "Unauthorized"
+          },
+          "403": {
+            "description": "Forbidden"
+          }
+        }
+      }
     }
   },
   "definitions": {
@@ -1211,6 +1294,18 @@
       "required": [
         "platform"
       ]
+    },
+    "GuildJoin": {
+      "type": "object",
+      "properties": {
+        "guild": {
+          "type": "integer",
+          "description": "Guild ID"
+        }
+      },
+      "example": {
+        "guild": 1
+      }
     },
     "GuildNew": {
       "type": "object",

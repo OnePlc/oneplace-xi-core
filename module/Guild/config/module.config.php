@@ -31,9 +31,10 @@ return [
             'collection_name' => 'guild',
             'entity_http_methods' => [
                 0 => 'GET',
-                1 => 'PATCH',
-                2 => 'PUT',
-                3 => 'DELETE',
+                1 => 'DELETE',
+                2 => 'POST',
+                3 => 'PUT',
+                4 => 'PATCH',
             ],
             'collection_http_methods' => [
                 0 => 'GET',
@@ -99,6 +100,32 @@ return [
                 'name' => 'guild',
                 'description' => 'Guild ID',
                 'error_message' => 'You must provide a valid Guild ID',
+            ],
+            1 => [
+                'required' => false,
+                'validators' => [],
+                'filters' => [
+                    0 => [
+                        'name' => \Laminas\Filter\StringTrim::class,
+                        'options' => [],
+                    ],
+                ],
+                'name' => 'name',
+                'description' => 'Name for a Guild',
+                'error_message' => 'You must provide a valid guild name',
+            ],
+            2 => [
+                'required' => false,
+                'validators' => [],
+                'filters' => [
+                    0 => [
+                        'name' => \Laminas\Filter\StringTrim::class,
+                        'options' => [],
+                    ],
+                ],
+                'name' => 'icon',
+                'description' => 'Guild Icon',
+                'error_message' => 'You must provide a valid guild icon',
             ],
         ],
     ],

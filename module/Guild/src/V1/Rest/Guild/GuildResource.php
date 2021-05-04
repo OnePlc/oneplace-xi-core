@@ -14,7 +14,6 @@
  */
 namespace Guild\V1\Rest\Guild;
 
-use Application\Controller\IndexController;
 use Laminas\ApiTools\ApiProblem\ApiProblem;
 use Laminas\ApiTools\Rest\AbstractResourceListener;
 use Laminas\ApiTools\ContentNegotiation\ViewModel;
@@ -167,7 +166,7 @@ class GuildResource extends AbstractResourceListener
     }
 
     /**
-     * Delete a resource
+     * Leave the current guild
      *
      * @param  mixed $id
      * @return ApiProblem|mixed
@@ -175,7 +174,37 @@ class GuildResource extends AbstractResourceListener
      */
     public function delete($id)
     {
-        return new ApiProblem(405, 'The DELETE method has not been defined for individual resources');
+        # Check if user is logged in
+        if(!isset($this->mSession->auth)) {
+            return new ApiProblem(401, 'Not logged in');
+        }
+        $me = $this->mSession->auth;
+
+        # check if user already has joined or created a guild
+        $checkWh = new Where();
+        $checkWh->equalTo('user_idfs', $me->User_ID);
+        $checkWh->notLike('date_joined', '0000-00-00 00:00:00');
+        $userHasGuild = $this->mGuildUserTbl->select($checkWh);
+
+        if(count($userHasGuild) == 0) {
+            return new ApiProblem(404, 'User is not part of any guild.');
+        } else {
+            $userGuildInfo = $userHasGuild->current();
+            if($userGuildInfo->rank == 0) {
+                return new ApiProblem(403, 'You cannot leave the guild as guildmaster. Please promote a new guildmaster first');
+            }
+
+            # make sure user id is not zero before delete
+            if($me->User_ID == 0) {
+                return new ApiProblem(400, 'invalid user id');
+            }
+            $this->mGuildUserTbl->delete([
+                'user_idfs' => $me->User_ID,
+                'guild_idfs' => $userGuildInfo->guild_idfs
+            ]);
+
+            return true;
+        }
     }
 
     /**
@@ -267,7 +296,7 @@ class GuildResource extends AbstractResourceListener
     }
 
     /**
-     * Update a resource
+     * Join a Guild
      *
      * @param  mixed $id
      * @param  mixed $data
@@ -276,6 +305,79 @@ class GuildResource extends AbstractResourceListener
      */
     public function update($id, $data)
     {
+        # Check if user is logged in
+        if(!isset($this->mSession->auth)) {
+            return new ApiProblem(401, 'Not logged in');
+        }
+        $me = $this->mSession->auth;
+
+        # check if user already has joined or created a guild
+        $checkWh = new Where();
+        $checkWh->equalTo('user_idfs', $me->User_ID);
+        $checkWh->notLike('date_joined', '0000-00-00 00:00:00');
+        $userHasGuild = $this->mGuildUserTbl->select($checkWh);
+
+        if(count($userHasGuild) == 0) {
+            # get information about the desired guild
+            $guildId = filter_var($data->guild, FILTER_SANITIZE_NUMBER_INT);
+            $guild = $this->mGuildTbl->select(['Guild_ID' => $guildId]);
+            if(count($guild) > 0) {
+                # load guild info
+                $guild = $guild->current();
+
+                # check if user does not have too much open requests in general
+                $maxOpenRequests = 5;
+                $checkWh = new Where();
+                $checkWh->equalTo('user_idfs', $me->User_ID);
+                $checkWh->like('date_joined', '0000-00-00 00:00:00');
+                $userOpenRequests = $this->mGuildUserTbl->select($checkWh);
+                if($userOpenRequests->count() >= $maxOpenRequests) {
+                    return new ApiProblem(403, 'You have reached the limit of '.$maxOpenRequests.' guild join requests. Wait for approval or cancel requests.');
+                }
+                $guildAlreadyRequested = false;
+                # check if user already has an open request for this guild
+                if(count($userOpenRequests) > 0) {
+                    foreach($userOpenRequests as $userReq) {
+                        if($userReq->guild_idfs == $guildId) {
+                            $guildAlreadyRequested = true;
+                        }
+                    }
+                }
+
+                if(!$guildAlreadyRequested) {
+                    # create a new join request
+                    $this->mGuildUserTbl->insert([
+                        'user_idfs' => $me->User_ID,
+                        'guild_idfs' => $guildId,
+                        'rank' => 9,
+                        'date_requested' => date('Y-m-d H:i:s', time()),
+                        'date_joined' => '0000-00-00 00:00:00',
+                        'date_declined' => '0000-00-00 00:00:00',
+                    ]);
+
+                    # success
+                    return (object)[
+                        'state' => 'success',
+                        'message' => 'Successfully sent a join request to guild '.$guild->label.'. Please wait for approval by guild.',
+                    ];
+                } else {
+                    return new ApiProblem(409, 'You already have an open request for the guild '.$guild->label.'. Please wait for approval by guild.');
+                }
+            } else {
+                return new ApiProblem(404, 'The guild you want to join does not exist');
+            }
+        } else {
+            # load existing guild info
+            $guild = $this->mGuildTbl->select(['Guild_ID' => $userHasGuild->current()->guild_idfs]);
+            # make sure guild does still exist
+            if(count($guild) > 0) {
+                $guild = $guild->current();
+                return new ApiProblem(409, 'User is already member of the guild '.$guild->label.'. Please leave guild before joining another one');
+            } else {
+                return new ApiProblem(409, 'User is already member of a removed guild. please contact admin.');
+            }
+        }
+
         return new ApiProblem(405, 'The PUT method has not been defined for individual resources');
     }
 }
