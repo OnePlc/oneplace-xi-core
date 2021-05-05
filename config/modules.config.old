@@ -30,4 +30,8 @@ return [
     'Application',
     'Status',
     'User',
+    'Faucet',
+    'Shortlink',
+    'Lottery',
+    'Guild',
 ];

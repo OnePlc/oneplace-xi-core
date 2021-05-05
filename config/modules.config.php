@@ -31,4 +31,8 @@ return [
     'Status',
     'User',
     'Faucet',
+    'Shortlink',
+    'Lottery',
+    'Guild',
+    'Offerwall',
 ];

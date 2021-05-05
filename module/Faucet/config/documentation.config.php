@@ -60,4 +60,10 @@ return [
             ],
         ],
     ],
+    'Faucet\\V1\\Rpc\\Referral\\Controller' => [
+        'description' => 'User Referral',
+        'GET' => [
+            'description' => 'Get all Referral Information for current User',
+        ],
+    ],
 ];

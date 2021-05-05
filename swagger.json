@@ -1528,6 +1528,56 @@
           }
         }
       }
+    },
+    "/referral": {
+      "get": {
+        "tags": [
+          "Faucet"
+        ],
+        "security": [
+          {"OAuth2" : []}
+        ],
+        "summary": "User Referral",
+        "description": "Get User Referral Statistics",
+        "produces": [
+          "application/vnd.offerwall.v1+json",
+          "application/hal+json",
+          "application/json"
+        ],
+        "responses": {
+          "406": {
+            "description": "Not Acceptable"
+          },
+          "415": {
+            "description": "Unsupported Media Type"
+          },
+          "200": {
+            "description": "OK",
+            "examples": {
+              "application/json": {
+                "_links": {
+                  "self": {
+                    "href": "https://swissfaucet.io/ref/335874987"
+                  }
+                },
+                "total_items": 4,
+                "withdrawn": 0,
+                "bonus": 0,
+                "balances": 1986
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found"
+          },
+          "401": {
+            "description": "Unauthorized"
+          },
+          "403": {
+            "description": "Forbidden"
+          }
+        }
+      }
     }
   },
   "definitions": {

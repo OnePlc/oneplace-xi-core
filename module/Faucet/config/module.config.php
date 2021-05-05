@@ -3,6 +3,7 @@ return [
     'controllers' => [
         'factories' => [
             'Faucet\\V1\\Rpc\\Claim\\Controller' => \Faucet\V1\Rpc\Claim\ClaimControllerFactory::class,
+            'Faucet\\V1\\Rpc\\Referral\\Controller' => \Faucet\V1\Rpc\Referral\ReferralControllerFactory::class,
         ],
     ],
     'router' => [
@@ -35,6 +36,16 @@ return [
                     ],
                 ],
             ],
+            'faucet.rpc.referral' => [
+                'type' => 'Segment',
+                'options' => [
+                    'route' => '/referral',
+                    'defaults' => [
+                        'controller' => 'Faucet\\V1\\Rpc\\Referral\\Controller',
+                        'action' => 'referral',
+                    ],
+                ],
+            ],
         ],
     ],
     'api-tools-versioning' => [
@@ -42,6 +53,7 @@ return [
             0 => 'faucet.rpc.claim',
             1 => 'faucet.rest.dailytask',
             2 => 'faucet.rest.achievement',
+            3 => 'faucet.rpc.referral',
         ],
     ],
     'api-tools-rpc' => [
@@ -53,12 +65,20 @@ return [
             ],
             'route_name' => 'faucet.rpc.claim',
         ],
+        'Faucet\\V1\\Rpc\\Referral\\Controller' => [
+            'service_name' => 'Referral',
+            'http_methods' => [
+                0 => 'GET',
+            ],
+            'route_name' => 'faucet.rpc.referral',
+        ],
     ],
     'api-tools-content-negotiation' => [
         'controllers' => [
             'Faucet\\V1\\Rpc\\Claim\\Controller' => 'Json',
             'Faucet\\V1\\Rest\\Dailytask\\Controller' => 'HalJson',
             'Faucet\\V1\\Rest\\Achievement\\Controller' => 'HalJson',
+            'Faucet\\V1\\Rpc\\Referral\\Controller' => 'Json',
         ],
         'accept_whitelist' => [
             'Faucet\\V1\\Rpc\\Claim\\Controller' => [
@@ -76,6 +96,11 @@ return [
                 1 => 'application/hal+json',
                 2 => 'application/json',
             ],
+            'Faucet\\V1\\Rpc\\Referral\\Controller' => [
+                0 => 'application/vnd.faucet.v1+json',
+                1 => 'application/json',
+                2 => 'application/*+json',
+            ],
         ],
         'content_type_whitelist' => [
             'Faucet\\V1\\Rpc\\Claim\\Controller' => [
@@ -87,6 +112,10 @@ return [
                 1 => 'application/json',
             ],
             'Faucet\\V1\\Rest\\Achievement\\Controller' => [
+                0 => 'application/vnd.faucet.v1+json',
+                1 => 'application/json',
+            ],
+            'Faucet\\V1\\Rpc\\Referral\\Controller' => [
                 0 => 'application/vnd.faucet.v1+json',
                 1 => 'application/json',
             ],
@@ -135,6 +164,17 @@ return [
                     'PUT' => true,
                     'PATCH' => false,
                     'DELETE' => false,
+                ],
+            ],
+            'Faucet\\V1\\Rpc\\Referral\\Controller' => [
+                'actions' => [
+                    'referral' => [
+                        'GET' => true,
+                        'POST' => false,
+                        'PUT' => false,
+                        'PATCH' => false,
+                        'DELETE' => false,
+                    ],
                 ],
             ],
         ],

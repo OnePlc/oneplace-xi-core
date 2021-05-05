@@ -75,14 +75,14 @@ class ClaimController extends AbstractActionController
         if(!isset($this->mSession->auth)) {
             return new ApiProblem(401, 'Not logged in');
         }
-        $oMe = $this->mSession->auth;
+        $me = $this->mSession->auth;
 
         # Set Timer for next claim
         $sTime = 0;
 
         # Lets check if there was a claim less than 60 minutes ago
         $oWh = new Where();
-        $oWh->equalTo('user_idfs', $oMe->User_ID);
+        $oWh->equalTo('user_idfs', $me->User_ID);
         $oWh->greaterThanOrEqualTo('date', date('Y-m-d H:i:s', strtotime('-1 hour')));
         $oClaimCheck = $this->mClaimTbl->select($oWh);
         if(count($oClaimCheck) > 0) {
@@ -112,10 +112,10 @@ class ClaimController extends AbstractActionController
 
             # Execute Claim Transaction
             $oTransHelper = new TransactionHelper($this->mMapper);
-            if($oTransHelper->executeTransaction($claimAmount, false, $oMe->User_ID, 10, 'web-faucet', 'Website Faucet claimed')) {
+            if($oTransHelper->executeTransaction($claimAmount, false, $me->User_ID, 10, 'web-faucet', 'Website Faucet claimed')) {
                 # Execute Claim
                 $this->mClaimTbl->insert([
-                    'user_idfs' => $oMe->User_ID,
+                    'user_idfs' => $me->User_ID,
                     'date' => date('Y-m-d H:i:s', time()),
                     'date_next' => $nextDate,
                     'amount' => $claimAmount,
