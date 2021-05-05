@@ -38,6 +38,10 @@
       "description": "Guild API"
     },
     {
+      "name": "Offerwall",
+      "description": "Offerwall API"
+    },
+    {
       "name": "Login",
       "description": "Login with Username and Password"
     }
@@ -1452,6 +1456,69 @@
           },
           "404": {
             "description": "Not Found"
+          },
+          "401": {
+            "description": "Unauthorized"
+          },
+          "403": {
+            "description": "Forbidden"
+          }
+        }
+      }
+    },
+    "/offerwall": {
+      "get": {
+        "tags": [
+          "Offerwall"
+        ],
+        "security": [
+          {"OAuth2" : []}
+        ],
+        "description": "Get a List of all Offerwall Providers",
+        "produces": [
+          "application/vnd.offerwall.v1+json",
+          "application/hal+json",
+          "application/json"
+        ],
+        "responses": {
+          "406": {
+            "description": "Not Acceptable"
+          },
+          "415": {
+            "description": "Unsupported Media Type"
+          },
+          "200": {
+            "description": "OK",
+            "examples": {
+              "application/json": {
+                "_links": {
+                  "self": {
+                    "href": "http://xi.api.swissfaucet.io/offerwall"
+                  }
+                },
+                "_embedded": {
+                  "offerwall": [
+                    {
+                      "Offerwall_ID": "1",
+                      "wall_name": "cpxresearch",
+                      "label": "CPX Research",
+                      "active": "1",
+                      "time": "slow",
+                      "reward": "high"
+                    },
+                    {
+                      "Offerwall_ID": "5",
+                      "wall_name": "ayetstudios",
+                      "label": "Ayetstudios",
+                      "active": "1",
+                      "time": "slow",
+                      "reward": "high"
+                    }
+                  ]
+                },
+                "total_items": 2
+              }
+            }
           },
           "401": {
             "description": "Unauthorized"

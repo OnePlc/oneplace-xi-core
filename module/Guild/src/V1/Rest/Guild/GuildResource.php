@@ -189,6 +189,9 @@ class GuildResource extends AbstractResourceListener
         if(count($userHasGuild) == 0) {
             return new ApiProblem(404, 'User is not part of any guild.');
         } else {
+            /**
+             * Leave Guild
+             */
             if($id == 'leave') {
                 $userGuildInfo = $userHasGuild->current();
                 if($userGuildInfo->rank == 0) {
@@ -208,6 +211,9 @@ class GuildResource extends AbstractResourceListener
 
                 return true;
             } elseif($id == 'remove') {
+                /**
+                 * Remove Guild
+                 */
                 $userGuildInfo = $userHasGuild->current();
                 if($userGuildInfo->rank == 0) {
                     # make sure user is is not zero before delete
