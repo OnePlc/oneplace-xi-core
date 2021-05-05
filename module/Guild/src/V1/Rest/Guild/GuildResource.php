@@ -189,21 +189,49 @@ class GuildResource extends AbstractResourceListener
         if(count($userHasGuild) == 0) {
             return new ApiProblem(404, 'User is not part of any guild.');
         } else {
-            $userGuildInfo = $userHasGuild->current();
-            if($userGuildInfo->rank == 0) {
-                return new ApiProblem(403, 'You cannot leave the guild as guildmaster. Please promote a new guildmaster first');
-            }
+            if($id == 'leave') {
+                $userGuildInfo = $userHasGuild->current();
+                if($userGuildInfo->rank == 0) {
+                    return new ApiProblem(403, 'You cannot leave the guild as guildmaster. Please promote a new guildmaster first');
+                }
 
-            # make sure user id is not zero before delete
-            if($me->User_ID == 0) {
-                return new ApiProblem(400, 'invalid user id');
-            }
-            $this->mGuildUserTbl->delete([
-                'user_idfs' => $me->User_ID,
-                'guild_idfs' => $userGuildInfo->guild_idfs
-            ]);
+                # make sure user id is not zero before delete
+                if($me->User_ID == 0) {
+                    return new ApiProblem(400, 'invalid user id');
+                }
 
-            return true;
+                # leave guild
+                $this->mGuildUserTbl->delete([
+                    'user_idfs' => $me->User_ID,
+                    'guild_idfs' => $userGuildInfo->guild_idfs
+                ]);
+
+                return true;
+            } elseif($id == 'remove') {
+                $userGuildInfo = $userHasGuild->current();
+                if($userGuildInfo->rank == 0) {
+                    # make sure user is is not zero before delete
+                    if($me->User_ID == 0) {
+                        return new ApiProblem(400, 'invalid user id');
+                    }
+
+                    # leave guild
+                    $this->mGuildUserTbl->delete([
+                        'user_idfs' => $me->User_ID,
+                        'guild_idfs' => $userGuildInfo->guild_idfs
+                    ]);
+
+                    # delete guild
+                    $this->mGuildTbl->delete([
+                        'Guild_ID' => $userGuildInfo->guild_idfs
+                    ]);
+
+                    return true;
+                } else {
+                    return new ApiProblem(403, 'You must own a guild to delete it.');
+                }
+            }
+            return new ApiProblem(400, 'Invalid request');
         }
     }
 
