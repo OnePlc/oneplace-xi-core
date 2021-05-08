@@ -4,6 +4,7 @@ return [
         'factories' => [
             'Faucet\\V1\\Rpc\\Claim\\Controller' => \Faucet\V1\Rpc\Claim\ClaimControllerFactory::class,
             'Faucet\\V1\\Rpc\\Referral\\Controller' => \Faucet\V1\Rpc\Referral\ReferralControllerFactory::class,
+            'Faucet\\V1\\Rpc\\HallOfFame\\Controller' => \Faucet\V1\Rpc\HallOfFame\HallOfFameControllerFactory::class,
         ],
     ],
     'router' => [
@@ -46,6 +47,16 @@ return [
                     ],
                 ],
             ],
+            'faucet.rpc.hall-of-fame' => [
+                'type' => 'Segment',
+                'options' => [
+                    'route' => '/statistics/halloffame',
+                    'defaults' => [
+                        'controller' => 'Faucet\\V1\\Rpc\\HallOfFame\\Controller',
+                        'action' => 'hallOfFame',
+                    ],
+                ],
+            ],
         ],
     ],
     'api-tools-versioning' => [
@@ -54,6 +65,7 @@ return [
             1 => 'faucet.rest.dailytask',
             2 => 'faucet.rest.achievement',
             3 => 'faucet.rpc.referral',
+            4 => 'faucet.rpc.hall-of-fame',
         ],
     ],
     'api-tools-rpc' => [
@@ -72,6 +84,13 @@ return [
             ],
             'route_name' => 'faucet.rpc.referral',
         ],
+        'Faucet\\V1\\Rpc\\HallOfFame\\Controller' => [
+            'service_name' => 'HallOfFame',
+            'http_methods' => [
+                0 => 'GET',
+            ],
+            'route_name' => 'faucet.rpc.hall-of-fame',
+        ],
     ],
     'api-tools-content-negotiation' => [
         'controllers' => [
@@ -79,6 +98,7 @@ return [
             'Faucet\\V1\\Rest\\Dailytask\\Controller' => 'HalJson',
             'Faucet\\V1\\Rest\\Achievement\\Controller' => 'HalJson',
             'Faucet\\V1\\Rpc\\Referral\\Controller' => 'Json',
+            'Faucet\\V1\\Rpc\\HallOfFame\\Controller' => 'Json',
         ],
         'accept_whitelist' => [
             'Faucet\\V1\\Rpc\\Claim\\Controller' => [
@@ -101,6 +121,11 @@ return [
                 1 => 'application/json',
                 2 => 'application/*+json',
             ],
+            'Faucet\\V1\\Rpc\\HallOfFame\\Controller' => [
+                0 => 'application/vnd.faucet.v1+json',
+                1 => 'application/json',
+                2 => 'application/*+json',
+            ],
         ],
         'content_type_whitelist' => [
             'Faucet\\V1\\Rpc\\Claim\\Controller' => [
@@ -116,6 +141,10 @@ return [
                 1 => 'application/json',
             ],
             'Faucet\\V1\\Rpc\\Referral\\Controller' => [
+                0 => 'application/vnd.faucet.v1+json',
+                1 => 'application/json',
+            ],
+            'Faucet\\V1\\Rpc\\HallOfFame\\Controller' => [
                 0 => 'application/vnd.faucet.v1+json',
                 1 => 'application/json',
             ],
@@ -169,6 +198,17 @@ return [
             'Faucet\\V1\\Rpc\\Referral\\Controller' => [
                 'actions' => [
                     'referral' => [
+                        'GET' => true,
+                        'POST' => false,
+                        'PUT' => false,
+                        'PATCH' => false,
+                        'DELETE' => false,
+                    ],
+                ],
+            ],
+            'Faucet\\V1\\Rpc\\HallOfFame\\Controller' => [
+                'actions' => [
+                    'hallOfFame' => [
                         'GET' => true,
                         'POST' => false,
                         'PUT' => false,

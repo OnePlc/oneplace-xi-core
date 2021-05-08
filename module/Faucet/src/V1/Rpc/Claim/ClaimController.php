@@ -2,7 +2,7 @@
 /**
  * ClaimController.php - Claim Controller
  *
- * Main Resource for Faucet Claim
+ * Main Controller for Faucet Claim
  *
  * @category Controller
  * @package Faucet
@@ -112,7 +112,8 @@ class ClaimController extends AbstractActionController
 
             # Execute Claim Transaction
             $oTransHelper = new TransactionHelper($this->mMapper);
-            if($oTransHelper->executeTransaction($claimAmount, false, $me->User_ID, 10, 'web-faucet', 'Website Faucet claimed')) {
+            $newBalance = $oTransHelper->executeTransaction($claimAmount, false, $me->User_ID, 10, 'web-faucet', 'Website Faucet claimed');
+            if($newBalance) {
                 # Execute Claim
                 $this->mClaimTbl->insert([
                     'user_idfs' => $me->User_ID,
@@ -122,13 +123,16 @@ class ClaimController extends AbstractActionController
                     'mode' => 'coins',
                     'source' => 'website',
                 ]);
-            }
 
-            # Show Timer
-            return new ViewModel([
-                'status' => 'done',
-                'next' => strtotime($nextDate)-time()
-            ]);
+                # Show Timer
+                return new ViewModel([
+                    'status' => 'done',
+                    'next' => strtotime($nextDate)-time(),
+                    'balance' => $newBalance
+                ]);
+            } else {
+                return new ApiProblemResponse(new ApiProblem(409, 'Transaction Error Please contact admin'));
+            }
         }
     }
 }

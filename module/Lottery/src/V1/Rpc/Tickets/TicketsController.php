@@ -132,14 +132,35 @@ class TicketsController extends AbstractActionController
                     ]);
                 }
 
+                # Get Tickets for current Round
+                $totalTickets = 0;
+                $ticketsRound = $this->mLotteryTkTbl->select(['round_idfs' => $roundID]);
+                if(count($ticketsRound) > 0) {
+                    foreach($ticketsRound as $tk) {
+                        $totalTickets+=$tk->tickets;
+                    }
+                }
+
+                # Calculate Users Winning Chance
+                $chanceWin = 0;
+                if($myTotalTickets > 0 && $totalTickets > 0) {
+                    $chanceWin = number_format(100/($totalTickets/$myTotalTickets),8,'.','\'');
+                }
+
+                $jackpot = ($totalTickets*10)*.9;
+
                 # success
                 return new ViewModel([
                     'state' => 'success',
                     'message' => $tickets.' bought for round '.$roundID,
+                    'all_tickets'=> $totalTickets,
+                    'my_tickets' => $myTotalTickets,
+                    'jackpot' => $jackpot,
+                    'my_chance'=> $chanceWin,
                     'user' => (object)[
+                        'id'=> $me->User_ID,
                         'name' => $me->username,
-                        'balance' => $newBalance,
-                        'tickets' => $myTotalTickets
+                        'token_balance' => $newBalance,
                     ],
                 ]);
             }

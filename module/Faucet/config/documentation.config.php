@@ -66,4 +66,10 @@ return [
             'description' => 'Get all Referral Information for current User',
         ],
     ],
+    'Faucet\\V1\\Rpc\\HallOfFame\\Controller' => [
+        'description' => 'Hall of Fame',
+        'GET' => [
+            'description' => 'Get Hall of Fame Numbers & Stats',
+        ],
+    ],
 ];
