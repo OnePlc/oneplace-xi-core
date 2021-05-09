@@ -20,6 +20,7 @@ use Laminas\ApiTools\Rest\AbstractResourceListener;
 use Laminas\ApiTools\ContentNegotiation\ViewModel;
 use Laminas\Db\TableGateway\TableGateway;
 use Laminas\Session\Container;
+use Laminas\Db\Sql\Where;
 
 class UserResource extends AbstractResourceListener
 {
@@ -37,6 +38,34 @@ class UserResource extends AbstractResourceListener
      * @var TableGateway $mXPLvlTbl
      */
     protected $mXPLvlTbl;
+
+    /**
+     * Guild Table
+     *
+     * @var TableGateway $mGuildTbl
+     * @since 1.0.0
+     */
+    protected $mGuildTbl;
+
+    /**
+     * Guild Rank Table
+     *
+     * @var TableGateway $mGuildRankTbl
+     * @since 1.0.0
+     */
+    protected $mGuildRankTbl;
+
+    /**
+     * Guild Table User Table
+     *
+     * Relation between Guild and User
+     * to determine if user has a guild and
+     * if yes what guild it is
+     *
+     * @var TableGateway $mGuildUserTbl
+     * @since 1.0.0
+     */
+    protected $mGuildUserTbl;
 
     /**
      * User Session
@@ -57,6 +86,9 @@ class UserResource extends AbstractResourceListener
     {
         $this->mapper = new TableGateway('user', $mapper);
         $this->mXPLvlTbl = new TableGateway('user_xp_level', $mapper);
+        $this->mGuildTbl = new TableGateway('faucet_guild', $mapper);
+        $this->mGuildRankTbl = new TableGateway('faucet_guild_rank', $mapper);
+        $this->mGuildUserTbl = new TableGateway('faucet_guild_user', $mapper);
         $this->mSession = new Container('webauth');
     }
 
@@ -149,6 +181,45 @@ class UserResource extends AbstractResourceListener
             $dPercent = round((100 / ($oNextLvl->xp_total / $user->xp_current)), 2);
         }
 
+        # check if user already has joined or created a guild
+        $guild = (object)[];
+        $checkWh = new Where();
+        $checkWh->equalTo('user_idfs', $user->User_ID);
+        $checkWh->notLike('date_joined', '0000-00-00 00:00:00');
+        $userHasGuild = $this->mGuildUserTbl->select($checkWh);
+
+        if(count($userHasGuild) > 0) {
+            $guildRank = $userHasGuild->current();
+            $guildDB = $this->mGuildTbl->select(['Guild_ID' => $guildRank->guild_idfs]);
+            if(count($guildDB) > 0) {
+                $guildDB = $guildDB->current();
+                $rank = '-';
+                $rankDB = $this->mGuildRankTbl->select([
+                    'guild_idfs' => $guildDB->Guild_ID,
+                    'level' => $guildRank->rank,
+                ]);
+                if(count($rankDB) > 0) {
+                    $rank = $rankDB->current()->label;
+                }
+                $guildXPPercent = 0;
+                if ($guildDB->xp_current != 0) {
+                    $guildNextLvl = $this->mXPLvlTbl->select(['Level_ID' => ($guildDB->xp_level + 1)])->current();
+                    $guildXPPercent = round((100 / ($guildNextLvl->xp_total / $guildDB->xp_current)), 2);
+                }
+                $guild = (object)[
+                    'id' => $guildDB->Guild_ID,
+                    'name' => $guildDB->label,
+                    'icon' => $guildDB->icon,
+                    'xp_level' => $guildDB->xp_level,
+                    'xp_total' => $guildDB->xp_total,
+                    'xp_current' => $guildDB->xp_current,
+                    'xp_percent' => $guildXPPercent,
+                    'token_balance' => $guildDB->token_balance,
+                    'rank' => (object)['id' => $guildRank->rank, 'name' => $rank],
+                ];
+            }
+        }
+
         # only send public fields
         return (object)[
             'id' => $user->User_ID,
@@ -157,6 +228,7 @@ class UserResource extends AbstractResourceListener
             'token_balance' => $user->token_balance,
             'xp_level' => $user->xp_level,
             'xp_percent' => $dPercent,
+            'guild' => $guild
         ];
     }
 

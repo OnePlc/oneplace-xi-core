@@ -19,6 +19,10 @@ use Laminas\ApiTools\Rest\AbstractResourceListener;
 use Laminas\ApiTools\ContentNegotiation\ViewModel;
 use Laminas\Db\TableGateway\TableGateway;
 use Laminas\Db\Sql\Where;
+use Laminas\Db\Sql\Select;
+use Laminas\Db\ResultSet\ResultSet;
+use Laminas\Paginator\Paginator;
+use Laminas\Paginator\Adapter\DbSelect;
 use Laminas\Session\Container;
 use Faucet\Transaction\TransactionHelper;
 
@@ -39,6 +43,30 @@ class GuildResource extends AbstractResourceListener
      * @since 1.0.0
      */
     protected $mGuildTbl;
+
+    /**
+     * Guild Rank Table
+     *
+     * @var TableGateway $mGuildRankTbl
+     * @since 1.0.0
+     */
+    protected $mGuildRankTbl;
+
+    /**
+     * Guild Task Table
+     *
+     * @var TableGateway $mGuildTaskTbl
+     * @since 1.0.0
+     */
+    protected $mGuildTaskTbl;
+
+    /**
+     * Guild Achievement Table
+     *
+     * @var TableGateway $mGuildAchievTbl
+     * @since 1.0.0
+     */
+    protected $mGuildAchievTbl;
 
     /**
      * Guild Table User Table
@@ -80,6 +108,9 @@ class GuildResource extends AbstractResourceListener
         # Init Tables for this API
         $this->mGuildTbl = new TableGateway('faucet_guild', $mapper);
         $this->mGuildUserTbl = new TableGateway('faucet_guild_user', $mapper);
+        $this->mGuildRankTbl = new TableGateway('faucet_guild_rank', $mapper);
+        $this->mGuildTaskTbl = new TableGateway('faucet_guild_weekly', $mapper);
+        $this->mGuildAchievTbl = new TableGateway('faucet_guild_achievement', $mapper);
         $this->mUserTbl = new TableGateway('user', $mapper);
         $this->mSession = new Container('webauth');
         $this->mTransaction = new TransactionHelper($mapper);
@@ -137,6 +168,16 @@ class GuildResource extends AbstractResourceListener
                         'date_joined' => date('Y-m-d H:i:s', time()),
                         'date_declined' => '0000-00-00 00:00:00',
                     ]);
+
+                    # create guild ranks
+                    $guildRanks = [0 => 'Guildmaster',1 => 'Officer',2 => 'Veteran', 3 => 'Member',9 => 'Newbie'];
+                    foreach(array_keys($guildRanks) as $rankLevel) {
+                        $this->mGuildRankTbl->insert([
+                            'guild_idfs' => $newGuildId,
+                            'level' => $rankLevel,
+                            'label' => $guildRanks[$rankLevel],
+                        ]);
+                    }
 
                     # deduct cost from user balance
                     $newBalance = $this->mTransaction->executeTransaction($guildPrice, 1, $me->User_ID, $newGuildId, 'create-guild', 'Guild '.$guildName.' created');
@@ -262,6 +303,112 @@ class GuildResource extends AbstractResourceListener
      */
     public function fetch($id)
     {
+        # Check if user is logged in
+        if(!isset($this->mSession->auth)) {
+            return new ApiProblem(401, 'Not logged in');
+        }
+        $me = $this->mSession->auth;
+
+        $guild = $this->mGuildTbl->select(['Guild_ID' => $id]);
+        if(count($guild) == 0) {
+            return new ApiProblem(404, 'Guild not found');
+        }
+        $guild = $guild->current();
+
+        $guildRanks = [];
+        $guildRanksDB = $this->mGuildRankTbl->select(['guild_idfs' => $id]);
+        if(count($guildRanksDB) > 0) {
+            foreach($guildRanksDB as $rank) {
+                $guildRanks[$rank->level] = $rank->label;
+            }
+        }
+
+        /**
+         * Load Guild Members List (paginated)
+         */
+        $page = (isset($_REQUEST['page'])) ? filter_var($_REQUEST['page'], FILTER_SANITIZE_NUMBER_INT) : 1;
+        $guildMembers = [];
+        $memberSel = new Select($this->mGuildUserTbl->getTable());
+        $checkWh = new Where();
+        $checkWh->equalTo('guild_idfs', $id);
+        $checkWh->notLike('date_joined', '0000-00-00 00:00:00');
+        $memberSel->where($checkWh);
+        # Create a new pagination adapter object
+        $oPaginatorAdapter = new DbSelect(
+        # our configured select object
+            $memberSel,
+            # the adapter to run it against
+            $this->mGuildUserTbl->getAdapter()
+        );
+        # Create Paginator with Adapter
+        $membersPaginated = new Paginator($oPaginatorAdapter);
+        $membersPaginated->setCurrentPageNumber($page);
+        $membersPaginated->setItemCountPerPage(25);
+        foreach($membersPaginated as $guildMember) {
+            $member = $this->mUserTbl->select(['User_ID' => $guildMember->user_idfs]);
+            if(count($member) > 0) {
+                $member = $member->current();
+                $guildMembers[] = (object)[
+                    'id' => $member->User_ID,
+                    'name' => $member->username,
+                    'xp_level' => $member->xp_level,
+                    'rank' => (object)[
+                        'id' => $guildMember->rank,
+                        'name'=> $guildRanks[$guildMember->rank]
+                    ]
+                ];
+            }
+        }
+        $totalMembers = $this->mGuildUserTbl->select($checkWh)->count();
+
+        /**
+         * Load Guild Tasks List (Weeklys)
+         */
+        $weeklyTasks = [];
+        $weeklysDB = $this->mGuildTaskTbl->select();
+        foreach($weeklysDB as $weekly) {
+            $weeklyTasks[] = (object)[
+                'id' => $weekly->Weekly_ID,
+                'name' => $weekly->label,
+                'description' => $weekly->description,
+                'target' => $weekly->target,
+                'target_mode' => $weekly->target_mode,
+                'reward' => $weekly->reward,
+                'current' => 0,
+            ];
+        }
+
+        /**
+         * Load Guild Achievements
+         */
+        $achievements = [];
+        $achievementsDB = $this->mGuildAchievTbl->select();
+        foreach($achievementsDB as $achiev) {
+            $achievements[] = (object)[
+                'id' => $achiev->Achievement_ID,
+                'name' => $achiev->label,
+                'description' => $achiev->description,
+                'target' => $achiev->target,
+                'target_mode' => $achiev->target_mode,
+                'reward' => $achiev->reward,
+                'current' => 0,
+            ];
+        }
+
+        return (object)[
+            'guild' => (object)[
+                'id' => $guild->Guild_ID,
+                'name'=> $guild->label,
+                'members' => $guildMembers,
+                'tasks' => $weeklyTasks,
+                'achievements' => $achievements,
+                'total_members' => $totalMembers,
+                'page_count' => round($totalMembers/25),
+                'page_size' => 25,
+                'page' => $page,
+            ],
+        ];
+
         return new ApiProblem(405, 'The GET method has not been defined for individual resources');
     }
 
@@ -280,16 +427,60 @@ class GuildResource extends AbstractResourceListener
         }
         $me = $this->mSession->auth;
 
+        $page = (isset($_REQUEST['page'])) ? filter_var($_REQUEST['page'], FILTER_SANITIZE_NUMBER_INT) : 1;
+
         # Compile list of all guilds
         $guilds = [];
-        $guildsDB = $this->mGuildTbl->select();
-        foreach($guildsDB as $guild) {
-            # count guild members
-            $guild->members = $this->mGuildUserTbl->select(['guild_idfs' => $guild->Guild_ID])->count();
-            $guilds[] = $guild;
+        $guildSel = new Select($this->mGuildTbl->getTable());
+        # Create a new pagination adapter object
+        $oPaginatorAdapter = new DbSelect(
+        # our configured select object
+            $guildSel,
+            # the adapter to run it against
+            $this->mGuildTbl->getAdapter()
+        );
+        # Create Paginator with Adapter
+        $guildsPaginated = new Paginator($oPaginatorAdapter);
+        $guildsPaginated->setCurrentPageNumber($page);
+        $guildsPaginated->setItemCountPerPage(4);
+
+        $totalGuilds = $this->mGuildTbl->select()->count();
+
+        # check if user already has joined or created a guild
+        $checkWh = new Where();
+        $checkWh->equalTo('user_idfs', $me->User_ID);
+        $checkWh->like('date_joined', '0000-00-00 00:00:00');
+        $userRequestsDB = $this->mGuildUserTbl->select($checkWh);
+        $userRequests = [];
+        if(count($userRequestsDB) > 0){
+            foreach($userRequestsDB as $req) {
+                $userRequests[$req->guild_idfs] = $req->date_requested;
+            }
         }
 
-        return $guilds;
+        foreach($guildsPaginated as $guild) {
+            # count guild members
+            $guild->members = $this->mGuildUserTbl->select(['guild_idfs' => $guild->Guild_ID])->count();
+            $guildAPI = (object)['id' => $guild->Guild_ID,'name' => $guild->label,'members' => $guild->members,
+                'xp_level' => $guild->xp_level,'xp_current' => $guild->xp_current,'xp_total' => $guild->xp_total,
+                'icon' => $guild->icon];
+            if(array_key_exists($guild->Guild_ID,$userRequests)) {
+                $guildAPI->userHasRequestOpen = 1;
+            } else {
+                $guildAPI->userHasRequestOpen = 0;
+            }
+            $guilds[] =$guildAPI;
+        }
+
+        // TODO: Remove static URL
+        return (object)[
+            '_links' => (object)['self' => (object)['href' => 'https://xi.swissfaucet.io/guild']],
+            '_embedded' => (object)['guild' => $guilds],
+            'total_items' => $totalGuilds,
+            'page_count' => round($totalGuilds/4),
+            'page_size' => 4,
+            'page' => $page,
+        ];
     }
 
     /**
