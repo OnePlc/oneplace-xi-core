@@ -18,8 +18,37 @@ use Laminas\Db\TableGateway\TableGateway;
 
 class TransactionHelper {
 
+    /**
+     * User Transaction Table
+     *
+     * @var TableGateway $mTransTbl
+     * @since 1.0.0
+     */
     private static $mTransTbl;
+
+    /**
+     * Guild Transaction Table
+     *
+     * @var TableGateway $mGuildTransTbl
+     * @since 1.0.0
+     */
+    private static $mGuildTransTbl;
+
+    /**
+     * User Table
+     *
+     * @var TableGateway $mUserTbl
+     * @since 1.0.0
+     */
     private static $mUserTbl;
+
+    /**
+     * Guild Table
+     *
+     * @var TableGateway $mGuildTbl
+     * @since 1.0.0
+     */
+    private static $mGuildTbl;
 
     /**
      * Constructor
@@ -32,6 +61,8 @@ class TransactionHelper {
     {
         TransactionHelper::$mTransTbl = new TableGateway('faucet_transaction', $mapper);
         TransactionHelper::$mUserTbl = new TableGateway('user', $mapper);
+        TransactionHelper::$mGuildTbl = new TableGateway('faucet_guild', $mapper);
+        TransactionHelper::$mGuildTransTbl = new TableGateway('faucet_guild_transaction', $mapper);
     }
 
     /**
@@ -99,6 +130,70 @@ class TransactionHelper {
     }
 
     /**
+     * Execute Faucet Guild Token Transaction for User
+     *
+     * @param float $amount - Amount of Token to transfer
+     * @param bool $isInput - Defines if Transaction is Output
+     * @param int $guildId - Target Guild ID
+     * @param int $refId - Reference ID for Transaction
+     * @param string $refType - Reference Type for Transaction
+     * @param string $description - Detailed Description for Transaction
+     * @param int $createdBy (optional) - Source User ID
+     * @since 1.0.0
+     */
+    public function executeGuildTransaction(float $amount, bool $isOutput, int $guildId, int $refId,
+                                       string $refType, string $description, int $createdBy)
+    {
+        # Generate Transaction ID
+        try {
+            $sTransactionID = $bytes = random_bytes(5);
+        } catch(\Exception $e) {
+            # Fallback if random bytes fails
+            $sTransactionID = time();
+        }
+        $sTransactionID = hash("sha256",$sTransactionID);
+
+        # Do not allow zero for update
+        if($guildId == 0) {
+            return false;
+        }
+
+        # Get user from database
+        $guildInfo = TransactionHelper::$mGuildTbl->select(['Guild_ID' => $guildId]);
+        if(count($guildInfo) > 0) {
+            $guildInfo = $guildInfo->current();
+            # calculate new balance
+            $newBalance = ($isOutput) ? $guildInfo->token_balance-$amount : $guildInfo->token_balance+$amount;
+            # Insert Transaction
+            if(TransactionHelper::$mGuildTransTbl->insert([
+                'Transaction_ID' => $sTransactionID,
+                'amount' => $amount,
+                'token_balance' => $guildInfo->token_balance,
+                'token_balance_new' => $newBalance,
+                'is_output' => ($isOutput) ? 1 : 0,
+                'date' => date('Y-m-d H:i:s', time()),
+                'ref_idfs' => $refId,
+                'ref_type' => $refType,
+                'comment' => $description,
+                'guild_idfs' => $guildId,
+                'created_by' => $createdBy,
+            ])) {
+                # update user balance
+                TransactionHelper::$mGuildTbl->update([
+                    'token_balance' => $newBalance,
+                ],[
+                    'Guild_ID' => $guildId
+                ]);
+                return $newBalance;
+            } else {
+                return false;
+            }
+        } else {
+            return false;
+        }
+    }
+
+    /**
      * Check if user has enough funds for transaction
      *
      * @param $amount
@@ -112,6 +207,27 @@ class TransactionHelper {
         if(count($userinfo) > 0) {
             $userinfo = $userinfo->current();
             if($userinfo->token_balance >= $amount) {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    /**
+     * Check if guild has enough funds for transaction
+     *
+     * @param $amount
+     * @param $guildId
+     * @return bool
+     * @since 1.0.0
+     */
+    public function checkGuildBalance($amount,$guildId)
+    {
+        $guildinfo = TransactionHelper::$mGuildTbl->select(['Guild_ID' => $guildId]);
+        if(count($guildinfo) > 0) {
+            $guildinfo = $guildinfo->current();
+            if($guildinfo->token_balance >= $amount) {
                 return true;
             }
         }

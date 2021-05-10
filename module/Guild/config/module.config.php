@@ -16,11 +16,22 @@ return [
                     ],
                 ],
             ],
+            'guild.rpc.bank' => [
+                'type' => 'Segment',
+                'options' => [
+                    'route' => '/guildbank',
+                    'defaults' => [
+                        'controller' => 'Guild\\V1\\Rpc\\Bank\\Controller',
+                        'action' => 'bank',
+                    ],
+                ],
+            ],
         ],
     ],
     'api-tools-versioning' => [
         'uri' => [
             0 => 'guild.rest.guild',
+            1 => 'guild.rpc.bank',
         ],
     ],
     'api-tools-rest' => [
@@ -50,6 +61,7 @@ return [
     'api-tools-content-negotiation' => [
         'controllers' => [
             'Guild\\V1\\Rest\\Guild\\Controller' => 'HalJson',
+            'Guild\\V1\\Rpc\\Bank\\Controller' => 'Json',
         ],
         'accept_whitelist' => [
             'Guild\\V1\\Rest\\Guild\\Controller' => [
@@ -57,9 +69,18 @@ return [
                 1 => 'application/hal+json',
                 2 => 'application/json',
             ],
+            'Guild\\V1\\Rpc\\Bank\\Controller' => [
+                0 => 'application/vnd.guild.v1+json',
+                1 => 'application/json',
+                2 => 'application/*+json',
+            ],
         ],
         'content_type_whitelist' => [
             'Guild\\V1\\Rest\\Guild\\Controller' => [
+                0 => 'application/vnd.guild.v1+json',
+                1 => 'application/json',
+            ],
+            'Guild\\V1\\Rpc\\Bank\\Controller' => [
                 0 => 'application/vnd.guild.v1+json',
                 1 => 'application/json',
             ],
@@ -84,6 +105,9 @@ return [
     'api-tools-content-validation' => [
         'Guild\\V1\\Rest\\Guild\\Controller' => [
             'input_filter' => 'Guild\\V1\\Rest\\Guild\\Validator',
+        ],
+        'Guild\\V1\\Rpc\\Bank\\Controller' => [
+            'input_filter' => 'Guild\\V1\\Rpc\\Bank\\Validator',
         ],
     ],
     'input_filter_specs' => [
@@ -128,6 +152,21 @@ return [
                 'error_message' => 'You must provide a valid guild icon',
             ],
         ],
+        'Guild\\V1\\Rpc\\Bank\\Validator' => [
+            0 => [
+                'required' => true,
+                'validators' => [],
+                'filters' => [
+                    0 => [
+                        'name' => \Laminas\Filter\ToInt::class,
+                        'options' => [],
+                    ],
+                ],
+                'name' => 'amount',
+                'description' => 'Amount to Withdraw or Deposit',
+                'error_message' => 'You must provide a valid amount',
+            ],
+        ],
     ],
     'api-tools-mvc-auth' => [
         'authorization' => [
@@ -147,6 +186,32 @@ return [
                     'DELETE' => true,
                 ],
             ],
+            'Guild\\V1\\Rpc\\Bank\\Controller' => [
+                'actions' => [
+                    'bank' => [
+                        'GET' => true,
+                        'POST' => true,
+                        'PUT' => true,
+                        'PATCH' => false,
+                        'DELETE' => false,
+                    ],
+                ],
+            ],
+        ],
+    ],
+    'controllers' => [
+        'factories' => [
+            'Guild\\V1\\Rpc\\Bank\\Controller' => \Guild\V1\Rpc\Bank\BankControllerFactory::class,
+        ],
+    ],
+    'api-tools-rpc' => [
+        'Guild\\V1\\Rpc\\Bank\\Controller' => [
+            'service_name' => 'Bank',
+            'http_methods' => [
+                0 => 'POST',
+                1 => 'PUT',
+            ],
+            'route_name' => 'guild.rpc.bank',
         ],
     ],
 ];
