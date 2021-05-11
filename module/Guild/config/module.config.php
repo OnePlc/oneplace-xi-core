@@ -154,7 +154,7 @@ return [
         ],
         'Guild\\V1\\Rpc\\Bank\\Validator' => [
             0 => [
-                'required' => true,
+                'required' => false,
                 'validators' => [],
                 'filters' => [
                     0 => [
@@ -210,6 +210,7 @@ return [
             'http_methods' => [
                 0 => 'POST',
                 1 => 'PUT',
+                2 => 'GET',
             ],
             'route_name' => 'guild.rpc.bank',
         ],

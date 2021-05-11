@@ -19,9 +19,12 @@ use Application\Controller\IndexController;
 use Faucet\Transaction\TransactionHelper;
 use Laminas\ApiTools\ApiProblem\ApiProblem;
 use Laminas\ApiTools\ApiProblem\ApiProblemResponse;
+use Laminas\Db\Sql\Select;
 use Laminas\Db\TableGateway\TableGateway;
 use Laminas\Db\Sql\Where;
 use Laminas\Mvc\Controller\AbstractActionController;
+use Laminas\Paginator\Adapter\DbSelect;
+use Laminas\Paginator\Paginator;
 use Laminas\Session\Container;
 
 class BankController extends AbstractActionController
@@ -41,6 +44,21 @@ class BankController extends AbstractActionController
      * @since 1.0.0
      */
     protected $mGuildTbl;
+
+    /**
+     * Guild Rank Table
+     *
+     * @var TableGateway $mGuildRankTbl
+     * @since 1.0.0
+     */
+    protected $mGuildRankTbl;
+
+    /**
+     * User XP Level Table
+     *
+     * @var TableGateway $mXPLvlTbl
+     */
+    protected $mXPLvlTbl;
 
     /**
      * Guild Table User Table
@@ -82,6 +100,8 @@ class BankController extends AbstractActionController
         # Init Tables for this API
         $this->mGuildTbl = new TableGateway('faucet_guild', $mapper);
         $this->mGuildUserTbl = new TableGateway('faucet_guild_user', $mapper);
+        $this->mGuildRankTbl = new TableGateway('faucet_guild_rank', $mapper);
+        $this->mXPLvlTbl = new TableGateway('user_xp_level', $mapper);
         $this->mGuildRankPermTbl = new TableGateway('faucet_guild_rank_permission', $mapper);
         $this->mSession = new Container('webauth');
         $this->mTransaction = new TransactionHelper($mapper);
@@ -122,16 +142,43 @@ class BankController extends AbstractActionController
 
         # Get Request Data
         $request = $this->getRequest();
-        $json = IndexController::loadJSONFromRequestBody(['amount'],$this->getRequest()->getContent());
-        if(!$json) {
-            return new ApiProblemResponse(new ApiProblem(400, 'Invalid JSON Body'));
+        if($request->isPut() || $request->isPost()) {
+            $json = IndexController::loadJSONFromRequestBody(['amount'],$this->getRequest()->getContent());
+            if(!$json) {
+                return new ApiProblemResponse(new ApiProblem(400, 'Invalid JSON Body'));
+            }
+            $amount = filter_var($json->amount, FILTER_SANITIZE_NUMBER_INT);
         }
-        $amount = filter_var($json->amount, FILTER_SANITIZE_NUMBER_INT);
+
+        $rank = '-';
+        $rankDB = $this->mGuildRankTbl->select([
+            'guild_idfs' => $guild->Guild_ID,
+            'level' => $userHasGuild->rank,
+        ]);
+        if(count($rankDB) > 0) {
+            $rank = $rankDB->current()->label;
+        }
+
+        $guildXPPercent = 0;
+        if ($guild->xp_current != 0) {
+            $guildNextLvl = $this->mXPLvlTbl->select(['Level_ID' => ($guild->xp_level + 1)])->current();
+            $guildXPPercent = round((100 / ($guildNextLvl->xp_total / $guild->xp_current)), 2);
+        }
 
         /**
          * Execute Command based on Request Type
          */
         switch($request) {
+            /**
+             * Transactions and Balance
+             */
+            case $request->isGet():
+                $page = (isset($_REQUEST['page'])) ? filter_var($_REQUEST['page'], FILTER_SANITIZE_NUMBER_INT) : 1;
+
+                return [
+                    'guild_token_balance' => $guild->token_balance,
+                    'transactions' => $this->mTransaction->getGuildTransactions($guild->Guild_ID, $page, 10),
+                ];
             /**
              * Withdraw
              */
@@ -161,7 +208,17 @@ class BankController extends AbstractActionController
                                 return [
                                     'state' => 'success',
                                     'message' => $amount.' successfully withdrawn from Guildbank',
-                                    'guild_token_balance' => $newGuildBalance,
+                                    'guild' => (object)[
+                                        'id' => $guild->Guild_ID,
+                                        'name' => $guild->label,
+                                        'icon' => $guild->icon,
+                                        'xp_level' => $guild->xp_level,
+                                        'xp_total' => $guild->xp_total,
+                                        'xp_current' => $guild->xp_current,
+                                        'xp_percent' => $guildXPPercent,
+                                        'rank' => (object)['id' => $userHasGuild->rank, 'name' => $rank],
+                                        'token_balance' => $newGuildBalance,
+                                    ],
                                     'token_balance' => $newBalance,
                                 ];
                             } else {
@@ -190,7 +247,17 @@ class BankController extends AbstractActionController
                             return [
                                 'state' => 'success',
                                 'message' => $amount.' successfully deposited to Guildbank',
-                                'guild_token_balance' => $newGuildBalance,
+                                'guild' => (object)[
+                                    'id' => $guild->Guild_ID,
+                                    'name' => $guild->label,
+                                    'icon' => $guild->icon,
+                                    'xp_level' => $guild->xp_level,
+                                    'xp_total' => $guild->xp_total,
+                                    'xp_current' => $guild->xp_current,
+                                    'xp_percent' => $guildXPPercent,
+                                    'rank' => (object)['id' => $userHasGuild->rank, 'name' => $rank],
+                                    'token_balance' => $newGuildBalance,
+                                ],
                                 'token_balance' => $newBalance,
                             ];
                         } else {

@@ -14,7 +14,10 @@
  */
 namespace Faucet\Transaction;
 
+use Laminas\Db\Sql\Select;
 use Laminas\Db\TableGateway\TableGateway;
+use Laminas\Paginator\Adapter\DbSelect;
+use Laminas\Paginator\Paginator;
 
 class TransactionHelper {
 
@@ -233,5 +236,39 @@ class TransactionHelper {
         }
 
         return false;
+    }
+
+    /**
+     * Get paginated Guild Transaction Log
+     *
+     * @param $guildId
+     * @param $page
+     * @param $itemsPerPage
+     * @return Paginator
+     * @since 1.0.0
+     */
+    public function getGuildTransactions($guildId,$page,$itemsPerPage) {
+        # Compile list of all guilds
+        $transactions = [];
+        $transactionsSel = new Select(TransactionHelper::$mGuildTransTbl->getTable());
+        $transactionsSel->where(['guild_idfs' => $guildId]);
+        $transactionsSel->order('date DESC');
+        # Create a new pagination adapter object
+        $oPaginatorAdapter = new DbSelect(
+        # our configured select object
+            $transactionsSel,
+            # the adapter to run it against
+            TransactionHelper::$mGuildTransTbl->getAdapter()
+        );
+        # Create Paginator with Adapter
+        $transactionsPaginated = new Paginator($oPaginatorAdapter);
+        $transactionsPaginated->setCurrentPageNumber($page);
+        $transactionsPaginated->setItemCountPerPage($itemsPerPage);
+
+        foreach($transactionsPaginated as $trans) {
+            $transactions[] = $trans;
+        }
+
+        return $transactions;
     }
 }

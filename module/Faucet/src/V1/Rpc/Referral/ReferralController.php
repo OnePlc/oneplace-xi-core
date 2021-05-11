@@ -14,9 +14,13 @@
  */
 namespace Faucet\V1\Rpc\Referral;
 
+use Laminas\Db\Sql\Predicate\PredicateSet;
+use Laminas\Db\Sql\Select;
 use Laminas\Mvc\Controller\AbstractActionController;
 use Laminas\Db\TableGateway\TableGateway;
 use Laminas\Db\Sql\Where;
+use Laminas\Paginator\Adapter\DbSelect;
+use Laminas\Paginator\Paginator;
 use Laminas\Session\Container;
 use Laminas\ApiTools\ContentNegotiation\ViewModel;
 use Laminas\ApiTools\ApiProblem\ApiProblem;
@@ -75,26 +79,36 @@ class ReferralController extends AbstractActionController
             return new ApiProblem(401, 'Not logged in');
         }
         $me = $this->mSession->auth;
-
+        $page = (isset($_REQUEST['page'])) ? filter_var($_REQUEST['page'], FILTER_SANITIZE_NUMBER_INT) : 1;
+        $pageSize = 25;
         # TODO: Rewrite to Batch to reduce DB load
         # TODO: Add paginated list of refs
-        $myRefs = $this->mUserTbl->select(['ref_user_idfs' => $me->User_ID]);
-        $myRefCount = 0;
-        $myRefWithdrawn = 0;
-        $myRefBalances = 0;
-        if(count($myRefs) > 0) {
-            foreach($myRefs as $ref) {
-                $myRefCount++;
-                $myRefBalances+=$ref->token_balance;
-                $myRefWithdraws = $this->mWthTbl->select(['user_idfs' => $ref->User_ID]);
-                # process withdrawals for user
-                if(count($myRefWithdraws) > 0) {
-                    foreach($myRefWithdraws as $wth) {
-                        $myRefWithdrawn+=$wth->amount;
-                    }
-                }
-            }
+        $myRefs = [];
+        $memberSel = new Select($this->mUserTbl->getTable());
+        $checkWh = new Where();
+        $checkWh->equalTo('ref_user_idfs', $me->User_ID);
+        $memberSel->where($checkWh);
+        # Create a new pagination adapter object
+        $oPaginatorAdapter = new DbSelect(
+        # our configured select object
+            $memberSel,
+            # the adapter to run it against
+            $this->mUserTbl->getAdapter()
+        );
+        # Create Paginator with Adapter
+        $membersPaginated = new Paginator($oPaginatorAdapter);
+        $membersPaginated->setCurrentPageNumber($page);
+        $membersPaginated->setItemCountPerPage($pageSize);
+        foreach($membersPaginated as $ref) {
+            $myRefs[] = (object)[
+                'id' => $ref->User_ID, 'name' => $ref->username,'xp_level' => $ref->xp_level,
+                'signup' => $ref->created_date, 'withdrawn' => 0, 'bonus' => 0,
+            ];
         }
+
+        $myRefCount = $this->mUserTbl->select($checkWh)->count();
+
+        $myRefWithdrawn = 0;
 
         # Return referall info
         return new ViewModel([
@@ -106,7 +120,10 @@ class ReferralController extends AbstractActionController
             'total_items' => $myRefCount,
             'withdrawn' => $myRefWithdrawn,
             'bonus' => $myRefWithdrawn*.1,
-            'balances' => $myRefBalances,
+            'referrals' => $myRefs,
+            'page' => $page,
+            'page_count' => round($myRefCount/$pageSize),
+            'page_size' => $pageSize,
         ]);
     }
 }
