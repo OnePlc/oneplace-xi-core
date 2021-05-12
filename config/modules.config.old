@@ -36,5 +36,4 @@ return [
     'Lottery',
     'Guild',
     'Offerwall',
-    'Game',
 ];

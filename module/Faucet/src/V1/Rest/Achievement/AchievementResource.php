@@ -41,6 +41,14 @@ class AchievementResource extends AbstractResourceListener
     protected $mAchievTbl;
 
     /**
+     * Achievement Category Table
+     *
+     * @var TableGateway $mAchievCatTbl
+     * @since 1.0.0
+     */
+    protected $mAchievCatTbl;
+
+    /**
      * Achievement Table User Table
      *
      * Relation between Achievement and User
@@ -70,6 +78,7 @@ class AchievementResource extends AbstractResourceListener
     {
         # Init Tables for this API
         $this->mAchievTbl = new TableGateway('faucet_achievement', $mapper);
+        $this->mAchievCatTbl = new TableGateway('faucet_achievement_category', $mapper);
         $this->mMinerTbl = new TableGateway('faucet_miner', $mapper);
         $this->mAchievDoneTbl = new TableGateway('faucet_achievement_user', $mapper);
         $this->mSession = new Container('webauth');
@@ -154,13 +163,40 @@ class AchievementResource extends AbstractResourceListener
             ->OR
             ->equalTo('mode', 'global')
             ->UNNEST;
+        $oWh->equalTo('series', 0);
         $achievementsDB = $this->mAchievTbl->select($oWh);
         $achievements = [];
+        $achievementCategories = [];
         foreach($achievementsDB as $achiev) {
-            $achievements[] = $achiev;
+            if(!array_key_exists($achiev->category_idfs,$achievements)) {
+                $category = $this->mAchievCatTbl->select(['Category_ID' => $achiev->category_idfs])->current();
+                $achievements[$achiev->category_idfs] = [];
+                $achievementCategories[] = (object)[
+                    'id' => $category->Category_ID,
+                    'name' => $category->label,
+                    'icon' => $category->icon,
+                    'target' => 100,
+                    'progress' => 0,
+                ];
+            }
+            $achievements[$achiev->category_idfs][] = (object)[
+                'id' => $achiev->Achievement_ID,
+                'name' => $achiev->label,
+                'goal' => $achiev->goal,
+                'reward' => $achiev->reward,
+                'mode' => $achiev->mode,
+                'progress' => 0
+            ];
         }
 
-        return $achievements;
+        # Return referall info
+        return (object)([
+            '_links' => [],
+            'total_items' => count($achievements),
+            'user_achievement' => [],
+            'category' => $achievementCategories,
+            'achievement' => $achievements,
+        ]);
     }
 
     /**

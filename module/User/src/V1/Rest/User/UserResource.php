@@ -36,6 +36,7 @@ class UserResource extends AbstractResourceListener
      * User XP Level Table
      *
      * @var TableGateway $mXPLvlTbl
+     * @since 1.0.0
      */
     protected $mXPLvlTbl;
 

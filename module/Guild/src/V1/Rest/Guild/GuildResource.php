@@ -474,7 +474,7 @@ class GuildResource extends AbstractResourceListener
 
         // TODO: Remove static URL
         return (object)[
-            '_links' => (object)['self' => (object)['href' => 'https://xi.swissfaucet.io/guild']],
+            '_links' => (object)['self' => (object)['href' => 'https://xi.api.swissfaucet.io/guild']],
             '_embedded' => (object)['guild' => $guilds],
             'total_items' => $totalGuilds,
             'page_count' => round($totalGuilds/4),
