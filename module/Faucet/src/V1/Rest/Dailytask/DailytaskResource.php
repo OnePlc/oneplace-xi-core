@@ -160,14 +160,34 @@ class DailytaskResource extends AbstractResourceListener
             return new ApiProblem(400, 'You must specify a plattform (website|app)');
         }
 
-        # Load Daily Tasks
-        $dailyTasksDB = $this->mTaskTbl->select(['mode' => $platform]);
-        $dailyTasks = [];
-        foreach($dailyTasksDB as $task) {
-            $dailyTasks[] = $task;
+        # Load Dailytasks
+        $oWh = new Where();
+        $oWh->NEST
+            ->equalTo('mode', $platform)
+            ->OR
+            ->equalTo('mode', 'global')
+            ->UNNEST;
+        $achievementsDB = $this->mTaskTbl->select($oWh);
+        $achievements = [];
+        foreach($achievementsDB as $achiev) {
+            $achievements[] = (object)[
+                'id' => $achiev->Dailytask_ID,
+                'name' => $achiev->label,
+                'goal' => $achiev->goal,
+                'reward' => $achiev->reward,
+                'mode' => $achiev->mode,
+                'progress' => 0,
+                'done' => 0
+            ];
         }
 
-        return $dailyTasks;
+        # Return referall info
+        return (object)([
+            '_links' => [],
+            'total_items' => count($achievements),
+            'user_task' => [],
+            'task' => $achievements,
+        ]);
     }
 
     /**
