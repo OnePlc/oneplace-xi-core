@@ -85,6 +85,14 @@ class UserResource extends AbstractResourceListener
     protected $mSession;
 
     /**
+     * Faucet Wallets Table
+     *
+     * @var TableGateway $mWalletTbl
+     * @since 1.0.0
+     */
+    protected $mWalletTbl;
+
+    /**
      * Constructor
      *
      * UserResource constructor.
@@ -96,6 +104,7 @@ class UserResource extends AbstractResourceListener
         $this->mapper = new TableGateway('user', $mapper);
         $this->mXPLvlTbl = new TableGateway('user_xp_level', $mapper);
         $this->mGuildTbl = new TableGateway('faucet_guild', $mapper);
+        $this->mWalletTbl = new TableGateway('faucet_wallet', $mapper);
         $this->mGuildRankTbl = new TableGateway('faucet_guild_rank', $mapper);
         $this->mGuildUserTbl = new TableGateway('faucet_guild_user', $mapper);
         $this->mWithdrawTbl = new TableGateway('faucet_withdraw', $mapper);
@@ -246,6 +255,7 @@ class UserResource extends AbstractResourceListener
             'token_balance' => $user->token_balance,
             'xp_level' => $user->xp_level,
             'xp_percent' => $dPercent,
+            'prefered_coin' => $user->prefered_coin,
             'guild' => $guild,
             'withdrawals' => $withdrawals
         ];
@@ -290,10 +300,104 @@ class UserResource extends AbstractResourceListener
         }
         # get user from db
         $user = $this->mapper->select(['User_ID' => $this->mSession->auth->User_ID])->current();
+        if($this->mSession->auth->User_ID == 0) {
+            return new ApiProblem(400, 'invalid user id');
+        }
 
-        return (object)[
-            'state' => 'success',
-        ];
+        $name = filter_var($data[0]->name, FILTER_SANITIZE_STRING);
+        $favCoin = filter_var($data[0]->favCoin, FILTER_SANITIZE_STRING);
+
+        $update = [];
+        # check if name has changed
+        if($name != $user->username) {
+            # check if name is already taken
+            $nameCheck = $this->mapper->select(['username' => $name]);
+            if(count($nameCheck) > 0) {
+                return new ApiProblem(409, 'name already taken');
+            }
+            $update['username'] = $name;
+        }
+
+        # check if coin has changed
+        if($user->prefered_coin != $favCoin) {
+            $wallet = $this->mWalletTbl->select(['coin_sign' => $favCoin]);
+            if(count($wallet) == 0) {
+                return new ApiProblem(404, 'Coin '.$favCoin.' is not valid');
+            }
+            $wallet = $wallet->current();
+            $update['prefered_coin'] = $favCoin;
+        }
+
+        $this->mapper->update($update,[
+            'User_ID' => $this->mSession->auth->User_ID
+        ]);
+
+        # get user next level xp
+        $oNextLvl = $this->mXPLvlTbl->select(['Level_ID' => ($user->xp_level + 1)])->current();
+        $dPercent = 0;
+        if ($user->xp_current != 0) {
+            $dPercent = round((100 / ($oNextLvl->xp_total / $user->xp_current)), 2);
+        }
+
+        # check if user already has joined or created a guild
+        $guild = (object)[];
+        $checkWh = new Where();
+        $checkWh->equalTo('user_idfs', $user->User_ID);
+        $checkWh->notLike('date_joined', '0000-00-00 00:00:00');
+        $userHasGuild = $this->mGuildUserTbl->select($checkWh);
+
+        if(count($userHasGuild) > 0) {
+            $guildRank = $userHasGuild->current();
+            $guildDB = $this->mGuildTbl->select(['Guild_ID' => $guildRank->guild_idfs]);
+            if(count($guildDB) > 0) {
+                $guildDB = $guildDB->current();
+                $rank = '-';
+                $rankDB = $this->mGuildRankTbl->select([
+                    'guild_idfs' => $guildDB->Guild_ID,
+                    'level' => $guildRank->rank,
+                ]);
+                if(count($rankDB) > 0) {
+                    $rank = $rankDB->current()->label;
+                }
+                $guildXPPercent = 0;
+                if ($guildDB->xp_current != 0) {
+                    $guildNextLvl = $this->mXPLvlTbl->select(['Level_ID' => ($guildDB->xp_level + 1)])->current();
+                    $guildXPPercent = round((100 / ($guildNextLvl->xp_total / $guildDB->xp_current)), 2);
+                }
+                $guild = (object)[
+                    'id' => $guildDB->Guild_ID,
+                    'name' => $guildDB->label,
+                    'icon' => $guildDB->icon,
+                    'xp_level' => $guildDB->xp_level,
+                    'xp_total' => $guildDB->xp_total,
+                    'xp_current' => $guildDB->xp_current,
+                    'xp_percent' => $guildXPPercent,
+                    'token_balance' => $guildDB->token_balance,
+                    'rank' => (object)['id' => $guildRank->rank, 'name' => $rank],
+                ];
+            }
+        }
+
+        $withdrawals = ['done' => [],'cancel' => [],'new' => [], 'total_items' => 0];
+        $userWithdrawals = $this->mWithdrawTbl->select(['user_idfs' => $user->User_ID]);
+        if(count($userWithdrawals) > 0) {
+            foreach($userWithdrawals as $wth) {
+                $withdrawals[$wth->state][] = $wth;
+            }
+        }
+
+        # only send public fields
+        return [(object)[
+            'id' => $user->User_ID,
+            'name' => $name,
+            'email' => $user->email,
+            'token_balance' => $user->token_balance,
+            'xp_level' => $user->xp_level,
+            'xp_percent' => $dPercent,
+            'prefered_coin' => $favCoin,
+            'guild' => $guild,
+            'withdrawals' => $withdrawals
+        ]];
 
         return new ApiProblem(405, 'The PUT method has not been defined for collections');
     }

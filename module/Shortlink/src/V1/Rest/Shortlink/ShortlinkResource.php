@@ -126,14 +126,14 @@ class ShortlinkResource extends AbstractResourceListener
         $me = $this->mSession->auth;
 
         # Load Shortlink Provider List
-        $shortlinksDB = $this->mShortProviderTbl->select(['Shortlink_ID' => $id]);
+        $shortlinksDB = $this->mShortProviderTbl->select(['url' => $id]);
         if(count($shortlinksDB) == 0) {
             return new ApiProblem(404, 'Shortlink provider not found');
         } else {
             $provider = $shortlinksDB->current();
 
             # get provider links
-            $links = $this->mShortTbl->select(['shortlink_idfs' => $id]);
+            $links = $this->mShortTbl->select(['shortlink_idfs' => $provider->Shortlink_ID]);
             if(count($links) > 0) {
                 foreach($links as $lnk) {
                     # Check if link is already started

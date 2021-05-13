@@ -186,7 +186,7 @@ return [
         ],
         'User\\V1\\Rest\\User\\Validator' => [
             0 => [
-                'required' => true,
+                'required' => false,
                 'validators' => [
                     0 => [
                         'name' => \Laminas\Validator\Regex::class,
