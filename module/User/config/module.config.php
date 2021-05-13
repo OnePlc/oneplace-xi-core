@@ -56,13 +56,12 @@ return [
             'collection_name' => 'user',
             'entity_http_methods' => [
                 0 => 'GET',
-                1 => 'PATCH',
-                2 => 'PUT',
-                3 => 'DELETE',
+                1 => 'DELETE',
             ],
             'collection_http_methods' => [
                 0 => 'POST',
                 1 => 'GET',
+                2 => 'PUT',
             ],
             'collection_query_whitelist' => [],
             'page_size' => 25,
@@ -212,9 +211,9 @@ return [
         'authorization' => [
             'User\\V1\\Rest\\User\\Controller' => [
                 'collection' => [
-                    'GET' => false,
+                    'GET' => true,
                     'POST' => false,
-                    'PUT' => false,
+                    'PUT' => true,
                     'PATCH' => false,
                     'DELETE' => false,
                 ],

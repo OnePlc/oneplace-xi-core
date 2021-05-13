@@ -41,6 +41,14 @@ class UserResource extends AbstractResourceListener
     protected $mXPLvlTbl;
 
     /**
+     * User Withdrawal Table
+     *
+     * @var TableGateway $mWithdrawTbl
+     * @since 1.0.0
+     */
+    protected $mWithdrawTbl;
+
+    /**
      * Guild Table
      *
      * @var TableGateway $mGuildTbl
@@ -90,6 +98,7 @@ class UserResource extends AbstractResourceListener
         $this->mGuildTbl = new TableGateway('faucet_guild', $mapper);
         $this->mGuildRankTbl = new TableGateway('faucet_guild_rank', $mapper);
         $this->mGuildUserTbl = new TableGateway('faucet_guild_user', $mapper);
+        $this->mWithdrawTbl = new TableGateway('faucet_withdraw', $mapper);
         $this->mSession = new Container('webauth');
     }
 
@@ -221,6 +230,14 @@ class UserResource extends AbstractResourceListener
             }
         }
 
+        $withdrawals = ['done' => [],'cancel' => [],'new' => [], 'total_items' => 0];
+        $userWithdrawals = $this->mWithdrawTbl->select(['user_idfs' => $user->User_ID]);
+        if(count($userWithdrawals) > 0) {
+            foreach($userWithdrawals as $wth) {
+                $withdrawals[$wth->state][] = $wth;
+            }
+        }
+
         # only send public fields
         return (object)[
             'id' => $user->User_ID,
@@ -229,7 +246,8 @@ class UserResource extends AbstractResourceListener
             'token_balance' => $user->token_balance,
             'xp_level' => $user->xp_level,
             'xp_percent' => $dPercent,
-            'guild' => $guild
+            'guild' => $guild,
+            'withdrawals' => $withdrawals
         ];
     }
 
@@ -267,6 +285,16 @@ class UserResource extends AbstractResourceListener
      */
     public function replaceList($data)
     {
+        if(!isset($this->mSession->auth)) {
+            return new ApiProblem(401, 'Not logged in');
+        }
+        # get user from db
+        $user = $this->mapper->select(['User_ID' => $this->mSession->auth->User_ID])->current();
+
+        return (object)[
+            'state' => 'success',
+        ];
+
         return new ApiProblem(405, 'The PUT method has not been defined for collections');
     }
 

@@ -5,6 +5,7 @@ return [
             'Faucet\\V1\\Rpc\\Claim\\Controller' => \Faucet\V1\Rpc\Claim\ClaimControllerFactory::class,
             'Faucet\\V1\\Rpc\\Referral\\Controller' => \Faucet\V1\Rpc\Referral\ReferralControllerFactory::class,
             'Faucet\\V1\\Rpc\\HallOfFame\\Controller' => \Faucet\V1\Rpc\HallOfFame\HallOfFameControllerFactory::class,
+            'Faucet\\V1\\Rpc\\Withdraw\\Controller' => \Faucet\V1\Rpc\Withdraw\WithdrawControllerFactory::class,
         ],
     ],
     'router' => [
@@ -57,6 +58,16 @@ return [
                     ],
                 ],
             ],
+            'faucet.rpc.withdraw' => [
+                'type' => 'Segment',
+                'options' => [
+                    'route' => '/withdraw',
+                    'defaults' => [
+                        'controller' => 'Faucet\\V1\\Rpc\\Withdraw\\Controller',
+                        'action' => 'withdraw',
+                    ],
+                ],
+            ],
         ],
     ],
     'api-tools-versioning' => [
@@ -66,6 +77,7 @@ return [
             2 => 'faucet.rest.achievement',
             3 => 'faucet.rpc.referral',
             4 => 'faucet.rpc.hall-of-fame',
+            5 => 'faucet.rpc.withdraw',
         ],
     ],
     'api-tools-rpc' => [
@@ -91,6 +103,14 @@ return [
             ],
             'route_name' => 'faucet.rpc.hall-of-fame',
         ],
+        'Faucet\\V1\\Rpc\\Withdraw\\Controller' => [
+            'service_name' => 'Withdraw',
+            'http_methods' => [
+                0 => 'GET',
+                1 => 'POST',
+            ],
+            'route_name' => 'faucet.rpc.withdraw',
+        ],
     ],
     'api-tools-content-negotiation' => [
         'controllers' => [
@@ -99,6 +119,7 @@ return [
             'Faucet\\V1\\Rest\\Achievement\\Controller' => 'HalJson',
             'Faucet\\V1\\Rpc\\Referral\\Controller' => 'Json',
             'Faucet\\V1\\Rpc\\HallOfFame\\Controller' => 'Json',
+            'Faucet\\V1\\Rpc\\Withdraw\\Controller' => 'Json',
         ],
         'accept_whitelist' => [
             'Faucet\\V1\\Rpc\\Claim\\Controller' => [
@@ -126,6 +147,11 @@ return [
                 1 => 'application/json',
                 2 => 'application/*+json',
             ],
+            'Faucet\\V1\\Rpc\\Withdraw\\Controller' => [
+                0 => 'application/vnd.faucet.v1+json',
+                1 => 'application/json',
+                2 => 'application/*+json',
+            ],
         ],
         'content_type_whitelist' => [
             'Faucet\\V1\\Rpc\\Claim\\Controller' => [
@@ -145,6 +171,10 @@ return [
                 1 => 'application/json',
             ],
             'Faucet\\V1\\Rpc\\HallOfFame\\Controller' => [
+                0 => 'application/vnd.faucet.v1+json',
+                1 => 'application/json',
+            ],
+            'Faucet\\V1\\Rpc\\Withdraw\\Controller' => [
                 0 => 'application/vnd.faucet.v1+json',
                 1 => 'application/json',
             ],
@@ -211,6 +241,17 @@ return [
                     'hallOfFame' => [
                         'GET' => true,
                         'POST' => false,
+                        'PUT' => false,
+                        'PATCH' => false,
+                        'DELETE' => false,
+                    ],
+                ],
+            ],
+            'Faucet\\V1\\Rpc\\Withdraw\\Controller' => [
+                'actions' => [
+                    'withdraw' => [
+                        'GET' => true,
+                        'POST' => true,
                         'PUT' => false,
                         'PATCH' => false,
                         'DELETE' => false,
