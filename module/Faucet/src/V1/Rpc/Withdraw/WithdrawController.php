@@ -71,6 +71,8 @@ class WithdrawController extends AbstractActionController
 
         $request = $this->getRequest();
 
+        $tokenValue = 0.00004;
+
         if($request->isGet()) {
             $wallets = [];
             $walletsDB = $this->mWalletTbl->select();
@@ -89,6 +91,13 @@ class WithdrawController extends AbstractActionController
                     $lastAddress = $lastWth->current()->wallet;
                 }
 
+                $balanceEst = $me->token_balance*$tokenValue;
+                if($wall->dollar_val > 0) {
+                    $balanceEst = $balanceEst/$wall->dollar_val;
+                } else {
+                    $balanceEst = $balanceEst*$wall->dollar_val;
+                }
+
                 $wallets[] = (object)[
                     'id' => $wall->Wallet_ID,
                     'name' => $wall->coin_label,
@@ -103,7 +112,9 @@ class WithdrawController extends AbstractActionController
                     'textcolor' => $wall->textcolor,
                     'blockexplorer_url' => $wall->blockexplorer_url,
                     'last_update' => $wall->last_update,
-                    'user_recent_wallet' => $lastAddress
+                    'user_recent_wallet' => $lastAddress,
+                    'balance_est' => number_format($balanceEst,8,'.',''),
+                    'test' =>  $me->token_balance.'*'.$tokenValue.'/'.$wall->dollar_val,
                 ];
             }
 
@@ -125,7 +136,7 @@ class WithdrawController extends AbstractActionController
                 '_links' => [],
                 'wallet' => $wallets,
                 'daily_limit' => $withdrawLimit,
-                'token_val' => 0.0004,
+                'token_val' => $tokenValue,
                 'daily_left' => ($withdrawLimit - $coinsWithdrawnToday)
             ];
         }

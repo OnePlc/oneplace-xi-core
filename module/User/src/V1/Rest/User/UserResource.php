@@ -247,12 +247,28 @@ class UserResource extends AbstractResourceListener
             }
         }
 
+        $tokenValue = 0.00004;
+
+        $coinInfo = $this->mWalletTbl->select(['coin_sign' => $user->prefered_coin]);
+        $cryptoBalance = 0;
+        if(count($coinInfo) > 0) {
+            $coinInfo = $coinInfo->current();
+            $cryptoBalance = $user->token_balance*$tokenValue;
+            if($coinInfo->dollar_val > 0) {
+                $cryptoBalance = $cryptoBalance/$coinInfo->dollar_val;
+            } else {
+                $cryptoBalance = $cryptoBalance*$coinInfo->dollar_val;
+            }
+            $cryptoBalance = number_format($cryptoBalance,8,'.','');
+        }
+
         # only send public fields
         return (object)[
             'id' => $user->User_ID,
             'name' => $user->username,
             'email' => $user->email,
             'token_balance' => $user->token_balance,
+            'crypto_balance' => $cryptoBalance,
             'xp_level' => $user->xp_level,
             'xp_percent' => $dPercent,
             'prefered_coin' => $user->prefered_coin,
@@ -386,12 +402,28 @@ class UserResource extends AbstractResourceListener
             }
         }
 
+        $tokenValue = 0.00004;
+
+        $coinInfo = $this->mWalletTbl->select(['coin_sign' => $favCoin]);
+        $cryptoBalance = 0;
+        if(count($coinInfo) > 0) {
+            $coinInfo = $coinInfo->current();
+            $cryptoBalance = $user->token_balance*$tokenValue;
+            if($coinInfo->dollar_val > 0) {
+                $cryptoBalance = $cryptoBalance/$coinInfo->dollar_val;
+            } else {
+                $cryptoBalance = $cryptoBalance*$coinInfo->dollar_val;
+            }
+            $cryptoBalance = number_format($cryptoBalance,8,'.','');
+        }
+
         # only send public fields
         return [(object)[
             'id' => $user->User_ID,
             'name' => $name,
             'email' => $user->email,
             'token_balance' => $user->token_balance,
+            'crypto_balance' => $cryptoBalance,
             'xp_level' => $user->xp_level,
             'xp_percent' => $dPercent,
             'prefered_coin' => $favCoin,
