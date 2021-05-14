@@ -17,8 +17,11 @@ namespace Shortlink\V1\Rest\Shortlink;
 use Laminas\ApiTools\ApiProblem\ApiProblem;
 use Laminas\ApiTools\Rest\AbstractResourceListener;
 use Laminas\ApiTools\ContentNegotiation\ViewModel;
+use Laminas\Db\Sql\Select;
 use Laminas\Db\TableGateway\TableGateway;
 use Laminas\Db\Sql\Where;
+use Laminas\Paginator\Adapter\DbSelect;
+use Laminas\Paginator\Paginator;
 use Laminas\Session\Container;
 
 class ShortlinkResource extends AbstractResourceListener
@@ -203,12 +206,13 @@ class ShortlinkResource extends AbstractResourceListener
         # Load Shortlink Provider List
         $shortlinksDB = $this->mShortProviderTbl->select();
         $shortlinks = [];
+        $shortlinksById = [];
         $totalLinks = 0;
         $totalReward = 0;
         foreach($shortlinksDB as $sh) {
             # get links for provider
             $links = $this->mShortTbl->select(['shortlink_idfs' => $sh->Shortlink_ID]);
-
+            $shortlinksById[$sh->Shortlink_ID] = ['name' =>  $sh->label,'reward' =>  $sh->reward];
             # Count links for provider
             $totalLinks+=count($links);
             $sh->linksTotal = count($links);
@@ -245,10 +249,63 @@ class ShortlinkResource extends AbstractResourceListener
                 }
             }
 
-            $shortlinks[] = $sh;
+            $shortlinks[] = (object)[
+                'id' => $sh->Shortlink_ID,
+                'name' => $sh->label,
+                'reward' => $sh->reward,
+                'url' => $sh->url,
+                'links_done' => $sh->linksDone,
+                'links_total' => $sh->linksTotal,
+                'count_started' => $sh->count_started,
+                'count_complete' => $sh->count_complete,
+                'count_percent' => number_format((100/(($sh->count_complete+$sh->count_started)/$sh->count_complete)),2),
+                'last_done' => $sh->last_done,
+            ];
         }
 
-        $return = (object)['provider' => $shortlinks,'total_reward' => $totalReward,'total_links' => $totalLinks];
+        $page = (isset($_REQUEST['page'])) ? filter_var($_REQUEST['page'], FILTER_SANITIZE_NUMBER_INT) : 1;
+        $pageSize = 10;
+
+        # Compile history
+        $history = [];
+        $historySel = new Select($this->mShortDoneTbl->getTable());
+        $historySel->where(['user_idfs' => $me->User_ID]);
+        $historySel->order('date_started DESC');
+        # Create a new pagination adapter object
+        $oPaginatorAdapter = new DbSelect(
+        # our configured select object
+            $historySel,
+            # the adapter to run it against
+            $this->mShortDoneTbl->getAdapter()
+        );
+        # Create Paginator with Adapter
+        $offersPaginated = new Paginator($oPaginatorAdapter);
+        $offersPaginated->setCurrentPageNumber($page);
+        $offersPaginated->setItemCountPerPage($pageSize);
+        foreach($offersPaginated as $offer) {
+            $history[] = (object)[
+                'date_start' => $offer->date_started,
+                'date_done' => $offer->date_completed,
+                'reward' => $shortlinksById[$offer->shortlink_idfs]['reward'],
+                'name' => $offer->label,
+                'shortlink' => $shortlinksById[$offer->shortlink_idfs]['name'],
+                'status' => ($offer->date_completed == '0000-00-00 00:00:00') ? 'started' : 'done',
+            ];
+        }
+        $totalLinksDone = $this->mShortDoneTbl->select(['user_idfs' => $me->User_ID])->count();
+
+        $return = (object)[
+            'provider' => $shortlinks,
+            'total_reward' => $totalReward,
+            'total_links' => $totalLinks,
+            'history' => [
+                'items' => $history,
+                'total_items' => $totalLinksDone,
+                'page_size' => $pageSize,
+                'page' => $page,
+                'page_count' => (round($totalLinksDone/$pageSize) > 0) ? round($totalLinksDone/$pageSize) : 1,
+            ]
+        ];
 
         return [
             'shortlinks' => $return,

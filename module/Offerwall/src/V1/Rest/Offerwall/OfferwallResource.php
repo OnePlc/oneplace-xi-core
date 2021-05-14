@@ -155,7 +155,7 @@ class OfferwallResource extends AbstractResourceListener
         $page = (isset($_REQUEST['page'])) ? filter_var($_REQUEST['page'], FILTER_SANITIZE_NUMBER_INT) : 1;
         $pageSize = 10;
 
-        # Compile list of all guilds
+        # Compile history
         $history = [];
         $historySel = new Select($this->mOfferwallUserTbl->getTable());
         $historySel->where(['user_idfs' => $me->User_ID]);
