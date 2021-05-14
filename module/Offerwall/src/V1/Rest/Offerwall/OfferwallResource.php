@@ -17,8 +17,11 @@ namespace Offerwall\V1\Rest\Offerwall;
 use Laminas\ApiTools\ApiProblem\ApiProblem;
 use Laminas\ApiTools\Rest\AbstractResourceListener;
 use Laminas\ApiTools\ContentNegotiation\ViewModel;
+use Laminas\Db\Sql\Select;
 use Laminas\Db\TableGateway\TableGateway;
 use Laminas\Db\Sql\Where;
+use Laminas\Paginator\Adapter\DbSelect;
+use Laminas\Paginator\Paginator;
 use Laminas\Session\Container;
 use Faucet\Transaction\TransactionHelper;
 
@@ -136,12 +139,59 @@ class OfferwallResource extends AbstractResourceListener
 
         # Compile list of all offerwall providers
         $offerwalls = [];
+        $offerwallsById = [];
         $offerwallsDB = $this->mOfferwallTbl->select(['active' => 1]);
         foreach($offerwallsDB as $offerwall) {
-            $offerwalls[] = $offerwall;
+            $offerwalls[] = (object)[
+                'id' => $offerwall->Offerwall_ID,
+                'url' => $offerwall->wall_name,
+                'name' => $offerwall->label,
+                'time' => $offerwall->time,
+                'reward' => $offerwall->reward
+            ];
+            $offerwallsById[$offerwall->Offerwall_ID] = $offerwall->label;
         }
 
-        return $offerwalls;
+        $page = (isset($_REQUEST['page'])) ? filter_var($_REQUEST['page'], FILTER_SANITIZE_NUMBER_INT) : 1;
+        $pageSize = 10;
+
+        # Compile list of all guilds
+        $history = [];
+        $historySel = new Select($this->mOfferwallUserTbl->getTable());
+        $historySel->where(['user_idfs' => $me->User_ID]);
+        $historySel->order('date_completed DESC');
+        # Create a new pagination adapter object
+        $oPaginatorAdapter = new DbSelect(
+        # our configured select object
+            $historySel,
+            # the adapter to run it against
+            $this->mOfferwallUserTbl->getAdapter()
+        );
+        # Create Paginator with Adapter
+        $offersPaginated = new Paginator($oPaginatorAdapter);
+        $offersPaginated->setCurrentPageNumber($page);
+        $offersPaginated->setItemCountPerPage($pageSize);
+        foreach($offersPaginated as $offer) {
+            $history[] = (object)[
+                'date' => $offer->date_completed,
+                'amount' => $offer->amount,
+                'name' => $offer->label,
+                'offerwall' => $offerwallsById[$offer->offerwall_idfs],
+            ];
+        }
+        $totalOffers = $this->mOfferwallUserTbl->select(['user_idfs' => $me->User_ID])->count();
+
+        return (object)[
+            '_links' => [],
+            '_embedded' => [
+                'offerwall' => $offerwalls,
+                'history' => $history,
+                'total_items' => $totalOffers,
+                'page_size' => $pageSize,
+                'page_count' => (round($totalOffers/$pageSize) > 0) ? round($totalOffers/$pageSize) : 1,
+                'page' => $page
+            ]
+        ];
     }
 
     /**
