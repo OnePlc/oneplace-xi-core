@@ -72,6 +72,15 @@ class DailytaskResource extends AbstractResourceListener
 
 
     /**
+     * Transaction Helper
+     *
+     * @var TransactionHelper $mTransaction
+     * @since 1.0.0
+     */
+    protected $mTransaction;
+
+
+    /**
      * Constructor
      *
      * DailytaskResource constructor.
@@ -86,6 +95,7 @@ class DailytaskResource extends AbstractResourceListener
         $this->mShortDoneTbl = new TableGateway('shortlink_link_user', $mapper);
         $this->mClaimTbl = new TableGateway('faucet_claim', $mapper);
         $this->mSession = new Container('webauth');
+        $this->mTransaction = new TransactionHelper($mapper);
     }
 
     /**
@@ -160,6 +170,26 @@ class DailytaskResource extends AbstractResourceListener
             return new ApiProblem(400, 'You must specify a plattform (website|app)');
         }
 
+        $sDate = date('Y-m-d', time());
+
+        /**
+         * Gather relevant data for progress
+         */
+        $oWh = new Where();
+        $oWh->equalTo('user_idfs', $me->User_ID);
+        $oWh->like('date_completed', $sDate.'%');
+        $shortlinksDone = $this->mShortDoneTbl->select($oWh)->count();
+
+        $oWh = new Where();
+        $oWh->equalTo('user_idfs', $me->User_ID);
+        $oWh->like('date', $sDate.'%');
+        $claimsDone = $this->mClaimTbl->select($oWh)->count();
+
+        $oWh = new Where();
+        $oWh->equalTo('user_idfs', $me->User_ID);
+        $oWh->like('date', $sDate.'%');
+        $dailysDone = $this->mTaskDoneTbl->select($oWh);
+
         # Load Dailytasks
         $oWh = new Where();
         $oWh->NEST
@@ -170,14 +200,35 @@ class DailytaskResource extends AbstractResourceListener
         $achievementsDB = $this->mTaskTbl->select($oWh);
         $achievements = [];
         foreach($achievementsDB as $achiev) {
+            switch($achiev->type) {
+                case 'shortlink':
+                    $progress = $shortlinksDone;
+                    break;
+                case 'claim':
+                    $progress = $claimsDone;
+                    break;
+                case 'daily':
+                    $progress = $dailysDone;
+                    break;
+                default:
+                    $progress = 0;
+                    break;
+            }
+            # Check if task is already claimed today
+            $oWh = new Where();
+            $oWh->equalTo('user_idfs', $me->User_ID);
+            $oWh->equalTo('task_idfs', $achiev->Dailytask_ID);
+            $oWh->like('date', $sDate.'%');
+            $oDailysDone = $this->mTaskDoneTbl->select($oWh);
+
             $achievements[] = (object)[
                 'id' => $achiev->Dailytask_ID,
                 'name' => $achiev->label,
                 'goal' => $achiev->goal,
                 'reward' => $achiev->reward,
                 'mode' => $achiev->mode,
-                'progress' => 0,
-                'done' => 0
+                'progress' => $progress,
+                'done' => (count($oDailysDone) == 0) ? 0 : 1
             ];
         }
 
@@ -301,19 +352,88 @@ class DailytaskResource extends AbstractResourceListener
                 }
 
                 # Transaction
-                $oTransHelper = new TransactionHelper($this->mMapper);
-                if($oTransHelper->executeTransaction($dailyTask->reward, false, $me->User_ID, $iTaskID, 'dailytask-claim', 'Daily Task '.$dailyTask->label.' completed')) {
+                $newBalance = $this->mTransaction->executeTransaction($dailyTask->reward, false, $me->User_ID, $iTaskID, 'dailytask-claim', 'Daily Task '.$dailyTask->label.' completed');
+                if($newBalance !== false) {
                     # Add Done
                     $this->mTaskDoneTbl->insert([
                         'user_idfs' => $me->User_ID,
                         'task_idfs' => $iTaskID,
                         'date' => date('Y-m-d H:i:s', time()),
                     ]);
+                } else {
+                    return new ApiProblem(500, 'Transaction error');
                 }
             }
 
-            # if all good, return dailytask object as confirmation
-            return $dailyTask;
+            /**
+             * Gather relevant data for progress
+             */
+            $oWh = new Where();
+            $oWh->equalTo('user_idfs', $me->User_ID);
+            $oWh->like('date_completed', $sDate.'%');
+            $shortlinksDone = $this->mShortDoneTbl->select($oWh)->count();
+
+            $oWh = new Where();
+            $oWh->equalTo('user_idfs', $me->User_ID);
+            $oWh->like('date', $sDate.'%');
+            $claimsDone = $this->mClaimTbl->select($oWh)->count();
+
+            $oWh = new Where();
+            $oWh->equalTo('user_idfs', $me->User_ID);
+            $oWh->like('date', $sDate.'%');
+            $dailysDone = $this->mTaskDoneTbl->select($oWh);
+
+            # Load Dailytasks
+            $oWh = new Where();
+            $oWh->NEST
+                ->equalTo('mode', $data->platform)
+                ->OR
+                ->equalTo('mode', 'global')
+                ->UNNEST;
+            $achievementsDB = $this->mTaskTbl->select($oWh);
+            $achievements = [];
+            foreach($achievementsDB as $achiev) {
+                switch($achiev->type) {
+                    case 'shortlink':
+                        $progress = $shortlinksDone;
+                        break;
+                    case 'claim':
+                        $progress = $claimsDone;
+                        break;
+                    case 'daily':
+                        $progress = $dailysDone;
+                        break;
+                    default:
+                        $progress = 0;
+                        break;
+                }
+                # Check if task is already claimed today
+                $oWh = new Where();
+                $oWh->equalTo('user_idfs', $me->User_ID);
+                $oWh->equalTo('task_idfs', $achiev->Dailytask_ID);
+                $oWh->like('date', $sDate.'%');
+                $oDailysDone = $this->mTaskDoneTbl->select($oWh);
+
+                $achievements[] = (object)[
+                    'id' => $achiev->Dailytask_ID,
+                    'name' => $achiev->label,
+                    'goal' => $achiev->goal,
+                    'reward' => $achiev->reward,
+                    'mode' => $achiev->mode,
+                    'progress' => $progress,
+                    'done' => (count($oDailysDone) == 0) ? 0 : 1
+                ];
+            }
+
+            # Return referall info
+            return (object)([
+                '_links' => [],
+                'total_items' => count($achievements),
+                'user_task' => [],
+                'reward' => $dailyTask->reward,
+                'token_balance' => $newBalance,
+                'task' => $achievements
+            ]);
         } else {
             return new ApiProblem(404, 'Daily task not found');
         }
