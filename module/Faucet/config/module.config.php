@@ -107,7 +107,7 @@ return [
             'service_name' => 'Withdraw',
             'http_methods' => [
                 0 => 'GET',
-                1 => 'POST',
+                1 => 'PUT',
             ],
             'route_name' => 'faucet.rpc.withdraw',
         ],
@@ -252,7 +252,7 @@ return [
                     'withdraw' => [
                         'GET' => true,
                         'POST' => true,
-                        'PUT' => false,
+                        'PUT' => true,
                         'PATCH' => false,
                         'DELETE' => false,
                     ],
