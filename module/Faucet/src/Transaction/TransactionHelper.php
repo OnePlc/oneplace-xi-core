@@ -83,6 +83,16 @@ class TransactionHelper {
     public function executeTransaction(float $amount, bool $isOutput, int $userId, int $refId,
                                               string $refType, string $description, int $createdBy = 0)
     {
+        # no negative transactions allowed
+        if($amount < 0) {
+            return false;
+        }
+
+        # Do not allow zero for update
+        if($userId == 0) {
+            return false;
+        }
+
         # Generate Transaction ID
         try {
             $sTransactionID = $bytes = random_bytes(5);
@@ -91,11 +101,6 @@ class TransactionHelper {
             $sTransactionID = time();
         }
         $sTransactionID = hash("sha256",$sTransactionID);
-
-        # Do not allow zero for update
-        if($userId == 0) {
-            return false;
-        }
 
         # Get user from database
         $userInfo = TransactionHelper::$mUserTbl->select(['User_ID' => $userId]);
@@ -147,6 +152,16 @@ class TransactionHelper {
     public function executeGuildTransaction(float $amount, bool $isOutput, int $guildId, int $refId,
                                        string $refType, string $description, int $createdBy)
     {
+        # no negative transactions allowed
+        if($amount < 0) {
+            return false;
+        }
+
+        # Do not allow zero for update
+        if($guildId == 0) {
+            return false;
+        }
+
         # Generate Transaction ID
         try {
             $sTransactionID = $bytes = random_bytes(5);
@@ -155,11 +170,6 @@ class TransactionHelper {
             $sTransactionID = time();
         }
         $sTransactionID = hash("sha256",$sTransactionID);
-
-        # Do not allow zero for update
-        if($guildId == 0) {
-            return false;
-        }
 
         # Get user from database
         $guildInfo = TransactionHelper::$mGuildTbl->select(['Guild_ID' => $guildId]);
