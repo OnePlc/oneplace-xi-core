@@ -13,4 +13,9 @@ return [
 }',
         ],
     ],
+    'User\\V1\\Rpc\\Dashboard\\Controller' => [
+        'GET' => [
+            'description' => 'Get User Dashboard',
+        ],
+    ],
 ];

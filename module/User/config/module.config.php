@@ -39,6 +39,16 @@ return [
                     ],
                 ],
             ],
+            'user.rpc.dashboard' => [
+                'type' => 'Segment',
+                'options' => [
+                    'route' => '/dashboard',
+                    'defaults' => [
+                        'controller' => 'User\\V1\\Rpc\\Dashboard\\Controller',
+                        'action' => 'dashboard',
+                    ],
+                ],
+            ],
         ],
     ],
     'api-tools-versioning' => [
@@ -46,6 +56,7 @@ return [
             0 => 'user.rest.user',
             1 => 'user.rpc.login',
             2 => 'user.rpc.logout',
+            3 => 'user.rpc.dashboard',
         ],
     ],
     'api-tools-rest' => [
@@ -76,6 +87,7 @@ return [
             'User\\V1\\Rest\\User\\Controller' => 'HalJson',
             'User\\V1\\Rpc\\Login\\Controller' => 'Json',
             'User\\V1\\Rpc\\Logout\\Controller' => 'Json',
+            'User\\V1\\Rpc\\Dashboard\\Controller' => 'Json',
         ],
         'accept_whitelist' => [
             'User\\V1\\Rest\\User\\Controller' => [
@@ -93,6 +105,11 @@ return [
                 1 => 'application/json',
                 2 => 'application/*+json',
             ],
+            'User\\V1\\Rpc\\Dashboard\\Controller' => [
+                0 => 'application/vnd.user.v1+json',
+                1 => 'application/json',
+                2 => 'application/*+json',
+            ],
         ],
         'content_type_whitelist' => [
             'User\\V1\\Rest\\User\\Controller' => [
@@ -104,6 +121,10 @@ return [
                 1 => 'application/json',
             ],
             'User\\V1\\Rpc\\Logout\\Controller' => [
+                0 => 'application/vnd.user.v1+json',
+                1 => 'application/json',
+            ],
+            'User\\V1\\Rpc\\Dashboard\\Controller' => [
                 0 => 'application/vnd.user.v1+json',
                 1 => 'application/json',
             ],
@@ -129,6 +150,7 @@ return [
         'factories' => [
             'User\\V1\\Rpc\\Login\\Controller' => \User\V1\Rpc\Login\LoginControllerFactory::class,
             'User\\V1\\Rpc\\Logout\\Controller' => \User\V1\Rpc\Logout\LogoutControllerFactory::class,
+            'User\\V1\\Rpc\\Dashboard\\Controller' => \User\V1\Rpc\Dashboard\DashboardControllerFactory::class,
         ],
     ],
     'api-tools-rpc' => [
@@ -145,6 +167,13 @@ return [
                 0 => 'GET',
             ],
             'route_name' => 'user.rpc.logout',
+        ],
+        'User\\V1\\Rpc\\Dashboard\\Controller' => [
+            'service_name' => 'Dashboard',
+            'http_methods' => [
+                0 => 'GET',
+            ],
+            'route_name' => 'user.rpc.dashboard',
         ],
     ],
     'api-tools-content-validation' => [
@@ -228,6 +257,17 @@ return [
             'User\\V1\\Rpc\\Logout\\Controller' => [
                 'actions' => [
                     'logout' => [
+                        'GET' => true,
+                        'POST' => false,
+                        'PUT' => false,
+                        'PATCH' => false,
+                        'DELETE' => false,
+                    ],
+                ],
+            ],
+            'User\\V1\\Rpc\\Dashboard\\Controller' => [
+                'actions' => [
+                    'dashboard' => [
                         'GET' => true,
                         'POST' => false,
                         'PUT' => false,

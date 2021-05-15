@@ -20,6 +20,7 @@ return [
                 'Guild\\V1' => 'oneplace',
                 'Offerwall\\V1' => 'oneplace',
                 'Game\\V1' => 'oneplace',
+                'Support\\V1' => 'oneplace',
             ],
         ],
     ],

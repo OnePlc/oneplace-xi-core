@@ -34,6 +34,14 @@ class LoginController extends AbstractActionController
     protected $mUserTbl;
 
     /**
+     * User Settings Table
+     *
+     * @var TableGateway $mUserSetTbl
+     * @since 1.0.0
+     */
+    protected $mUserSetTbl;
+
+    /**
      * Constructor
      *
      * LoginController constructor.
@@ -43,6 +51,7 @@ class LoginController extends AbstractActionController
     public function __construct($mapper)
     {
         $this->mUserTbl = new TableGateway('user', $mapper);
+        $this->mUserSetTbl = new TableGateway('user_setting', $mapper);
     }
 
     /**
@@ -80,6 +89,15 @@ class LoginController extends AbstractActionController
         # Password check
         if(!password_verify($json->password,$oUser->password)) {
             return new ApiProblemResponse(new ApiProblem(401, 'Invalid credentials'));
+        }
+
+        # check for user bans
+        $userTempBan = $this->mUserSetTbl->select([
+            'user_idfs' => $oUser->User_ID,
+            'setting_name' => 'user-tempban',
+        ]);
+        if(count($userTempBan) > 0) {
+            return new ApiProblemResponse(new ApiProblem(403, 'You are temporarly banned. Please contact support.'));
         }
 
         # Create user session

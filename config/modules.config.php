@@ -37,4 +37,5 @@ return [
     'Guild',
     'Offerwall',
     'News',
+    'Support',
 ];

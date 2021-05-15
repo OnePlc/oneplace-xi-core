@@ -15,6 +15,7 @@
 
 namespace User\V1\Rest\User;
 
+use Faucet\Tools\SecurityTools;
 use Laminas\ApiTools\ApiProblem\ApiProblem;
 use Laminas\ApiTools\Rest\AbstractResourceListener;
 use Laminas\ApiTools\ContentNegotiation\ViewModel;
@@ -93,6 +94,22 @@ class UserResource extends AbstractResourceListener
     protected $mWalletTbl;
 
     /**
+     * Security Tools Helper
+     *
+     * @var SecurityTools $mSecTools
+     * @since 1.0.0
+     */
+    protected $mSecTools;
+
+    /**
+     * User Settings Table
+     *
+     * @var TableGateway $mUserSetTbl
+     * @since 1.0.0
+     */
+    protected $mUserSetTbl;
+
+    /**
      * Constructor
      *
      * UserResource constructor.
@@ -109,6 +126,8 @@ class UserResource extends AbstractResourceListener
         $this->mGuildUserTbl = new TableGateway('faucet_guild_user', $mapper);
         $this->mWithdrawTbl = new TableGateway('faucet_withdraw', $mapper);
         $this->mSession = new Container('webauth');
+        $this->mSecTools = new SecurityTools($mapper);
+        $this->mUserSetTbl = new TableGateway('user_setting', $mapper);
     }
 
     /**
@@ -318,6 +337,18 @@ class UserResource extends AbstractResourceListener
         $user = $this->mapper->select(['User_ID' => $this->mSession->auth->User_ID])->current();
         if($this->mSession->auth->User_ID == 0) {
             return new ApiProblem(400, 'invalid user id');
+        }
+
+        # check for attack vendors
+        $secResult = $this->mSecTools->basicInputCheck([$data[0]->name,$data[0]->favCoin]);
+        if($secResult !== 'ok') {
+            # ban user and force logout on client
+            $this->mUserSetTbl->insert([
+                'user_idfs' => $user->User_ID,
+                'setting_name' => 'user-tempban',
+                'setting_value' => 'Potential '.$secResult.' Attack @ '.date('Y-m-d H:i:s').' User Profile Form',
+            ]);
+            return new ApiProblem(418, 'Potential XSS Attack - Goodbye');
         }
 
         $name = filter_var($data[0]->name, FILTER_SANITIZE_STRING);
