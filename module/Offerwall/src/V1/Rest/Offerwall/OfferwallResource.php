@@ -14,6 +14,7 @@
  */
 namespace Offerwall\V1\Rest\Offerwall;
 
+use Faucet\Tools\SecurityTools;
 use Laminas\ApiTools\ApiProblem\ApiProblem;
 use Laminas\ApiTools\Rest\AbstractResourceListener;
 use Laminas\ApiTools\ContentNegotiation\ViewModel;
@@ -22,18 +23,17 @@ use Laminas\Db\TableGateway\TableGateway;
 use Laminas\Db\Sql\Where;
 use Laminas\Paginator\Adapter\DbSelect;
 use Laminas\Paginator\Paginator;
-use Laminas\Session\Container;
 use Faucet\Transaction\TransactionHelper;
 
 class OfferwallResource extends AbstractResourceListener
 {
     /**
-     * User Session
+     * Security Tools Helper
      *
-     * @var Container $mSession
+     * @var SecurityTools $mSecTools
      * @since 1.0.0
      */
-    protected $mSession;
+    protected $mSecTools;
 
     /**
      * Offerwall Table
@@ -75,7 +75,7 @@ class OfferwallResource extends AbstractResourceListener
         # Init Tables for this API
         $this->mOfferwallTbl = new TableGateway('offerwall', $mapper);
         $this->mOfferwallUserTbl = new TableGateway('offerwall_user', $mapper);
-        $this->mSession = new Container('webauth');
+        $this->mSecTools = new SecurityTools($mapper);
         $this->mTransaction = new TransactionHelper($mapper);
     }
 
@@ -132,10 +132,10 @@ class OfferwallResource extends AbstractResourceListener
     public function fetchAll($params = [])
     {
         # Check if user is logged in
-        if(!isset($this->mSession->auth)) {
-            return new ApiProblem(401, 'Not logged in');
+        $me = $this->mSecTools->getSecuredUserSession();
+        if(get_class($me) == 'Laminas\\ApiTools\\ApiProblem\\ApiProblem') {
+            return $me;
         }
-        $me = $this->mSession->auth;
 
         # Compile list of all offerwall providers
         $offerwalls = [];

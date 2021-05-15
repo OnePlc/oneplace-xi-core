@@ -16,6 +16,7 @@
 namespace Guild\V1\Rpc\Bank;
 
 use Application\Controller\IndexController;
+use Faucet\Tools\SecurityTools;
 use Faucet\Transaction\TransactionHelper;
 use Laminas\ApiTools\ApiProblem\ApiProblem;
 use Laminas\ApiTools\ApiProblem\ApiProblemResponse;
@@ -30,12 +31,12 @@ use Laminas\Session\Container;
 class BankController extends AbstractActionController
 {
     /**
-     * User Session
+     * Security Tools Helper
      *
-     * @var Container $mSession
+     * @var SecurityTools $mSecTools
      * @since 1.0.0
      */
-    protected $mSession;
+    protected $mSecTools;
 
     /**
      * Guild Table
@@ -103,7 +104,7 @@ class BankController extends AbstractActionController
         $this->mGuildRankTbl = new TableGateway('faucet_guild_rank', $mapper);
         $this->mXPLvlTbl = new TableGateway('user_xp_level', $mapper);
         $this->mGuildRankPermTbl = new TableGateway('faucet_guild_rank_permission', $mapper);
-        $this->mSession = new Container('webauth');
+        $this->mSecTools = new SecurityTools($mapper);
         $this->mTransaction = new TransactionHelper($mapper);
     }
 
@@ -117,11 +118,10 @@ class BankController extends AbstractActionController
      */
     public function bankAction()
     {
-        # Check if user is logged in
-        if(!isset($this->mSession->auth)) {
-            return new ApiProblemResponse(new ApiProblem(401, 'Not logged in'));
+        $me = $this->mSecTools->getSecuredUserSession();
+        if(get_class($me) == 'Laminas\\ApiTools\\ApiProblem\\ApiProblem') {
+            return new ApiProblemResponse($me);
         }
-        $me = $this->mSession->auth;
 
         # check if user already has joined or created a guild
         $checkWh = new Where();

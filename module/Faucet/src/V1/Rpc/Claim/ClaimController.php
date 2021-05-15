@@ -14,6 +14,7 @@
  */
 namespace Faucet\V1\Rpc\Claim;
 
+use Faucet\Tools\SecurityTools;
 use Faucet\Transaction\TransactionHelper;
 use Laminas\Mvc\Controller\AbstractActionController;
 use Laminas\ApiTools\ContentNegotiation\ViewModel;
@@ -26,12 +27,12 @@ use Laminas\Session\Container;
 class ClaimController extends AbstractActionController
 {
     /**
-     * User Session
+     * Security Tools Helper
      *
-     * @var Container $mSession
+     * @var SecurityTools $mSecTools
      * @since 1.0.0
      */
-    protected $mSession;
+    protected $mSecTools;
 
     /**
      * Claim Table
@@ -59,7 +60,7 @@ class ClaimController extends AbstractActionController
     public function __construct($mapper)
     {
         $this->mClaimTbl = new TableGateway('faucet_claim', $mapper);
-        $this->mSession = new Container('webauth');
+        $this->mSecTools = new SecurityTools($mapper);
         $this->mMapper = $mapper;
     }
 
@@ -71,11 +72,10 @@ class ClaimController extends AbstractActionController
      */
     public function claimAction()
     {
-        # Check if user is logged in
-        if(!isset($this->mSession->auth)) {
-            return new ApiProblem(401, 'Not logged in');
+        $me = $this->mSecTools->getSecuredUserSession();
+        if(get_class($me) == 'Laminas\\ApiTools\\ApiProblem\\ApiProblem') {
+            return new ApiProblemResponse($me);
         }
-        $me = $this->mSession->auth;
 
         # Set Timer for next claim
         $sTime = 0;

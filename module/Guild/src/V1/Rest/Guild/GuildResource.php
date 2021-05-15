@@ -14,6 +14,7 @@
  */
 namespace Guild\V1\Rest\Guild;
 
+use Faucet\Tools\SecurityTools;
 use Laminas\ApiTools\ApiProblem\ApiProblem;
 use Laminas\ApiTools\Rest\AbstractResourceListener;
 use Laminas\ApiTools\ContentNegotiation\ViewModel;
@@ -97,6 +98,14 @@ class GuildResource extends AbstractResourceListener
     protected $mTransaction;
 
     /**
+     * Security Tools Helper
+     *
+     * @var SecurityTools $mSecTools
+     * @since 1.0.0
+     */
+    protected $mSecTools;
+
+    /**
      * Constructor
      *
      * AchievementResource constructor.
@@ -114,6 +123,7 @@ class GuildResource extends AbstractResourceListener
         $this->mUserTbl = new TableGateway('user', $mapper);
         $this->mSession = new Container('webauth');
         $this->mTransaction = new TransactionHelper($mapper);
+        $this->mSecTools = new SecurityTools($mapper);
     }
 
     /**
@@ -125,11 +135,10 @@ class GuildResource extends AbstractResourceListener
      */
     public function create($data)
     {
-        # Check if user is logged in
-        if(!isset($this->mSession->auth)) {
-            return new ApiProblem(401, 'Not logged in');
+        $me = $this->mSecTools->getSecuredUserSession();
+        if(get_class($me) == 'Laminas\\ApiTools\\ApiProblem\\ApiProblem') {
+            return $me;
         }
-        $me = $this->mSession->auth;
 
         # check if user already has joined or created a guild
         $checkWh = new Where();
@@ -215,11 +224,10 @@ class GuildResource extends AbstractResourceListener
      */
     public function delete($id)
     {
-        # Check if user is logged in
-        if(!isset($this->mSession->auth)) {
-            return new ApiProblem(401, 'Not logged in');
+        $me = $this->mSecTools->getSecuredUserSession();
+        if(get_class($me) == 'Laminas\\ApiTools\\ApiProblem\\ApiProblem') {
+            return $me;
         }
-        $me = $this->mSession->auth;
 
         # check if user already has joined or created a guild
         $checkWh = new Where();
@@ -303,11 +311,10 @@ class GuildResource extends AbstractResourceListener
      */
     public function fetch($id)
     {
-        # Check if user is logged in
-        if(!isset($this->mSession->auth)) {
-            return new ApiProblem(401, 'Not logged in');
+        $me = $this->mSecTools->getSecuredUserSession();
+        if(get_class($me) == 'Laminas\\ApiTools\\ApiProblem\\ApiProblem') {
+            return $me;
         }
-        $me = $this->mSession->auth;
 
         $guild = $this->mGuildTbl->select(['Guild_ID' => $id]);
         if(count($guild) == 0) {
@@ -421,11 +428,10 @@ class GuildResource extends AbstractResourceListener
      */
     public function fetchAll($params = [])
     {
-        # Check if user is logged in
-        if(!isset($this->mSession->auth)) {
-            return new ApiProblem(401, 'Not logged in');
+        $me = $this->mSecTools->getSecuredUserSession();
+        if(get_class($me) == 'Laminas\\ApiTools\\ApiProblem\\ApiProblem') {
+            return $me;
         }
-        $me = $this->mSession->auth;
 
         $page = (isset($_REQUEST['page'])) ? filter_var($_REQUEST['page'], FILTER_SANITIZE_NUMBER_INT) : 1;
 
@@ -495,11 +501,10 @@ class GuildResource extends AbstractResourceListener
      */
     public function patch($id, $data)
     {
-        # Check if user is logged in
-        if(!isset($this->mSession->auth)) {
-            return new ApiProblem(401, 'Not logged in');
+        $me = $this->mSecTools->getSecuredUserSession();
+        if(get_class($me) == 'Laminas\\ApiTools\\ApiProblem\\ApiProblem') {
+            return $me;
         }
-        $me = $this->mSession->auth;
 
         # check if user is guildmaster of a guild
         $checkWh = new Where();
@@ -576,11 +581,10 @@ class GuildResource extends AbstractResourceListener
      */
     public function update($id, $data)
     {
-        # Check if user is logged in
-        if(!isset($this->mSession->auth)) {
-            return new ApiProblem(401, 'Not logged in');
+        $me = $this->mSecTools->getSecuredUserSession();
+        if(get_class($me) == 'Laminas\\ApiTools\\ApiProblem\\ApiProblem') {
+            return $me;
         }
-        $me = $this->mSession->auth;
 
         # check if user already has joined or created a guild
         $checkWh = new Where();

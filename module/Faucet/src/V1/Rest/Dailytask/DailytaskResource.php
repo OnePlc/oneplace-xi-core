@@ -14,23 +14,23 @@
  */
 namespace Faucet\V1\Rest\Dailytask;
 
+use Faucet\Tools\SecurityTools;
 use Faucet\Transaction\TransactionHelper;
 use Laminas\ApiTools\ApiProblem\ApiProblem;
 use Laminas\ApiTools\Rest\AbstractResourceListener;
 use Laminas\ApiTools\ContentNegotiation\ViewModel;
 use Laminas\Db\TableGateway\TableGateway;
 use Laminas\Db\Sql\Where;
-use Laminas\Session\Container;
 
 class DailytaskResource extends AbstractResourceListener
 {
     /**
-     * User Session
+     * Security Tools Helper
      *
-     * @var Container $mSession
+     * @var SecurityTools $mSecTools
      * @since 1.0.0
      */
-    protected $mSession;
+    protected $mSecTools;
 
     /**
      * Dailytask Table
@@ -94,7 +94,7 @@ class DailytaskResource extends AbstractResourceListener
         $this->mTaskDoneTbl = new TableGateway('faucet_dailytask_user', $mapper);
         $this->mShortDoneTbl = new TableGateway('shortlink_link_user', $mapper);
         $this->mClaimTbl = new TableGateway('faucet_claim', $mapper);
-        $this->mSession = new Container('webauth');
+        $this->mSecTools = new SecurityTools($mapper);
         $this->mTransaction = new TransactionHelper($mapper);
     }
 
@@ -155,11 +155,10 @@ class DailytaskResource extends AbstractResourceListener
      */
     public function fetchAll($params = [])
     {
-        # Check if user is logged in
-        if(!isset($this->mSession->auth)) {
-            return new ApiProblem(401, 'Not logged in');
+        $me = $this->mSecTools->getSecuredUserSession();
+        if(get_class($me) == 'Laminas\\ApiTools\\ApiProblem\\ApiProblem') {
+            return $me;
         }
-        $me = $this->mSession->auth;
 
         # Check platform
         if(!isset($_REQUEST['platform'])) {
@@ -288,11 +287,10 @@ class DailytaskResource extends AbstractResourceListener
      */
     public function update($id, $data)
     {
-        # Check if user is logged in
-        if(!isset($this->mSession->auth)) {
-            return new ApiProblem(401, 'Not logged in');
+        $me = $this->mSecTools->getSecuredUserSession();
+        if(get_class($me) == 'Laminas\\ApiTools\\ApiProblem\\ApiProblem') {
+            return $me;
         }
-        $me = $this->mSession->auth;
 
         $iTaskID = filter_var($id, FILTER_SANITIZE_NUMBER_INT);
         # Check platform

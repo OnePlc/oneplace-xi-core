@@ -1,6 +1,7 @@
 <?php
 namespace User\V1\Rpc\Dashboard;
 
+use Faucet\Tools\SecurityTools;
 use Laminas\ApiTools\ApiProblem\ApiProblem;
 use Laminas\ApiTools\ApiProblem\ApiProblemResponse;
 use Laminas\ApiTools\ContentNegotiation\ViewModel;
@@ -12,12 +13,12 @@ use Laminas\Session\Container;
 class DashboardController extends AbstractActionController
 {
     /**
-     * User Session
+     * Security Tools Helper
      *
-     * @var Container $mSession
+     * @var SecurityTools $mSecTools
      * @since 1.0.0
      */
-    protected $mSession;
+    protected $mSecTools;
 
     /**
      * Shortlink Provider Table
@@ -67,7 +68,7 @@ class DashboardController extends AbstractActionController
      */
     public function __construct($mapper)
     {
-        $this->mSession = new Container('webauth');
+        $this->mSecTools = new SecurityTools($mapper);
         $this->mShortDoneTbl = new TableGateway('shortlink_link_user', $mapper);
         $this->mOfferwallUserTbl = new TableGateway('offerwall_user', $mapper);
         $this->mShortTbl = new TableGateway('shortlink', $mapper);
@@ -82,15 +83,14 @@ class DashboardController extends AbstractActionController
      */
     public function dashboardAction()
     {
+        $me = $this->mSecTools->getSecuredUserSession();
+        if(get_class($me) == 'Laminas\\ApiTools\\ApiProblem\\ApiProblem') {
+            return new ApiProblemResponse($me);
+        }
+
         $request = $this->getRequest();
 
         if($request->isGet()) {
-            # Check if user is logged in
-            if(!isset($this->mSession->auth)) {
-                return new ApiProblemResponse(new ApiProblem(401, 'Not logged in'));
-            }
-            $me = $this->mSession->auth;
-
             $chartLabels = [];
             $tasksDoneData = [];
             $coinsEarnedData = [];

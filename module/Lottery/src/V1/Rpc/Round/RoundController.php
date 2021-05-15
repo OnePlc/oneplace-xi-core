@@ -14,6 +14,7 @@
  */
 namespace Lottery\V1\Rpc\Round;
 
+use Faucet\Tools\SecurityTools;
 use Laminas\Mvc\Controller\AbstractActionController;
 use Laminas\ApiTools\ContentNegotiation\ViewModel;
 use Laminas\Db\TableGateway\TableGateway;
@@ -26,15 +27,6 @@ use Laminas\ApiTools\ApiProblem\ApiProblemResponse;
 
 class RoundController extends AbstractActionController
 {
-
-    /**
-     * User Session
-     *
-     * @var Container $mSession
-     * @since 1.0.0
-     */
-    protected $mSession;
-
     /**
      * User Table
      *
@@ -68,6 +60,14 @@ class RoundController extends AbstractActionController
     protected $mLotteryWInTbl;
 
     /**
+     * Security Tools Helper
+     *
+     * @var SecurityTools $mSecTools
+     * @since 1.0.0
+     */
+    protected $mSecTools;
+
+    /**
      * Constructor
      *
      * RoundController constructor.
@@ -81,7 +81,7 @@ class RoundController extends AbstractActionController
         $this->mLotteryTkTbl = new TableGateway('faucet_lottery_ticket', $mapper);
         $this->mUserTbl = new TableGateway('user', $mapper);
         $this->mLotteryWInTbl = new TableGateway('faucet_lottery_winner', $mapper);
-        $this->mSession = new Container('webauth');
+        $this->mSecTools = new SecurityTools($mapper);
     }
 
     /**
@@ -91,11 +91,10 @@ class RoundController extends AbstractActionController
      */
     public function roundAction()
     {
-        # Check if user is logged in
-        if(!isset($this->mSession->auth)) {
-            return new ApiProblemResponse(new ApiProblem(401, 'You are not logged in'));
+        $me = $this->mSecTools->getSecuredUserSession();
+        if(get_class($me) == 'Laminas\\ApiTools\\ApiProblem\\ApiProblem') {
+            return new ApiProblemResponse($me);
         }
-        $me = $this->mSession->auth;
         
         # Get current lottery round
         $roundSel = new Select($this->mLotteryTbl->getTable());

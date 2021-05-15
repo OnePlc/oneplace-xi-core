@@ -14,6 +14,7 @@
  */
 namespace Faucet\V1\Rpc\Referral;
 
+use Faucet\Tools\SecurityTools;
 use Laminas\Db\Sql\Predicate\PredicateSet;
 use Laminas\Db\Sql\Select;
 use Laminas\Mvc\Controller\AbstractActionController;
@@ -28,14 +29,6 @@ use Laminas\ApiTools\ApiProblem\ApiProblemResponse;
 
 class ReferralController extends AbstractActionController
 {
-    /**
-     * User Session
-     *
-     * @var Container $mSession
-     * @since 1.0.0
-     */
-    protected $mSession;
-
     /**
      * User Table
      *
@@ -52,6 +45,15 @@ class ReferralController extends AbstractActionController
      */
     protected $mWthTbl;
 
+
+    /**
+     * Security Tools Helper
+     *
+     * @var SecurityTools $mSecTools
+     * @since 1.0.0
+     */
+    protected $mSecTools;
+
     /**
      * Constructor
      *
@@ -63,7 +65,7 @@ class ReferralController extends AbstractActionController
     {
         $this->mUserTbl = new TableGateway('user', $mapper);
         $this->mWthTbl = new TableGateway('faucet_withdraw', $mapper);
-        $this->mSession = new Container('webauth');
+        $this->mSecTools = new SecurityTools($mapper);
     }
 
     /**
@@ -74,11 +76,10 @@ class ReferralController extends AbstractActionController
      */
     public function referralAction()
     {
-        # Check if user is logged in
-        if(!isset($this->mSession->auth)) {
-            return new ApiProblem(401, 'Not logged in');
+        $me = $this->mSecTools->getSecuredUserSession();
+        if(get_class($me) == 'Laminas\\ApiTools\\ApiProblem\\ApiProblem') {
+            return new ApiProblemResponse($me);
         }
-        $me = $this->mSession->auth;
         $page = (isset($_REQUEST['page'])) ? filter_var($_REQUEST['page'], FILTER_SANITIZE_NUMBER_INT) : 1;
         $pageSize = 25;
         # TODO: Rewrite to Batch to reduce DB load

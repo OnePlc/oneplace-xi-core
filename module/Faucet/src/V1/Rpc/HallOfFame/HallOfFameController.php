@@ -14,22 +14,23 @@
  */
 namespace Faucet\V1\Rpc\HallOfFame;
 
+use Faucet\Tools\SecurityTools;
 use Laminas\ApiTools\ApiProblem\ApiProblem;
+use Laminas\ApiTools\ApiProblem\ApiProblemResponse;
 use Laminas\Db\TableGateway\TableGateway;
 use Laminas\Db\Sql\Select;
 use Laminas\Mvc\Controller\AbstractActionController;
-use Laminas\Session\Container;
 use Laminas\ApiTools\ContentNegotiation\ViewModel;
 
 class HallOfFameController extends AbstractActionController
 {
     /**
-     * User Session
+     * Security Tools Helper
      *
-     * @var Container $mSession
+     * @var SecurityTools $mSecTools
      * @since 1.0.0
      */
-    protected $mSession;
+    protected $mSecTools;
 
     /**
      * Stats Table
@@ -58,16 +59,15 @@ class HallOfFameController extends AbstractActionController
     {
         $this->mStatsTbl = new TableGateway('faucet_statistic', $mapper);
         $this->mUserTbl = new TableGateway('user', $mapper);
-        $this->mSession = new Container('webauth');
+        $this->mSecTools = new SecurityTools($mapper);
     }
 
     public function hallOfFameAction()
     {
-        # Check if user is logged in
-        if(!isset($this->mSession->auth)) {
-            return new ApiProblem(401, 'Not logged in');
+        $me = $this->mSecTools->getSecuredUserSession();
+        if(get_class($me) == 'Laminas\\ApiTools\\ApiProblem\\ApiProblem') {
+            return new ApiProblemResponse($me);
         }
-        $me = $this->mSession->auth;
 
         $employees = [];
         $employeesDB = $this->mUserTbl->select(['is_employee' => 1]);

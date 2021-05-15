@@ -2,6 +2,7 @@
 namespace Faucet\V1\Rpc\Withdraw;
 
 use Application\Controller\IndexController;
+use Faucet\Tools\SecurityTools;
 use Faucet\Transaction\TransactionHelper;
 use Laminas\ApiTools\ApiProblem\ApiProblem;
 use Laminas\ApiTools\ApiProblem\ApiProblemResponse;
@@ -14,14 +15,6 @@ use Laminas\Session\Container;
 
 class WithdrawController extends AbstractActionController
 {
-    /**
-     * User Session
-     *
-     * @var Container $mSession
-     * @since 1.0.0
-     */
-    protected $mSession;
-
     /**
      * User Withdrawal Table
      *
@@ -47,6 +40,14 @@ class WithdrawController extends AbstractActionController
     protected $mTransaction;
 
     /**
+     * Security Tools Helper
+     *
+     * @var SecurityTools $mSecTools
+     * @since 1.0.0
+     */
+    protected $mSecTools;
+
+    /**
      * Constructor
      *
      * UserResource constructor.
@@ -57,17 +58,16 @@ class WithdrawController extends AbstractActionController
     {
         $this->mWithdrawTbl = new TableGateway('faucet_withdraw', $mapper);
         $this->mWalletTbl = new TableGateway('faucet_wallet', $mapper);
-        $this->mSession = new Container('webauth');
         $this->mTransaction = new TransactionHelper($mapper);
+        $this->mSecTools = new SecurityTools($mapper);
     }
 
     public function withdrawAction()
     {
-        # Check if user is logged in
-        if(!isset($this->mSession->auth)) {
-            return new ApiProblemResponse(new ApiProblem(401, 'Not logged in'));
+        $me = $this->mSecTools->getSecuredUserSession();
+        if(get_class($me) == 'Laminas\\ApiTools\\ApiProblem\\ApiProblem') {
+            return new ApiProblemResponse($me);
         }
-        $me = $this->mSession->auth;
 
         $request = $this->getRequest();
 

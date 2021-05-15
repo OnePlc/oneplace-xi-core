@@ -19,17 +19,46 @@ use Laminas\Db\Sql\Select;
 use Laminas\Db\TableGateway\TableGateway;
 use Laminas\Paginator\Adapter\DbSelect;
 use Laminas\Paginator\Paginator;
+use Laminas\ApiTools\ApiProblem\ApiProblem;
+use Laminas\Session\Container;
 
 class SecurityTools {
     /**
+     * User Session
+     *
+     * @var Container $mSession
+     * @since 1.0.0
+     */
+    protected $mSession;
+
+    /**
+     * User Table
+     *
+     * @var TableGateway $mUserTbl
+     * @since 1.0.0
+     */
+    protected $mUserTbl;
+
+    /**
+     * User Settings Table
+     *
+     * @var TableGateway $mUserSetTbl
+     * @since 1.0.0
+     */
+    protected $mUserSetTbl;
+
+    /**
      * Constructor
      *
-     * LoginController constructor.
+     * SecurityTools constructor.
      * @param $mapper
      * @since 1.0.0
      */
     public function __construct($mapper)
     {
+        $this->mSession = new Container('webauth');
+        $this->mUserSetTbl = new TableGateway('user_setting', $mapper);
+        $this->mUserTbl = new TableGateway('user', $mapper);
     }
 
     /**
@@ -139,5 +168,28 @@ class SecurityTools {
         }
 
         return 'ok';
+    }
+
+    /**
+     * Get secured User Session on Server
+     *
+     * @return ApiProblem
+     * @since 1.0.0
+     */
+    public function getSecuredUserSession() {
+        if(!isset($this->mSession->auth)) {
+            return new ApiProblem(401, 'Not logged in');
+        }
+        # check for user bans
+        $userTempBan = $this->mUserSetTbl->select([
+            'user_idfs' => $this->mSession->auth->User_ID,
+            'setting_name' => 'user-tempban',
+        ]);
+        if(count($userTempBan) > 0) {
+            return new ApiProblem(403, 'You are temporarily banned. Please contact support.');
+        }
+
+        # get user from db
+        return $this->mUserTbl->select(['User_ID' => $this->mSession->auth->User_ID])->current();
     }
 }

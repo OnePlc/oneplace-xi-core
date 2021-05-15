@@ -175,6 +175,10 @@ class UserResource extends AbstractResourceListener
      */
     public function fetch($id)
     {
+        $me = $this->mSecTools->getSecuredUserSession();
+        if(get_class($me) == 'Laminas\\ApiTools\\ApiProblem\\ApiProblem') {
+            return $me;
+        }
 
         # get user from db
         $user = $this->mapper->select(['User_ID' => $id])->current();
@@ -206,11 +210,10 @@ class UserResource extends AbstractResourceListener
      */
     public function fetchAll($params = [])
     {
-        if(!isset($this->mSession->auth)) {
-            return new ApiProblem(401, 'Not logged in');
+        $user = $this->mSecTools->getSecuredUserSession();
+        if(get_class($user) == 'Laminas\\ApiTools\\ApiProblem\\ApiProblem') {
+            return $user;
         }
-        # get user from db
-        $user = $this->mapper->select(['User_ID' => $this->mSession->auth->User_ID])->current();
 
         # get user next level xp
         $oNextLvl = $this->mXPLvlTbl->select(['Level_ID' => ($user->xp_level + 1)])->current();
@@ -330,13 +333,9 @@ class UserResource extends AbstractResourceListener
      */
     public function replaceList($data)
     {
-        if(!isset($this->mSession->auth)) {
-            return new ApiProblem(401, 'Not logged in');
-        }
-        # get user from db
-        $user = $this->mapper->select(['User_ID' => $this->mSession->auth->User_ID])->current();
-        if($this->mSession->auth->User_ID == 0) {
-            return new ApiProblem(400, 'invalid user id');
+        $user = $this->mSecTools->getSecuredUserSession();
+        if(get_class($user) == 'Laminas\\ApiTools\\ApiProblem\\ApiProblem') {
+            return $user;
         }
 
         # check for attack vendors

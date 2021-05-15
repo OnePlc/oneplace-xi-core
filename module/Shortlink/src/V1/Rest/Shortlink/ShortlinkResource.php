@@ -14,6 +14,7 @@
  */
 namespace Shortlink\V1\Rest\Shortlink;
 
+use Faucet\Tools\SecurityTools;
 use Laminas\ApiTools\ApiProblem\ApiProblem;
 use Laminas\ApiTools\Rest\AbstractResourceListener;
 use Laminas\ApiTools\ContentNegotiation\ViewModel;
@@ -27,12 +28,12 @@ use Laminas\Session\Container;
 class ShortlinkResource extends AbstractResourceListener
 {
     /**
-     * User Session
+     * Security Tools Helper
      *
-     * @var Container $mSession
+     * @var SecurityTools $mSecTools
      * @since 1.0.0
      */
-    protected $mSession;
+    protected $mSecTools;
 
     /**
      * Shortlink Table
@@ -74,7 +75,7 @@ class ShortlinkResource extends AbstractResourceListener
         $this->mShortProviderTbl = new TableGateway('shortlink', $mapper);
         $this->mShortTbl = new TableGateway('shortlink_link', $mapper);
         $this->mShortDoneTbl = new TableGateway('shortlink_link_user', $mapper);
-        $this->mSession = new Container('webauth');
+        $this->mSecTools = new SecurityTools($mapper);
     }
 
     /**
@@ -122,11 +123,10 @@ class ShortlinkResource extends AbstractResourceListener
      */
     public function fetch($id)
     {
-        # Check if user is logged in
-        if(!isset($this->mSession->auth)) {
-            return new ApiProblem(401, 'Not logged in');
+        $me = $this->mSecTools->getSecuredUserSession();
+        if(get_class($me) == 'Laminas\\ApiTools\\ApiProblem\\ApiProblem') {
+            return $me;
         }
-        $me = $this->mSession->auth;
 
         # Load Shortlink Provider List
         $shortlinksDB = $this->mShortProviderTbl->select(['url' => $id]);
@@ -197,11 +197,10 @@ class ShortlinkResource extends AbstractResourceListener
      */
     public function fetchAll($params = [])
     {
-        # Check if user is logged in
-        if(!isset($this->mSession->auth)) {
-            return new ApiProblem(401, 'Not logged in');
+        $me = $this->mSecTools->getSecuredUserSession();
+        if(get_class($me) == 'Laminas\\ApiTools\\ApiProblem\\ApiProblem') {
+            return $me;
         }
-        $me = $this->mSession->auth;
 
         # Load Shortlink Provider List
         $shortlinksDB = $this->mShortProviderTbl->select();
