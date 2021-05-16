@@ -48,6 +48,14 @@ class WithdrawController extends AbstractActionController
     protected $mSecTools;
 
     /**
+     * User Settings Table
+     *
+     * @var TableGateway $mUserSetTbl
+     * @since 1.0.0
+     */
+    protected $mUserSetTbl;
+
+    /**
      * Constructor
      *
      * UserResource constructor.
@@ -58,6 +66,7 @@ class WithdrawController extends AbstractActionController
     {
         $this->mWithdrawTbl = new TableGateway('faucet_withdraw', $mapper);
         $this->mWalletTbl = new TableGateway('faucet_wallet', $mapper);
+        $this->mUserSetTbl = new TableGateway('user_setting', $mapper);
         $this->mTransaction = new TransactionHelper($mapper);
         $this->mSecTools = new SecurityTools($mapper);
     }
@@ -148,16 +157,29 @@ class WithdrawController extends AbstractActionController
                 return new ApiProblemResponse(new ApiProblem(400, 'Invalid Response Body (missing required fields)'));
             }
 
+            # check for attack vendors
+            $secResult = $this->mSecTools->basicInputCheck([$json->amount,$json->coin,$json->wallet]);
+            if($secResult !== 'ok') {
+                # ban user and force logout on client
+                $this->mUserSetTbl->insert([
+                    'user_idfs' => $me->User_ID,
+                    'setting_name' => 'user-tempban',
+                    'setting_value' => 'Potential '.$secResult.' Attack @ '.date('Y-m-d H:i:s').' Withdraw Request',
+                ]);
+                return new ApiProblem(418, 'Potential '.$secResult.' Attack - Goodbye');
+            }
+
             $tokenValue = 0.0004;
 
             /**
              * Double check amount
              */
+            $amount = filter_var($json->amount, FILTER_SANITIZE_NUMBER_INT);
             $withdrawLimit = 1000 * (1 + (($me->xp_level - 1) / 6));
-            if($json->amount > $withdrawLimit) {
+            if($amount > $withdrawLimit) {
                 return new ApiProblemResponse(new ApiProblem(409, 'Amount is bigger than daily withdrawal limit'));
             }
-            if($json->amount < 0 || !is_numeric($json->amount) || empty($json->amount)) {
+            if($amount < 0 || empty($amount)) {
                 return new ApiProblemResponse(new ApiProblem(409, 'Invalid amount'));
             }
 
@@ -174,7 +196,6 @@ class WithdrawController extends AbstractActionController
             /**
              * Calculate Crypto Amount to Send
              */
-            $amount = filter_var($json->amount, FILTER_SANITIZE_NUMBER_INT);
             $wallet = filter_var($json->wallet, FILTER_SANITIZE_STRING);
             $amountCrypto = $amount*$tokenValue;
             $amountFee = $coinInfo->fee*$tokenValue;
