@@ -62,6 +62,14 @@ class TicketsController extends AbstractActionController
     protected $mSecTools;
 
     /**
+     * User Settings Table
+     *
+     * @var TableGateway $mUserSetTbl
+     * @since 1.0.0
+     */
+    protected $mUserSetTbl;
+
+    /**
      * Constructor
      *
      * TicketsController constructor.
@@ -73,6 +81,7 @@ class TicketsController extends AbstractActionController
         # Init Tables for this API
         $this->mLotteryTbl = new TableGateway('faucet_lottery_round', $mapper);
         $this->mLotteryTkTbl = new TableGateway('faucet_lottery_ticket', $mapper);
+        $this->mUserSetTbl = new TableGateway('user_setting', $mapper);
         $this->mTransaction = new TransactionHelper($mapper);
         $this->mSecTools = new SecurityTools($mapper);
     }
@@ -98,7 +107,23 @@ class TicketsController extends AbstractActionController
 
         # get data from request
         $json = IndexController::loadJSONFromRequestBody(['round','tickets'],$this->getRequest()->getContent());
+        # check for attack vendors
+        $secResult = $this->mSecTools->basicInputCheck([$json->tickets,$json->round]);
+        if($secResult !== 'ok') {
+            # ban user and force logout on client
+            $this->mUserSetTbl->insert([
+                'user_idfs' => $me->User_ID,
+                'setting_name' => 'user-tempban',
+                'setting_value' => 'Potential '.$secResult.' Attack @ '.date('Y-m-d H:i:s').' Lottery Buy Tickets',
+            ]);
+            return new ApiProblemResponse(new ApiProblem(418, 'Potential '.$secResult.' Attack - Goodbye'));
+        }
+
         $tickets = filter_var($json->tickets, FILTER_SANITIZE_NUMBER_INT);
+
+        if($tickets <= 0) {
+            return new ApiProblemResponse(new ApiProblem(400, 'You must provide a valid amount of tickets'));
+        }
         $ticketPrice = 10;
         $myTotalTickets = 0;
         # Check if user has enough funds to buy the tickets

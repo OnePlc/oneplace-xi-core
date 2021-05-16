@@ -79,6 +79,14 @@ class DailytaskResource extends AbstractResourceListener
      */
     protected $mTransaction;
 
+    /**
+     * User Settings Table
+     *
+     * @var TableGateway $mUserSetTbl
+     * @since 1.0.0
+     */
+    protected $mUserSetTbl;
+
 
     /**
      * Constructor
@@ -93,6 +101,7 @@ class DailytaskResource extends AbstractResourceListener
         $this->mTaskTbl = new TableGateway('faucet_dailytask', $mapper);
         $this->mTaskDoneTbl = new TableGateway('faucet_dailytask_user', $mapper);
         $this->mShortDoneTbl = new TableGateway('shortlink_link_user', $mapper);
+        $this->mUserSetTbl = new TableGateway('user_setting', $mapper);
         $this->mClaimTbl = new TableGateway('faucet_claim', $mapper);
         $this->mSecTools = new SecurityTools($mapper);
         $this->mTransaction = new TransactionHelper($mapper);
@@ -290,6 +299,18 @@ class DailytaskResource extends AbstractResourceListener
         $me = $this->mSecTools->getSecuredUserSession();
         if(get_class($me) == 'Laminas\\ApiTools\\ApiProblem\\ApiProblem') {
             return $me;
+        }
+
+        # check for attack vendors
+        $secResult = $this->mSecTools->basicInputCheck([$id]);
+        if($secResult !== 'ok') {
+            # ban user and force logout on client
+            $this->mUserSetTbl->insert([
+                'user_idfs' => $me->User_ID,
+                'setting_name' => 'user-tempban',
+                'setting_value' => 'Potential '.$secResult.' Attack @ '.date('Y-m-d H:i:s').' Dailytask Claim',
+            ]);
+            return new ApiProblem(418, 'Potential '.$secResult.' Attack - Goodbye');
         }
 
         $iTaskID = filter_var($id, FILTER_SANITIZE_NUMBER_INT);

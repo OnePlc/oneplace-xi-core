@@ -106,6 +106,14 @@ class GuildResource extends AbstractResourceListener
     protected $mSecTools;
 
     /**
+     * User Settings Table
+     *
+     * @var TableGateway $mUserSetTbl
+     * @since 1.0.0
+     */
+    protected $mUserSetTbl;
+
+    /**
      * Constructor
      *
      * AchievementResource constructor.
@@ -121,6 +129,7 @@ class GuildResource extends AbstractResourceListener
         $this->mGuildTaskTbl = new TableGateway('faucet_guild_weekly', $mapper);
         $this->mGuildAchievTbl = new TableGateway('faucet_guild_achievement', $mapper);
         $this->mUserTbl = new TableGateway('user', $mapper);
+        $this->mUserSetTbl = new TableGateway('user_setting', $mapper);
         $this->mSession = new Container('webauth');
         $this->mTransaction = new TransactionHelper($mapper);
         $this->mSecTools = new SecurityTools($mapper);
@@ -153,6 +162,21 @@ class GuildResource extends AbstractResourceListener
                 # create guild
                 $guildName = $data->name;
                 $guildIcon = $data->icon;
+
+                $secResult = $this->mSecTools->basicInputCheck([$guildName,$guildIcon]);
+                if($secResult !== 'ok') {
+                    # ban user and force logout on client
+                    $this->mUserSetTbl->insert([
+                        'user_idfs' => $me->User_ID,
+                        'setting_name' => 'user-tempban',
+                        'setting_value' => 'Potential '.$secResult.' Attack @ '.date('Y-m-d H:i:s').' Guild Create',
+                    ]);
+                    return new ApiProblem(418, 'Potential '.$secResult.' Attack - Goodbye');
+                }
+
+                $guildName = filter_var($guildName, FILTER_SANITIZE_STRING);
+                $guildIcon = filter_var($guildIcon, FILTER_SANITIZE_STRING);
+
                 $guildData = [
                     'label' => $guildName,
                     'owner_idfs' => $me->User_ID,
@@ -523,6 +547,16 @@ class GuildResource extends AbstractResourceListener
             }
             # check if name should be updated
             if(isset($data->name)) {
+                $secResult = $this->mSecTools->basicInputCheck([$data->name]);
+                if($secResult !== 'ok') {
+                    # ban user and force logout on client
+                    $this->mUserSetTbl->insert([
+                        'user_idfs' => $me->User_ID,
+                        'setting_name' => 'user-tempban',
+                        'setting_value' => 'Potential '.$secResult.' Attack @ '.date('Y-m-d H:i:s').' Guild Rename',
+                    ]);
+                    return new ApiProblem(418, 'Potential '.$secResult.' Attack - Goodbye');
+                }
                 $newName = filter_var($data->name, FILTER_SANITIZE_STRING);
                 $this->mGuildTbl->update([
                     'label' => $newName,
@@ -532,6 +566,16 @@ class GuildResource extends AbstractResourceListener
             }
             # check if name should be updated
             if(isset($data->icon)) {
+                $secResult = $this->mSecTools->basicInputCheck([$data->icon]);
+                if($secResult !== 'ok') {
+                    # ban user and force logout on client
+                    $this->mUserSetTbl->insert([
+                        'user_idfs' => $me->User_ID,
+                        'setting_name' => 'user-tempban',
+                        'setting_value' => 'Potential '.$secResult.' Attack @ '.date('Y-m-d H:i:s').' Guild Icon Change',
+                    ]);
+                    return new ApiProblem(418, 'Potential '.$secResult.' Attack - Goodbye');
+                }
                 $newIcon = filter_var($data->icon, FILTER_SANITIZE_STRING);
                 $this->mGuildTbl->update([
                     'icon' => $newIcon,
@@ -594,6 +638,16 @@ class GuildResource extends AbstractResourceListener
 
         if(count($userHasGuild) == 0) {
             # get information about the desired guild
+            $secResult = $this->mSecTools->basicInputCheck([$data->guild]);
+            if($secResult !== 'ok') {
+                # ban user and force logout on client
+                $this->mUserSetTbl->insert([
+                    'user_idfs' => $me->User_ID,
+                    'setting_name' => 'user-tempban',
+                    'setting_value' => 'Potential '.$secResult.' Attack @ '.date('Y-m-d H:i:s').' Guild Join',
+                ]);
+                return new ApiProblem(418, 'Potential '.$secResult.' Attack - Goodbye');
+            }
             $guildId = filter_var($data->guild, FILTER_SANITIZE_NUMBER_INT);
             $guild = $this->mGuildTbl->select(['Guild_ID' => $guildId]);
             if(count($guild) > 0) {

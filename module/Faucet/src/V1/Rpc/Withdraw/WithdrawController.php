@@ -166,7 +166,7 @@ class WithdrawController extends AbstractActionController
                     'setting_name' => 'user-tempban',
                     'setting_value' => 'Potential '.$secResult.' Attack @ '.date('Y-m-d H:i:s').' Withdraw Request',
                 ]);
-                return new ApiProblem(418, 'Potential '.$secResult.' Attack - Goodbye');
+                return new ApiProblemResponse(new ApiProblem(418, 'Potential '.$secResult.' Attack - Goodbye'));
             }
 
             $tokenValue = 0.0004;

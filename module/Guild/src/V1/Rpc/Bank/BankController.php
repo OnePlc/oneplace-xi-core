@@ -90,6 +90,14 @@ class BankController extends AbstractActionController
     protected $mTransaction;
 
     /**
+     * User Settings Table
+     *
+     * @var TableGateway $mUserSetTbl
+     * @since 1.0.0
+     */
+    protected $mUserSetTbl;
+
+    /**
      * Constructor
      *
      * BankController constructor.
@@ -104,6 +112,7 @@ class BankController extends AbstractActionController
         $this->mGuildRankTbl = new TableGateway('faucet_guild_rank', $mapper);
         $this->mXPLvlTbl = new TableGateway('user_xp_level', $mapper);
         $this->mGuildRankPermTbl = new TableGateway('faucet_guild_rank_permission', $mapper);
+        $this->mUserSetTbl = new TableGateway('user_setting', $mapper);
         $this->mSecTools = new SecurityTools($mapper);
         $this->mTransaction = new TransactionHelper($mapper);
     }
@@ -147,6 +156,17 @@ class BankController extends AbstractActionController
             if(!$json) {
                 return new ApiProblemResponse(new ApiProblem(400, 'Invalid JSON Body'));
             }
+            # check for attack vendors
+            $secResult = $this->mSecTools->basicInputCheck([$json->amount]);
+            if($secResult !== 'ok') {
+                # ban user and force logout on client
+                $this->mUserSetTbl->insert([
+                    'user_idfs' => $me->User_ID,
+                    'setting_name' => 'user-tempban',
+                    'setting_value' => 'Potential '.$secResult.' Attack @ '.date('Y-m-d H:i:s').' Guildbank Withdraw',
+                ]);
+                return new ApiProblemResponse(new ApiProblem(418, 'Potential '.$secResult.' Attack - Goodbye'));
+            }
             $amount = filter_var($json->amount, FILTER_SANITIZE_NUMBER_INT);
         }
 
@@ -174,6 +194,17 @@ class BankController extends AbstractActionController
              */
             case $request->isGet():
                 $page = (isset($_REQUEST['page'])) ? filter_var($_REQUEST['page'], FILTER_SANITIZE_NUMBER_INT) : 1;
+                # check for attack vendors
+                $secResult = $this->mSecTools->basicInputCheck([$_REQUEST['page']]);
+                if($secResult !== 'ok') {
+                    # ban user and force logout on client
+                    $this->mUserSetTbl->insert([
+                        'user_idfs' => $me->User_ID,
+                        'setting_name' => 'user-tempban',
+                        'setting_value' => 'Potential '.$secResult.' Attack @ '.date('Y-m-d H:i:s').' Guildbank GET',
+                    ]);
+                    return new ApiProblemResponse(new ApiProblem(418, 'Potential '.$secResult.' Attack - Goodbye'));
+                }
 
                 return [
                     'guild_token_balance' => $guild->token_balance,

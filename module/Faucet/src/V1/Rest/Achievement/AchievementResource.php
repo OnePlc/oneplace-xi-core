@@ -17,6 +17,7 @@ namespace Faucet\V1\Rest\Achievement;
 use Faucet\Tools\SecurityTools;
 use Faucet\Transaction\TransactionHelper;
 use Laminas\ApiTools\ApiProblem\ApiProblem;
+use Laminas\ApiTools\ApiProblem\ApiProblemResponse;
 use Laminas\ApiTools\Rest\AbstractResourceListener;
 use Laminas\ApiTools\ContentNegotiation\ViewModel;
 use Laminas\Db\TableGateway\TableGateway;
@@ -68,6 +69,14 @@ class AchievementResource extends AbstractResourceListener
     protected $mMinerTbl;
 
     /**
+     * User Settings Table
+     *
+     * @var TableGateway $mUserSetTbl
+     * @since 1.0.0
+     */
+    protected $mUserSetTbl;
+
+    /**
      * Constructor
      *
      * AchievementResource constructor.
@@ -80,6 +89,7 @@ class AchievementResource extends AbstractResourceListener
         $this->mAchievTbl = new TableGateway('faucet_achievement', $mapper);
         $this->mAchievCatTbl = new TableGateway('faucet_achievement_category', $mapper);
         $this->mMinerTbl = new TableGateway('faucet_miner', $mapper);
+        $this->mUserSetTbl = new TableGateway('user_setting', $mapper);
         $this->mAchievDoneTbl = new TableGateway('faucet_achievement_user', $mapper);
         $this->mSecTools = new SecurityTools($mapper);
     }
@@ -248,6 +258,18 @@ class AchievementResource extends AbstractResourceListener
         $me = $this->mSecTools->getSecuredUserSession();
         if(get_class($me) == 'Laminas\\ApiTools\\ApiProblem\\ApiProblem') {
             return $me;
+        }
+
+        # check for attack vendors
+        $secResult = $this->mSecTools->basicInputCheck([$id]);
+        if($secResult !== 'ok') {
+            # ban user and force logout on client
+            $this->mUserSetTbl->insert([
+                'user_idfs' => $me->User_ID,
+                'setting_name' => 'user-tempban',
+                'setting_value' => 'Potential '.$secResult.' Attack @ '.date('Y-m-d H:i:s').' Achievement Claim',
+            ]);
+            return new ApiProblem(418, 'Potential '.$secResult.' Attack - Goodbye');
         }
 
         $achievementId = filter_var($id, FILTER_SANITIZE_NUMBER_INT);
