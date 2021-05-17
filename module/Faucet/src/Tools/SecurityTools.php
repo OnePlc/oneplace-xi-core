@@ -70,19 +70,16 @@ class SecurityTools {
      */
     private function xssCheck(array $aValsToCheck = [])
     {
+        $aBlacklist = ['script>','src=','<script','</sc','=//'];
         foreach($aValsToCheck as $sVal) {
-            $bHasScript = stripos(strtolower($sVal),'script>');
-            if($bHasScript === false) {
-                $bHasScript = stripos(strtolower($sVal),'src=');
-                if($bHasScript === false) {
-
+            foreach($aBlacklist as $sBlack) {
+                $bHasBlack = stripos(strtolower($sVal),strtolower($sBlack));
+                if($bHasBlack === false) {
+                    # all good
                 } else {
-                    # found xss attack
-                    return 'src=';
+                    # found blacklisted needle in string
+                    return $sBlack;
                 }
-            } else {
-                # found xss attack
-                return 'script>';
             }
         }
 
