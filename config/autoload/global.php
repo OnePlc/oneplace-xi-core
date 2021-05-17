@@ -21,8 +21,14 @@ return [
                 'Offerwall\\V1' => 'oneplace',
                 'Game\\V1' => 'oneplace',
                 'Support\\V1' => 'oneplace',
+                'Laminas\\ApiTools\\OAuth2' => 'session',
             ],
         ],
+        'adapters' => [
+            'session' => [
+                'adapter' => 'Application\\Authentication\\Adapter\\SessionAdapter',
+            ],
+        ]
     ],
     'router' => [
         'routes' => [

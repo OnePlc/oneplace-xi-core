@@ -30,8 +30,8 @@ return [
             'route_identifier_name' => 'shortlink_id',
             'collection_name' => 'shortlink',
             'entity_http_methods' => [
-                0 => 'PUT',
-                1 => 'GET',
+                0 => 'GET',
+                1 => 'PUT',
             ],
             'collection_http_methods' => [
                 0 => 'GET',
@@ -84,7 +84,7 @@ return [
                 'collection' => [
                     'GET' => true,
                     'POST' => false,
-                    'PUT' => false,
+                    'PUT' => true,
                     'PATCH' => false,
                     'DELETE' => false,
                 ],

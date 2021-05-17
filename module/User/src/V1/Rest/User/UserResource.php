@@ -15,6 +15,7 @@
 
 namespace User\V1\Rest\User;
 
+use Application\Identity\UserIdentity;
 use Faucet\Tools\SecurityTools;
 use Laminas\ApiTools\ApiProblem\ApiProblem;
 use Laminas\ApiTools\Rest\AbstractResourceListener;
@@ -175,30 +176,7 @@ class UserResource extends AbstractResourceListener
      */
     public function fetch($id)
     {
-        $me = $this->mSecTools->getSecuredUserSession();
-        if(get_class($me) == 'Laminas\\ApiTools\\ApiProblem\\ApiProblem') {
-            return $me;
-        }
-
-        # get user from db
-        $user = $this->mapper->select(['User_ID' => $id])->current();
-
-        # get user next level xp
-        $oNextLvl = $this->mXPLvlTbl->select(['Level_ID' => ($user->xp_level + 1)])->current();
-        $dPercent = 0;
-        if ($user->xp_current != 0) {
-            $dPercent = round((100 / ($oNextLvl->xp_total / $user->xp_current)), 2);
-        }
-
-        # only send public fields
-        return (object)[
-            'id' => $user->User_ID,
-            'session_user' => $this->mSession->auth->username,
-            'username' => $user->username,
-            'token_balance' => $user->token_balance,
-            'xp_level' => $user->xp_level,
-            'xp_percent' => $dPercent,
-        ];
+        return new ApiProblem(405, 'The GET method has not been defined for invidiual resources');
     }
 
     /**
@@ -210,7 +188,11 @@ class UserResource extends AbstractResourceListener
      */
     public function fetchAll($params = [])
     {
-        $user = $this->mSecTools->getSecuredUserSession();
+        # Prevent 500 error
+        if(!$this->getIdentity()) {
+            return new ApiProblem(401, 'Not logged in');
+        }
+        $user = $this->mSecTools->getSecuredUserSession($this->getIdentity()->getName());
         if(get_class($user) == 'Laminas\\ApiTools\\ApiProblem\\ApiProblem') {
             return $user;
         }
@@ -333,7 +315,11 @@ class UserResource extends AbstractResourceListener
      */
     public function replaceList($data)
     {
-        $user = $this->mSecTools->getSecuredUserSession();
+        # Prevent 500 error
+        if(!$this->getIdentity()) {
+            return new ApiProblem(401, 'Not logged in');
+        }
+        $user = $this->mSecTools->getSecuredUserSession($this->getIdentity()->getName());
         if(get_class($user) == 'Laminas\\ApiTools\\ApiProblem\\ApiProblem') {
             return $user;
         }

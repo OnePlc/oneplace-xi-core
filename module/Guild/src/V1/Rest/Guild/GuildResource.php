@@ -144,7 +144,11 @@ class GuildResource extends AbstractResourceListener
      */
     public function create($data)
     {
-        $me = $this->mSecTools->getSecuredUserSession();
+        # Prevent 500 error
+        if(!$this->getIdentity()) {
+            return new ApiProblem(401, 'Not logged in');
+        }
+        $me = $this->mSecTools->getSecuredUserSession($this->getIdentity()->getName());
         if(get_class($me) == 'Laminas\\ApiTools\\ApiProblem\\ApiProblem') {
             return $me;
         }
@@ -248,7 +252,11 @@ class GuildResource extends AbstractResourceListener
      */
     public function delete($id)
     {
-        $me = $this->mSecTools->getSecuredUserSession();
+        # Prevent 500 error
+        if(!$this->getIdentity()) {
+            return new ApiProblem(401, 'Not logged in');
+        }
+        $me = $this->mSecTools->getSecuredUserSession($this->getIdentity()->getName());
         if(get_class($me) == 'Laminas\\ApiTools\\ApiProblem\\ApiProblem') {
             return $me;
         }
@@ -335,7 +343,11 @@ class GuildResource extends AbstractResourceListener
      */
     public function fetch($id)
     {
-        $me = $this->mSecTools->getSecuredUserSession();
+        # Prevent 500 error
+        if(!$this->getIdentity()) {
+            return new ApiProblem(401, 'Not logged in');
+        }
+        $me = $this->mSecTools->getSecuredUserSession($this->getIdentity()->getName());
         if(get_class($me) == 'Laminas\\ApiTools\\ApiProblem\\ApiProblem') {
             return $me;
         }
@@ -452,7 +464,11 @@ class GuildResource extends AbstractResourceListener
      */
     public function fetchAll($params = [])
     {
-        $me = $this->mSecTools->getSecuredUserSession();
+        # Prevent 500 error
+        if(!$this->getIdentity()) {
+            return new ApiProblem(401, 'Not logged in');
+        }
+        $me = $this->mSecTools->getSecuredUserSession($this->getIdentity()->getName());
         if(get_class($me) == 'Laminas\\ApiTools\\ApiProblem\\ApiProblem') {
             return $me;
         }
@@ -525,7 +541,11 @@ class GuildResource extends AbstractResourceListener
      */
     public function patch($id, $data)
     {
-        $me = $this->mSecTools->getSecuredUserSession();
+        # Prevent 500 error
+        if(!$this->getIdentity()) {
+            return new ApiProblem(401, 'Not logged in');
+        }
+        $me = $this->mSecTools->getSecuredUserSession($this->getIdentity()->getName());
         if(get_class($me) == 'Laminas\\ApiTools\\ApiProblem\\ApiProblem') {
             return $me;
         }
@@ -625,7 +645,11 @@ class GuildResource extends AbstractResourceListener
      */
     public function update($id, $data)
     {
-        $me = $this->mSecTools->getSecuredUserSession();
+        # Prevent 500 error
+        if(!$this->getIdentity()) {
+            return new ApiProblem(401, 'Not logged in');
+        }
+        $me = $this->mSecTools->getSecuredUserSession($this->getIdentity()->getName());
         if(get_class($me) == 'Laminas\\ApiTools\\ApiProblem\\ApiProblem') {
             return $me;
         }

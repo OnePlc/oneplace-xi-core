@@ -11,6 +11,11 @@ namespace Application;
 use Laminas\ServiceManager\Factory\InvokableFactory;
 
 return [
+    'service_manager' => [
+        'aliases' => [
+            'Laminas\ApiTools\OAuth2\Provider\UserId' => 'Laminas\ApiTools\OAuth2\Provider\UserId\AuthenticationService',
+        ],
+    ],
     'router' => [
         'routes' => [
             'home' => [

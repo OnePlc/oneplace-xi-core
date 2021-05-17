@@ -15,6 +15,7 @@
  */
 namespace Faucet\Tools;
 
+use Laminas\ApiTools\Rest\AbstractResourceListener;
 use Laminas\Db\Sql\Select;
 use Laminas\Db\TableGateway\TableGateway;
 use Laminas\Paginator\Adapter\DbSelect;
@@ -22,7 +23,7 @@ use Laminas\Paginator\Paginator;
 use Laminas\ApiTools\ApiProblem\ApiProblem;
 use Laminas\Session\Container;
 
-class SecurityTools {
+class SecurityTools extends AbstractResourceListener {
     /**
      * User Session
      *
@@ -173,13 +174,13 @@ class SecurityTools {
      * @return ApiProblem
      * @since 1.0.0
      */
-    public function getSecuredUserSession() {
-        if(!isset($this->mSession->auth)) {
+    public function getSecuredUserSession($userId) {
+        if(empty($userId) || $userId == 0) {
             return new ApiProblem(401, 'Not logged in');
         }
         # check for user bans
         $userTempBan = $this->mUserSetTbl->select([
-            'user_idfs' => $this->mSession->auth->User_ID,
+            'user_idfs' => $userId,
             'setting_name' => 'user-tempban',
         ]);
         if(count($userTempBan) > 0) {
@@ -187,6 +188,6 @@ class SecurityTools {
         }
 
         # get user from db
-        return $this->mUserTbl->select(['User_ID' => $this->mSession->auth->User_ID])->current();
+        return $this->mUserTbl->select(['User_ID' => $userId])->current();
     }
 }

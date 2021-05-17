@@ -73,7 +73,11 @@ class WithdrawController extends AbstractActionController
 
     public function withdrawAction()
     {
-        $me = $this->mSecTools->getSecuredUserSession();
+        # Prevent 500 error
+        if(!$this->getIdentity()) {
+            return new ApiProblemResponse(new ApiProblem(401, 'Not logged in'));
+        }
+        $me = $this->mSecTools->getSecuredUserSession($this->getIdentity()->getName());
         if(get_class($me) == 'Laminas\\ApiTools\\ApiProblem\\ApiProblem') {
             return new ApiProblemResponse($me);
         }

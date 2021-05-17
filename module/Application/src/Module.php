@@ -8,10 +8,32 @@
 
 namespace Application;
 
+use Laminas\ApiTools\MvcAuth\Authentication\DefaultAuthenticationListener;
+use Laminas\ApiTools\MvcAuth\MvcAuthEvent;
+use Laminas\EventManager\EventInterface;
+
 class Module
 {
     public function getConfig()
     {
         return include __DIR__ . '/../config/module.config.php';
+    }
+
+    public function onBootstrap(EventInterface $e)
+    {
+        $app       = $e->getApplication();
+        $container = $app->getServiceManager();
+
+        // Add Authentication Adapter for session
+        $defaultAuthenticationListener = $container->get(DefaultAuthenticationListener::class);
+        $defaultAuthenticationListener->attach(new Authentication\Adapter\SessionAdapter());
+
+        // Add Authorization
+        $eventManager = $app->getEventManager();
+        $eventManager->attach(
+            MvcAuthEvent::EVENT_AUTHORIZATION,
+            new Authorization\AuthorizationListener(),
+            100
+        );
     }
 }

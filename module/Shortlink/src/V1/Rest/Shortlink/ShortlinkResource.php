@@ -15,6 +15,7 @@
 namespace Shortlink\V1\Rest\Shortlink;
 
 use Faucet\Tools\SecurityTools;
+use Faucet\Transaction\TransactionHelper;
 use Laminas\ApiTools\ApiProblem\ApiProblem;
 use Laminas\ApiTools\Rest\AbstractResourceListener;
 use Laminas\ApiTools\ContentNegotiation\ViewModel;
@@ -63,6 +64,22 @@ class ShortlinkResource extends AbstractResourceListener
     protected $mShortDoneTbl;
 
     /**
+     * User Settings Table
+     *
+     * @var TableGateway $mUserSetTbl
+     * @since 1.0.0
+     */
+    protected $mUserSetTbl;
+
+    /**
+     * Transaction Helper
+     *
+     * @var TransactionHelper $mTransaction
+     * @since 1.0.0
+     */
+    protected $mTransaction;
+
+    /**
      * Constructor
      *
      * ShortlinkResource constructor.
@@ -75,6 +92,8 @@ class ShortlinkResource extends AbstractResourceListener
         $this->mShortProviderTbl = new TableGateway('shortlink', $mapper);
         $this->mShortTbl = new TableGateway('shortlink_link', $mapper);
         $this->mShortDoneTbl = new TableGateway('shortlink_link_user', $mapper);
+        $this->mUserSetTbl = new TableGateway('user_setting', $mapper);
+        $this->mTransaction = new TransactionHelper($mapper);
         $this->mSecTools = new SecurityTools($mapper);
     }
 
@@ -123,7 +142,11 @@ class ShortlinkResource extends AbstractResourceListener
      */
     public function fetch($id)
     {
-        $me = $this->mSecTools->getSecuredUserSession();
+        # Prevent 500 error
+        if(!$this->getIdentity()) {
+            return new ApiProblem(401, 'Not logged in');
+        }
+        $me = $this->mSecTools->getSecuredUserSession($this->getIdentity()->getName());
         if(get_class($me) == 'Laminas\\ApiTools\\ApiProblem\\ApiProblem') {
             return $me;
         }
@@ -197,7 +220,11 @@ class ShortlinkResource extends AbstractResourceListener
      */
     public function fetchAll($params = [])
     {
-        $me = $this->mSecTools->getSecuredUserSession();
+        # Prevent 500 error
+        if(!$this->getIdentity()) {
+            return new ApiProblem(401, 'Not logged in');
+        }
+        $me = $this->mSecTools->getSecuredUserSession($this->getIdentity()->getName());
         if(get_class($me) == 'Laminas\\ApiTools\\ApiProblem\\ApiProblem') {
             return $me;
         }
@@ -358,6 +385,69 @@ class ShortlinkResource extends AbstractResourceListener
      */
     public function update($id, $data)
     {
-        return new ApiProblem(405, 'The PUT method has not been defined for individual resources');
+        # Prevent 500 error
+        if(!$this->getIdentity()) {
+            return new ApiProblem(401, 'Not logged in');
+        }
+        $me = $this->mSecTools->getSecuredUserSession($this->getIdentity()->getName());
+        if(get_class($me) == 'Laminas\\ApiTools\\ApiProblem\\ApiProblem') {
+            return $me;
+        }
+
+        # check link id for malicious code
+        $secResult = $this->mSecTools->basicInputCheck([$data->link_id]);
+        if($secResult !== 'ok') {
+            # ban user and force logout on client
+            $this->mUserSetTbl->insert([
+                'user_idfs' => $me->User_ID,
+                'setting_name' => 'user-tempban',
+                'setting_value' => 'Potential '.$secResult.' Attack @ '.date('Y-m-d H:i:s').' Shortlink Complete',
+            ]);
+            return new ApiProblem(418, 'Potential '.$secResult.' Attack - Goodbye');
+        }
+
+        $linkId = filter_var($data->link_id, FILTER_SANITIZE_STRING);
+        $hasStarted = $this->mShortDoneTbl->select([
+            'user_idfs' => $me->User_ID,
+            'link_id' => $linkId,
+            'date_claimed' => '0000-00-00 00:00:00'
+        ]);
+
+        if(count($hasStarted) == 0) {
+            return new ApiProblem(404, 'Could not find entry for this shortlink. Did you start it correctly ?');
+        }
+        $hasStarted = $hasStarted->current();
+
+        /**
+         * Add Anti-Fraud here
+         * - 10 Second Timer for Claim
+         * - Captcha for Star
+         * - Check further
+         */
+
+        $linkInfo = $this->mShortProviderTbl->select(['Shortlink_ID' => $hasStarted->shortlink_idfs]);
+        if(count($linkInfo) > 0) {
+            $linkInfo = $linkInfo->current();
+
+            $this->mShortDoneTbl->update([
+                'date_claimed' => date('Y-m-d H:i:s', time()),
+            ],[
+                'user_idfs' => $me->User_ID,
+                'link_id' => $linkId,
+            ]);
+
+            $newBalance = $this->mTransaction->executeTransaction($linkInfo->reward, false, $me->User_ID, $linkInfo->Shortlink_ID, 'shortlink-complete', 'Shortlink '.$linkId.' completed');
+            if($newBalance !== false) {
+                return [
+                    'link_id' => $linkId,
+                    'reward' => $linkInfo->reward,
+                    'token_balance' => $newBalance,
+                ];
+            } else {
+                return new ApiProblem(500, 'Transaction Error. Please contact admin');
+            }
+        } else {
+            return new ApiProblem(404, 'Could not find shortlink provider.');
+        }
     }
 }

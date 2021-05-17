@@ -158,6 +158,7 @@ return [
             'service_name' => 'Login',
             'http_methods' => [
                 0 => 'POST',
+                1 => 'GET',
             ],
             'route_name' => 'user.rpc.login',
         ],

@@ -3,14 +3,16 @@
 namespace Application\Identity;
 
 use Laminas\ApiTools\MvcAuth\Identity\IdentityInterface;
-use Laminas\Permissions\Rbac\AbstractRole as AbstractRbacRole;
+use Laminas\Permissions\Rbac\Role as AbstractRbacRole;
+use Laminas\Permissions\Rbac\RoleInterface;
+use phpDocumentor\Reflection\Types\Object_;
 
 final class UserIdentity extends AbstractRbacRole implements IdentityInterface
 {
     private $user;
-    private $username;
+    protected $name;
 
-    public function __construct(array $user)
+    public function __construct($user)
     {
         $this->user = $user;
     }
@@ -22,7 +24,7 @@ final class UserIdentity extends AbstractRbacRole implements IdentityInterface
 
     public function getId()
     {
-        return $this->user['User_ID'];
+        return $this->user->User_ID;
     }
 
     public function getUser()
@@ -32,12 +34,10 @@ final class UserIdentity extends AbstractRbacRole implements IdentityInterface
 
     public function getRoleId()
     {
-        return $this->username;
+        return $this->name;
     }
 
-    // Alias for roleId
-    public function setName($name)
-    {
-        $this->username = $name;
+    public function setName($name) {
+        $this->name = $name;
     }
 }
