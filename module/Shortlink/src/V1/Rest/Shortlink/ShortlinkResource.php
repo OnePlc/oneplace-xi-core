@@ -256,6 +256,7 @@ class ShortlinkResource extends AbstractResourceListener
                     $sl = $slCheck->current();
                     $linksDone[] = $sl;
                     $sh->last_done = $sl->date_completed;
+                    $sh->unlock_in = strtotime($sl->date_completed)+(24*3600)-time();
                 }
             }
             $sh->linksDone = count($linksDone);
@@ -286,6 +287,7 @@ class ShortlinkResource extends AbstractResourceListener
                 'count_complete' => $sh->count_complete,
                 'count_percent' => number_format((100/(($sh->count_complete+$sh->count_started)/$sh->count_complete)),2),
                 'last_done' => $sh->last_done,
+                'unlock_in' =>  $sh->unlock_in,
             ];
         }
 
@@ -431,6 +433,7 @@ class ShortlinkResource extends AbstractResourceListener
 
             $this->mShortDoneTbl->update([
                 'date_claimed' => date('Y-m-d H:i:s', time()),
+                'date_completed' => date('Y-m-d H:i:s', time()),
             ],[
                 'user_idfs' => $me->User_ID,
                 'link_id' => $linkId,

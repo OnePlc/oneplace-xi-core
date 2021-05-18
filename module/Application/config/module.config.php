@@ -30,6 +30,12 @@ return [
             ],
         ],
     ],
+    'api-tools-oauth2' => [
+        'options' => [
+            'access_lifetime' => 1800,
+            'always_issue_new_refresh_token' => true,
+        ],
+    ],
     'controllers' => [
         'factories' => [
             Controller\IndexController::class => InvokableFactory::class,
