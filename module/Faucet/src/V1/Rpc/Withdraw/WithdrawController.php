@@ -84,7 +84,7 @@ class WithdrawController extends AbstractActionController
 
         $request = $this->getRequest();
 
-        $tokenValue = 0.00004;
+        $tokenValue = $this->mTransaction->getTokenValue();
 
         if($request->isGet()) {
             $wallets = [];
@@ -127,11 +127,10 @@ class WithdrawController extends AbstractActionController
                     'last_update' => $wall->last_update,
                     'user_recent_wallet' => $lastAddress,
                     'balance_est' => number_format($balanceEst,8,'.',''),
-                    'test' =>  $me->token_balance.'*'.$tokenValue.'/'.$wall->dollar_val,
                 ];
             }
 
-            $withdrawLimit = 1000 * (1 + (($me->xp_level - 1) / 6));
+            $withdrawLimit = 1000 + (200 * ($me->xp_level - 1));
 
             $coinsWithdrawnToday = 0;
             $oWh = new Where();
@@ -173,7 +172,12 @@ class WithdrawController extends AbstractActionController
                 return new ApiProblemResponse(new ApiProblem(418, 'Potential '.$secResult.' Attack - Goodbye'));
             }
 
-            $tokenValue = 0.0004;
+            # Check if user is verified
+            if($me->email_verified == 0) {
+                return new ApiProblemResponse(new ApiProblem(400, 'Account is not verified. Please verify E-Mail before submitting Withdrawal Request.'));
+            }
+
+            $tokenValue = $this->mTransaction->getTokenValue();
 
             /**
              * Double check amount
@@ -196,6 +200,13 @@ class WithdrawController extends AbstractActionController
                 return new ApiProblemResponse(new ApiProblem(404, 'Currency not found'));
             }
             $coinInfo = $coinInfo->current();
+
+            /**
+             * Check if amount is below minimum withdrawal for coin
+             */
+            if($amount < $coinInfo->withdraw_min) {
+                return new ApiProblemResponse(new ApiProblem(409, 'Amount is lower than '.$coinInfo->coin_label.' withdrawal minimum'));
+            }
 
             /**
              * Calculate Crypto Amount to Send

@@ -7,6 +7,9 @@ return [
     ],
     'view_manager' => [
         'display_exceptions' => false,
+        'template_path_stack' => [
+            'user' => __DIR__ . '/../view',
+        ],
     ],
     'router' => [
         'routes' => [
@@ -49,6 +52,16 @@ return [
                     ],
                 ],
             ],
+            'user.rpc.confirm' => [
+                'type' => 'Segment',
+                'options' => [
+                    'route' => '/confirm/user',
+                    'defaults' => [
+                        'controller' => 'User\\V1\\Rpc\\Confirm\\Controller',
+                        'action' => 'confirm',
+                    ],
+                ],
+            ],
         ],
     ],
     'api-tools-versioning' => [
@@ -57,6 +70,7 @@ return [
             1 => 'user.rpc.login',
             2 => 'user.rpc.logout',
             3 => 'user.rpc.dashboard',
+            4 => 'user.rpc.confirm',
         ],
     ],
     'api-tools-rest' => [
@@ -73,6 +87,7 @@ return [
                 0 => 'POST',
                 1 => 'GET',
                 2 => 'PUT',
+                3 => 'PATCH',
             ],
             'collection_query_whitelist' => [],
             'page_size' => 25,
@@ -88,6 +103,7 @@ return [
             'User\\V1\\Rpc\\Login\\Controller' => 'Json',
             'User\\V1\\Rpc\\Logout\\Controller' => 'Json',
             'User\\V1\\Rpc\\Dashboard\\Controller' => 'Json',
+            'User\\V1\\Rpc\\Confirm\\Controller' => 'Json',
         ],
         'accept_whitelist' => [
             'User\\V1\\Rest\\User\\Controller' => [
@@ -110,6 +126,11 @@ return [
                 1 => 'application/json',
                 2 => 'application/*+json',
             ],
+            'User\\V1\\Rpc\\Confirm\\Controller' => [
+                0 => 'application/vnd.user.v1+json',
+                1 => 'application/json',
+                2 => 'application/*+json',
+            ],
         ],
         'content_type_whitelist' => [
             'User\\V1\\Rest\\User\\Controller' => [
@@ -125,6 +146,10 @@ return [
                 1 => 'application/json',
             ],
             'User\\V1\\Rpc\\Dashboard\\Controller' => [
+                0 => 'application/vnd.user.v1+json',
+                1 => 'application/json',
+            ],
+            'User\\V1\\Rpc\\Confirm\\Controller' => [
                 0 => 'application/vnd.user.v1+json',
                 1 => 'application/json',
             ],
@@ -151,6 +176,7 @@ return [
             'User\\V1\\Rpc\\Login\\Controller' => \User\V1\Rpc\Login\LoginControllerFactory::class,
             'User\\V1\\Rpc\\Logout\\Controller' => \User\V1\Rpc\Logout\LogoutControllerFactory::class,
             'User\\V1\\Rpc\\Dashboard\\Controller' => \User\V1\Rpc\Dashboard\DashboardControllerFactory::class,
+            'User\\V1\\Rpc\\Confirm\\Controller' => \User\V1\Rpc\Confirm\ConfirmControllerFactory::class,
         ],
     ],
     'api-tools-rpc' => [
@@ -176,6 +202,13 @@ return [
             ],
             'route_name' => 'user.rpc.dashboard',
         ],
+        'User\\V1\\Rpc\\Confirm\\Controller' => [
+            'service_name' => 'Confirm',
+            'http_methods' => [
+                0 => 'POST',
+            ],
+            'route_name' => 'user.rpc.confirm',
+        ],
     ],
     'api-tools-content-validation' => [
         'User\\V1\\Rest\\User\\Controller' => [
@@ -183,6 +216,9 @@ return [
         ],
         'User\\V1\\Rpc\\Login\\Controller' => [
             'input_filter' => 'User\\V1\\Rpc\\Login\\Validator',
+        ],
+        'User\\V1\\Rpc\\Confirm\\Controller' => [
+            'input_filter' => 'User\\V1\\Rpc\\Confirm\\Validator',
         ],
     ],
     'input_filter_specs' => [
@@ -236,6 +272,29 @@ return [
                 'error_message' => 'You must provide a valid user',
             ],
         ],
+        'User\\V1\\Rpc\\Confirm\\Validator' => [
+            0 => [
+                'required' => true,
+                'validators' => [],
+                'filters' => [
+                    0 => [
+                        'name' => \Laminas\Filter\StringTrim::class,
+                        'options' => [],
+                    ],
+                ],
+                'name' => 'action',
+                'description' => 'What you want to confirm',
+                'error_message' => 'You must provide a valid action',
+            ],
+            1 => [
+                'required' => true,
+                'validators' => [],
+                'filters' => [],
+                'name' => 'token',
+                'description' => 'Token for Confirmation',
+                'error_message' => 'You must provide a valid token',
+            ],
+        ],
     ],
     'api-tools-mvc-auth' => [
         'authorization' => [
@@ -244,7 +303,7 @@ return [
                     'GET' => true,
                     'POST' => false,
                     'PUT' => true,
-                    'PATCH' => false,
+                    'PATCH' => true,
                     'DELETE' => false,
                 ],
                 'entity' => [
@@ -271,6 +330,17 @@ return [
                     'dashboard' => [
                         'GET' => true,
                         'POST' => false,
+                        'PUT' => false,
+                        'PATCH' => false,
+                        'DELETE' => false,
+                    ],
+                ],
+            ],
+            'User\\V1\\Rpc\\Confirm\\Controller' => [
+                'actions' => [
+                    'confirm' => [
+                        'GET' => false,
+                        'POST' => true,
                         'PUT' => false,
                         'PATCH' => false,
                         'DELETE' => false,

@@ -16,11 +16,22 @@ return [
                     ],
                 ],
             ],
+            'offerwall.rpc.ayetstudios' => [
+                'type' => 'Segment',
+                'options' => [
+                    'route' => '/ayetstudios',
+                    'defaults' => [
+                        'controller' => 'Offerwall\\V1\\Rpc\\Ayetstudios\\Controller',
+                        'action' => 'ayetstudios',
+                    ],
+                ],
+            ],
         ],
     ],
     'api-tools-versioning' => [
         'uri' => [
             0 => 'offerwall.rest.offerwall',
+            1 => 'offerwall.rpc.ayetstudios',
         ],
     ],
     'api-tools-rest' => [
@@ -46,6 +57,7 @@ return [
     'api-tools-content-negotiation' => [
         'controllers' => [
             'Offerwall\\V1\\Rest\\Offerwall\\Controller' => 'HalJson',
+            'Offerwall\\V1\\Rpc\\Ayetstudios\\Controller' => 'Json',
         ],
         'accept_whitelist' => [
             'Offerwall\\V1\\Rest\\Offerwall\\Controller' => [
@@ -53,9 +65,18 @@ return [
                 1 => 'application/hal+json',
                 2 => 'application/json',
             ],
+            'Offerwall\\V1\\Rpc\\Ayetstudios\\Controller' => [
+                0 => 'application/vnd.offerwall.v1+json',
+                1 => 'application/json',
+                2 => 'application/*+json',
+            ],
         ],
         'content_type_whitelist' => [
             'Offerwall\\V1\\Rest\\Offerwall\\Controller' => [
+                0 => 'application/vnd.offerwall.v1+json',
+                1 => 'application/json',
+            ],
+            'Offerwall\\V1\\Rpc\\Ayetstudios\\Controller' => [
                 0 => 'application/vnd.offerwall.v1+json',
                 1 => 'application/json',
             ],
@@ -95,6 +116,17 @@ return [
                     'DELETE' => false,
                 ],
             ],
+            'Offerwall\\V1\\Rpc\\Ayetstudios\\Controller' => [
+                'actions' => [
+                    'ayetstudios' => [
+                        'GET' => true,
+                        'POST' => false,
+                        'PUT' => false,
+                        'PATCH' => false,
+                        'DELETE' => false,
+                    ],
+                ],
+            ],
         ],
     ],
     'api-tools-content-validation' => [
@@ -117,6 +149,20 @@ return [
                 'description' => 'Offerwall ID',
                 'error_message' => 'You must provide a valid offerwall ID',
             ],
+        ],
+    ],
+    'controllers' => [
+        'factories' => [
+            'Offerwall\\V1\\Rpc\\Ayetstudios\\Controller' => \Offerwall\V1\Rpc\Ayetstudios\AyetstudiosControllerFactory::class,
+        ],
+    ],
+    'api-tools-rpc' => [
+        'Offerwall\\V1\\Rpc\\Ayetstudios\\Controller' => [
+            'service_name' => 'Ayetstudios',
+            'http_methods' => [
+                0 => 'GET',
+            ],
+            'route_name' => 'offerwall.rpc.ayetstudios',
         ],
     ],
 ];

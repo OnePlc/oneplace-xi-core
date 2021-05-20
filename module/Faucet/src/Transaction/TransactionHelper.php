@@ -18,6 +18,7 @@ use Laminas\Db\Sql\Select;
 use Laminas\Db\TableGateway\TableGateway;
 use Laminas\Paginator\Adapter\DbSelect;
 use Laminas\Paginator\Paginator;
+use phpDocumentor\Reflection\Types\Float_;
 
 class TransactionHelper {
 
@@ -54,6 +55,30 @@ class TransactionHelper {
     private static $mGuildTbl;
 
     /**
+     * Settings Table
+     *
+     * @var TableGateway $mSettingsTbl
+     * @since 1.0.0
+     */
+    private static $mSettingsTbl;
+
+    /**
+     * Token USD Value
+     *
+     * @var Float $mTokenValue
+     * @since 1.0.0
+     */
+    private static $mTokenValue;
+
+    /**
+     * Faucet Wallets Table
+     *
+     * @var TableGateway $mWalletTbl
+     * @since 1.0.0
+     */
+    private static $mWalletTbl;
+
+    /**
      * Constructor
      *
      * LoginController constructor.
@@ -65,7 +90,10 @@ class TransactionHelper {
         TransactionHelper::$mTransTbl = new TableGateway('faucet_transaction', $mapper);
         TransactionHelper::$mUserTbl = new TableGateway('user', $mapper);
         TransactionHelper::$mGuildTbl = new TableGateway('faucet_guild', $mapper);
+        TransactionHelper::$mSettingsTbl = new TableGateway('settings', $mapper);
         TransactionHelper::$mGuildTransTbl = new TableGateway('faucet_guild_transaction', $mapper);
+        TransactionHelper::$mWalletTbl = new TableGateway('faucet_wallet', $mapper);
+        TransactionHelper::$mTokenValue = TransactionHelper::$mSettingsTbl->select(['settings_key' => 'token-value'])->current()->settings_value;
     }
 
     /**
@@ -257,7 +285,8 @@ class TransactionHelper {
      * @return Paginator
      * @since 1.0.0
      */
-    public function getGuildTransactions($guildId,$page,$itemsPerPage) {
+    public function getGuildTransactions($guildId,$page,$itemsPerPage)
+    {
         # Compile list of all guilds
         $transactions = [];
         $transactionsSel = new Select(TransactionHelper::$mGuildTransTbl->getTable());
@@ -280,5 +309,27 @@ class TransactionHelper {
         }
 
         return $transactions;
+    }
+
+    public function getTokenValue()
+    {
+        return TransactionHelper::$mTokenValue;
+    }
+
+    public function getCryptoBalance($balance, $user) {
+        $coinInfo = TransactionHelper::$mWalletTbl->select(['coin_sign' => $user->prefered_coin]);
+        $cryptoBalance = 0;
+        if(count($coinInfo) > 0) {
+            $coinInfo = $coinInfo->current();
+            $cryptoBalance = $balance*$this->getTokenValue();
+            if($coinInfo->dollar_val > 0) {
+                $cryptoBalance = $cryptoBalance/$coinInfo->dollar_val;
+            } else {
+                $cryptoBalance = $cryptoBalance*$coinInfo->dollar_val;
+            }
+            $cryptoBalance = number_format($cryptoBalance,8,'.','');
+        }
+
+        return $cryptoBalance;
     }
 }

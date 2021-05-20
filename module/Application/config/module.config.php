@@ -28,6 +28,19 @@ return [
                     ],
                 ],
             ],
+            'firewallpanel' => [
+                'type' => 'Segment',
+                'options' => [
+                    'route'    => '/firewall/panel[:slug]',
+                    'constraints' => [
+                        'slug' => '[a-zA-Z0-9\/]*',
+                    ],
+                    'defaults' => [
+                        'controller' => Controller\FirewallController::class,
+                        'action'     => 'panel',
+                    ],
+                ],
+            ],
         ],
     ],
     'api-tools-oauth2' => [
@@ -39,6 +52,7 @@ return [
     'controllers' => [
         'factories' => [
             Controller\IndexController::class => InvokableFactory::class,
+            Controller\FirewallController::class => InvokableFactory::class,
         ],
     ],
     'view_manager' => [

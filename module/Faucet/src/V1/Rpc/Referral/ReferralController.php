@@ -112,7 +112,6 @@ class ReferralController extends AbstractActionController
         }
 
         $myRefCount = $this->mUserTbl->select($checkWh)->count();
-
         $myRefWithdrawn = 0;
 
         # Return referall info
@@ -127,7 +126,7 @@ class ReferralController extends AbstractActionController
             'bonus' => $myRefWithdrawn*.1,
             'referrals' => $myRefs,
             'page' => $page,
-            'page_count' => round($myRefCount/$pageSize),
+            'page_count' => (round($myRefCount/$pageSize) > 0) ? round($myRefCount/$pageSize) : 1,
             'page_size' => $pageSize,
         ]);
     }

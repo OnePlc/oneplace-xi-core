@@ -22,6 +22,7 @@ use Laminas\ApiTools\Rest\AbstractResourceListener;
 use Laminas\ApiTools\ContentNegotiation\ViewModel;
 use Laminas\Db\TableGateway\TableGateway;
 use Laminas\Db\Sql\Where;
+use Laminas\Db\Sql\Select;
 
 class AchievementResource extends AbstractResourceListener
 {
@@ -169,6 +170,38 @@ class AchievementResource extends AbstractResourceListener
             return new ApiProblem(400, 'You must specify a plattform (website|app)');
         }
 
+        # get recent achievements
+        $recent = [];
+        $recSel = new Select($this->mAchievDoneTbl->getTable());
+        $recSel->where(['user_idfs' => $me->User_ID]);
+        $recSel->order('date DESC');
+        $recentDB = $this->mAchievDoneTbl->selectWith($recSel);
+        $userAchievementsDone = [];
+        $achievementPoints = 0;
+        $totalDone = 0;
+        if(count($recentDB) > 0) {
+            foreach($recentDB as $rec) {
+                $userAchievementsDone[$rec->achievement_idfs] = true;
+                $achievRec = $this->mAchievTbl->select(['Achievement_ID' => $rec->achievement_idfs]);
+                if(count($achievRec) > 0) {
+                    $totalDone++;
+                    $achievRec = $achievRec->current();
+                    if(count($recent) < 4) {
+                        $recent[] =(object)[
+                            'id' => $achievRec->Achievement_ID,
+                            'name' => $achievRec->label,
+                            'icon' => $achievRec->icon,
+                            'description' => $achievRec->description,
+                            'goal' => $achievRec->goal,
+                            'reward' => $achievRec->reward,
+                            'mode' => $achievRec->mode,
+                        ];
+                    }
+                    $achievementPoints+=$achievRec->reward;
+                }
+            }
+        }
+
         # Load Achievements
         $oWh = new Where();
         $oWh->NEST
@@ -179,36 +212,99 @@ class AchievementResource extends AbstractResourceListener
         $oWh->equalTo('series', 0);
         $achievementsDB = $this->mAchievTbl->select($oWh);
         $achievements = [];
+        $totalAchievements = $this->mAchievTbl->select()->count();
         $achievementCategories = [];
         foreach($achievementsDB as $achiev) {
             if(!array_key_exists($achiev->category_idfs,$achievements)) {
                 $category = $this->mAchievCatTbl->select(['Category_ID' => $achiev->category_idfs])->current();
                 $achievements[$achiev->category_idfs] = [];
-                $achievementCategories[] = (object)[
+                $targetCat = $this->mAchievTbl->select(['category_idfs' => $achiev->category_idfs])->count();
+                $achievementCategories[$category->Category_ID] = (object)[
                     'id' => $category->Category_ID,
                     'name' => $category->label,
                     'icon' => $category->icon,
-                    'target' => 100,
+                    'counter' => $category->counter,
+                    'target' => $targetCat,
                     'progress' => 0,
+                    'achievements' => [],
+                    'user_achievements' => [],
                 ];
             }
-            $achievements[$achiev->category_idfs][] = (object)[
-                'id' => $achiev->Achievement_ID,
-                'name' => $achiev->label,
-                'goal' => $achiev->goal,
-                'reward' => $achiev->reward,
-                'mode' => $achiev->mode,
-                'progress' => 0
-            ];
+            $progress = 0;
+            if(array_key_exists($achiev->Achievement_ID, $userAchievementsDone)) {
+                $progress = $achiev->goal;
+                $achievementCategories[$achiev->category_idfs]->progress++;
+                $nextSel = new Select($this->mAchievTbl->getTable());
+                $nextSel->where(['series' => $achiev->Achievement_ID]);
+                $nextSel->order('reward ASC');
+                $nextSel->limit(1);
+                $hasNext = $this->mAchievTbl->selectWith($nextSel);
+                $achievementCategories[$achiev->category_idfs]->user_achievements[] = (object)[
+                    'id' => $achiev->Achievement_ID,
+                    'name' => $achiev->label,
+                    'icon' => $achiev->icon,
+                    'description' => $achiev->description,
+                    'goal' => $achiev->goal,
+                    'reward' => $achiev->reward,
+                    'mode' => $achiev->mode,
+                    'progress' => $progress
+                ];
+                if(count($hasNext) > 0) {
+                    $achiev = $hasNext->current();
+                    $progress = 0;
+                    switch($achiev->type) {
+                        case 'xplevel':
+                            $progress = $me->xp_level;
+                            break;
+                        default:
+                            break;
+                    }
+                    $achievementCategories[$achiev->category_idfs]->achievements[] = (object)[
+                        'id' => $achiev->Achievement_ID,
+                        'name' => $achiev->label,
+                        'icon' => $achiev->icon,
+                        'description' => $achiev->description,
+                        'goal' => $achiev->goal,
+                        'reward' => $achiev->reward,
+                        'mode' => $achiev->mode,
+                        'progress' => $progress
+                    ];
+                }
+            } else {
+                switch($achiev->type) {
+                    case 'xplevel':
+                        $progress = $me->xp_level;
+                        break;
+                    default:
+                        break;
+                }
+                $achievementCategories[$achiev->category_idfs]->achievements[] = (object)[
+                    'id' => $achiev->Achievement_ID,
+                    'name' => $achiev->label,
+                    'icon' => $achiev->icon,
+                    'description' => $achiev->description,
+                    'goal' => $achiev->goal,
+                    'reward' => $achiev->reward,
+                    'mode' => $achiev->mode,
+                    'progress' => $progress
+                ];
+            }
+
+        }
+
+        $categoriesExport = [];
+        foreach(array_keys($achievementCategories) as $categoryExportID) {
+            $categoriesExport[] = $achievementCategories[$categoryExportID];
         }
 
         # Return referall info
         return (object)([
             '_links' => [],
-            'total_items' => count($achievements),
-            'user_achievement' => [],
-            'category' => $achievementCategories,
-            'achievement' => $achievements,
+            'total_items' => $totalAchievements,
+            'total_done' => $totalDone,
+            'user_points' => $achievementPoints,
+            'user_recent' => $recent,
+            'achievement' => $categoriesExport,
         ]);
     }
 

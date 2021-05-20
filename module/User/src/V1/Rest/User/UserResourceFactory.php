@@ -6,6 +6,6 @@ class UserResourceFactory
     public function __invoke($services)
     {
 
-        return new UserResource($services->get('faucetdev'));
+        return new UserResource($services->get('faucetdev'), $services->get('ViewRenderer'));
     }
 }

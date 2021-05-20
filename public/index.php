@@ -47,6 +47,30 @@ if (! file_exists('vendor/autoload.php')) {
 // Setup autoloading
 include 'vendor/autoload.php';
 
+/*
+|--------------------------------------------------------------------------
+| Run The Shieldon Firewall
+|--------------------------------------------------------------------------
+|
+| Shieldon Firewall will watch all HTTP requests coming to your website.
+|
+*/
+if (isset($_SERVER['REQUEST_URI'])) {
+
+    // This directory must be writable.
+    $storage = dirname($_SERVER['SCRIPT_FILENAME']) . '/../shieldon_firewall';
+
+    $firewall = new \Shieldon\Firewall\Firewall();
+    $firewall->configure($storage);
+    $firewall->controlPanel('/firewall/panel');
+    $response = $firewall->run();
+
+    if ($response->getStatusCode() !== 200) {
+        $httpResolver = new \Shieldon\Firewall\HttpResolver();
+        $httpResolver($response);
+    }
+}
+
 $appConfig = include 'config/application.config.php';
 
 if (file_exists('config/development.config.php')) {

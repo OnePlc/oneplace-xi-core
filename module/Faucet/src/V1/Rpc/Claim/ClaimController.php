@@ -14,7 +14,9 @@
  */
 namespace Faucet\V1\Rpc\Claim;
 
+use Application\Controller\IndexController;
 use Faucet\Tools\SecurityTools;
+use Faucet\Tools\UserTools;
 use Faucet\Transaction\TransactionHelper;
 use Laminas\Mvc\Controller\AbstractActionController;
 use Laminas\ApiTools\ContentNegotiation\ViewModel;
@@ -33,6 +35,14 @@ class ClaimController extends AbstractActionController
      * @since 1.0.0
      */
     protected $mSecTools;
+
+    /**
+     * User Basic Tools
+     *
+     * @var UserTools $mUserTools
+     * @since 1.0.0
+     */
+    protected $mUserTools;
 
     /**
      * Claim Table
@@ -61,6 +71,7 @@ class ClaimController extends AbstractActionController
     {
         $this->mClaimTbl = new TableGateway('faucet_claim', $mapper);
         $this->mSecTools = new SecurityTools($mapper);
+        $this->mUserTools = new UserTools($mapper);
         $this->mMapper = $mapper;
     }
 
@@ -74,11 +85,16 @@ class ClaimController extends AbstractActionController
     {
         # Prevent 500 error
         if(!$this->getIdentity()) {
-            return new ApiProblem(401, 'Not logged in');
+            return new ApiProblemResponse(new ApiProblem(401, 'Not logged in'));
         }
         $me = $this->mSecTools->getSecuredUserSession($this->getIdentity()->getName());
         if(get_class($me) == 'Laminas\\ApiTools\\ApiProblem\\ApiProblem') {
             return new ApiProblemResponse($me);
+        }
+
+        $platform = (isset($_REQUEST['platform'])) ? filter_var($_REQUEST['platform'], FILTER_SANITIZE_STRING) : 'website';
+        if($platform != 'website' && $platform != 'android') {
+            return new ApiProblemResponse(new ApiProblem(400, 'invalid platform'));
         }
 
         # Set Timer for next claim
@@ -87,6 +103,7 @@ class ClaimController extends AbstractActionController
         # Lets check if there was a claim less than 60 minutes ago
         $oWh = new Where();
         $oWh->equalTo('user_idfs', $me->User_ID);
+        $oWh->like('source', $platform);
         $oWh->greaterThanOrEqualTo('date', date('Y-m-d H:i:s', strtotime('-1 hour')));
         $oClaimCheck = $this->mClaimTbl->select($oWh);
         if(count($oClaimCheck) > 0) {
@@ -98,6 +115,9 @@ class ClaimController extends AbstractActionController
         # Only show timer if GET
         $oRequest = $this->getRequest();
         if(!$oRequest->isPost()) {
+            if($platform == 'android') {
+                $sTime = 60;
+            }
             return new ViewModel([
                 'status' => 'wait',
                 'next_claim' => $sTime,
@@ -108,8 +128,37 @@ class ClaimController extends AbstractActionController
         if($sTime > 0) {
             return new ApiProblemResponse(new ApiProblem(409, 'Already claimed - wait '.$sTime.' more seconds before claiming again'));
         } else {
+            # Get Data from Request Body
+            $json = IndexController::loadJSONFromRequestBody(['device','ad_id','advertiser'],$this->getRequest()->getContent());
+            if(!$json) {
+                return new ApiProblemResponse(new ApiProblem(400, 'Invalid Response Body (missing required fields)'));
+            }
+
+            # check for attack vendors
+            $secResult = $this->mSecTools->basicInputCheck([$json->device,$json->ad_id,$json->advertiser]);
+            if($secResult !== 'ok') {
+                # ban user and force logout on client
+                $this->mUserSetTbl->insert([
+                    'user_idfs' => $me->User_ID,
+                    'setting_name' => 'user-tempban',
+                    'setting_value' => 'Potential '.$secResult.' Attack @ '.date('Y-m-d H:i:s').' Faucet Claim',
+                ]);
+                return new ApiProblem(418, 'Potential '.$secResult.' Attack - Goodbye');
+            }
+
+            $device = filter_var($json->device, FILTER_SANITIZE_STRING);
+            $ad_id = filter_var($json->ad_id, FILTER_SANITIZE_STRING);
+            $advertiser = filter_var($json->advertiser, FILTER_SANITIZE_STRING);
+
             # Default Claim
-            $claimAmount = 10;
+            switch($advertiser) {
+                case 'adcolony':
+                    $claimAmount = rand(10,25);
+                    break;
+                default:
+                    $claimAmount = 10;
+                    break;
+            }
 
             # Set next claim date
             $nextDate = date('Y-m-d H:i:s', time()+3600);
@@ -125,14 +174,38 @@ class ClaimController extends AbstractActionController
                     'date_next' => $nextDate,
                     'amount' => $claimAmount,
                     'mode' => 'coins',
-                    'source' => 'website',
+                    'source' => ($platform != 'website') ? 'android' : 'website',
+                    'ad_id' => $ad_id,
+                    'advertiser' => $advertiser,
+                    'device' => $device
                 ]);
+
+                # Add User XP
+                $achievDone = (object)[];
+                $newLevel = $this->mUserTools->addXP('faucet-claim', $me->User_ID);
+                if($newLevel !== false) {
+                    $me->xp_level = $newLevel['xp_level'];
+                    $me->xp_current = $newLevel['xp_current'];
+                    $me->xp_percent = $newLevel['xp_percent'];
+
+                    # check if achievement got completed
+                    if($newLevel['achievement']->id != 0) {
+                        $achievDone = $newLevel['achievement'];
+                    }
+                }
+                $tokenValue = $oTransHelper->getTokenValue();
 
                 # Show Timer
                 return new ViewModel([
                     'status' => 'done',
+                    'amount' => $claimAmount,
                     'next' => strtotime($nextDate)-time(),
-                    'balance' => $newBalance
+                    'balance' => $newBalance,
+                    'balance_crypto' => $oTransHelper->getCryptoBalance($newBalance, $me),
+                    'xp_level' => $me->xp_level,
+                    'xp_current' => $me->xp_current,
+                    'xp_percent' => $me->xp_percent,
+                    'achievement' => $achievDone,
                 ]);
             } else {
                 return new ApiProblemResponse(new ApiProblem(409, 'Transaction Error Please contact admin'));

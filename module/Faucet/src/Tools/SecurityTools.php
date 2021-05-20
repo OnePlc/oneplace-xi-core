@@ -49,6 +49,14 @@ class SecurityTools extends AbstractResourceListener {
     protected $mUserSetTbl;
 
     /**
+     * Settings Table
+     *
+     * @var TableGateway $mSettingsTbl
+     * @since 1.0.0
+     */
+    protected $mSettingsTbl;
+
+    /**
      * Constructor
      *
      * SecurityTools constructor.
@@ -59,6 +67,7 @@ class SecurityTools extends AbstractResourceListener {
     {
         $this->mSession = new Container('webauth');
         $this->mUserSetTbl = new TableGateway('user_setting', $mapper);
+        $this->mSettingsTbl = new TableGateway('settings', $mapper);
         $this->mUserTbl = new TableGateway('user', $mapper);
     }
 
@@ -189,5 +198,24 @@ class SecurityTools extends AbstractResourceListener {
 
         # get user from db
         return $this->mUserTbl->select(['User_ID' => $userId])->current();
+    }
+
+    /**
+     * Get Username Blacklist
+     *
+     * @return array
+     * @since 1.0.0
+     */
+    public function getUsernameBlacklist() {
+        $blacklist = $this->mSettingsTbl->select(['settings_key' => 'username_blacklist']);
+        if(count($blacklist) == 0) {
+            return [];
+        }
+        $blacklist = json_decode($blacklist->current()->settings_value);
+        $blackIndex = [];
+        foreach($blacklist as $bl) {
+            $blackIndex[$bl] = true;
+        }
+        return $blackIndex;
     }
 }
