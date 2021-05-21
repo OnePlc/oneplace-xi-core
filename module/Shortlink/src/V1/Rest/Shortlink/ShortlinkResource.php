@@ -15,6 +15,7 @@
 namespace Shortlink\V1\Rest\Shortlink;
 
 use Faucet\Tools\SecurityTools;
+use Faucet\Tools\UserTools;
 use Faucet\Transaction\TransactionHelper;
 use Laminas\ApiTools\ApiProblem\ApiProblem;
 use Laminas\ApiTools\Rest\AbstractResourceListener;
@@ -80,6 +81,22 @@ class ShortlinkResource extends AbstractResourceListener
     protected $mTransaction;
 
     /**
+     * User Basic Tools
+     *
+     * @var UserTools $mUserTools
+     * @since 1.0.0
+     */
+    protected $mUserTools;
+
+    /**
+     * Shortlink Achievements
+     *
+     * @var array $mAchievementPoints
+     * @since 1.0.0
+     */
+    protected $mAchievementPoints;
+
+    /**
      * Constructor
      *
      * ShortlinkResource constructor.
@@ -93,8 +110,23 @@ class ShortlinkResource extends AbstractResourceListener
         $this->mShortTbl = new TableGateway('shortlink_link', $mapper);
         $this->mShortDoneTbl = new TableGateway('shortlink_link_user', $mapper);
         $this->mUserSetTbl = new TableGateway('user_setting', $mapper);
+        $this->mUserTools = new UserTools($mapper);
         $this->mTransaction = new TransactionHelper($mapper);
         $this->mSecTools = new SecurityTools($mapper);
+
+
+        /**
+         * Load Achievements to Cache
+         */
+        $achievTbl = new TableGateway('faucet_achievement', $mapper);
+        $achievsXP = $achievTbl->select(['type' => 'shortlink']);
+        $achievsFinal = [];
+        if(count($achievsXP) > 0) {
+            foreach($achievsXP as $achiev) {
+                $achievsFinal[$achiev->goal] = $achiev;
+            }
+        }
+        $this->mAchievementPoints = $achievsFinal;
     }
 
     /**
@@ -437,7 +469,23 @@ class ShortlinkResource extends AbstractResourceListener
             ],[
                 'user_idfs' => $me->User_ID,
                 'link_id' => $linkId,
+                'date_completed' => '0000-00-00 00:00:00',
             ]);
+
+            # check for achievement completetion
+            $currentLinksDone = $this->mShortDoneTbl->select(['user_idfs' => $me->User_ID])->count();
+
+            # check if user has completed an achievement
+            if(array_key_exists($currentLinksDone,$this->mAchievementPoints)) {
+                $this->mUserTools->completeAchievement($this->mAchievementPoints[$currentLinksDone]->Achievement_ID, $me->User_ID);
+            }
+
+            # Add User XP
+            $newLevel = $this->mUserTools->addXP('shortlink-claim', $me->User_ID);
+            if($newLevel !== false) {
+                $me->xp_level = $newLevel['xp_level'];
+                $me->xp_percent = $newLevel['xp_percent'];
+            }
 
             $newBalance = $this->mTransaction->executeTransaction($linkInfo->reward, false, $me->User_ID, $linkInfo->Shortlink_ID, 'shortlink-complete', 'Shortlink '.$linkId.' completed');
             if($newBalance !== false) {
@@ -445,6 +493,9 @@ class ShortlinkResource extends AbstractResourceListener
                     'link_id' => $linkId,
                     'reward' => $linkInfo->reward,
                     'token_balance' => $newBalance,
+                    'xp_level' => $me->xp_level,
+                    'xp_percent' => $me->xp_percent,
+                    'crypto_balance' => $this->mTransaction->getCryptoBalance($newBalance, $me),
                 ];
             } else {
                 return new ApiProblem(500, 'Transaction Error. Please contact admin');

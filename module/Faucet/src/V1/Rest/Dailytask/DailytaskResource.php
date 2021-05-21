@@ -189,7 +189,7 @@ class DailytaskResource extends AbstractResourceListener
          */
         $oWh = new Where();
         $oWh->equalTo('user_idfs', $me->User_ID);
-        $oWh->like('date_completed', $sDate.'%');
+        $oWh->like('date_claimed', $sDate.'%');
         $shortlinksDone = $this->mShortDoneTbl->select($oWh)->count();
 
         $oWh = new Where();
@@ -200,7 +200,7 @@ class DailytaskResource extends AbstractResourceListener
         $oWh = new Where();
         $oWh->equalTo('user_idfs', $me->User_ID);
         $oWh->like('date', $sDate.'%');
-        $dailysDone = $this->mTaskDoneTbl->select($oWh);
+        $dailysDone = $this->mTaskDoneTbl->select($oWh)->count();
 
         # Load Dailytasks
         $oWh = new Where();
@@ -408,7 +408,7 @@ class DailytaskResource extends AbstractResourceListener
             $oWh = new Where();
             $oWh->equalTo('user_idfs', $me->User_ID);
             $oWh->like('date', $sDate.'%');
-            $dailysDone = $this->mTaskDoneTbl->select($oWh);
+            $dailysDone = $this->mTaskDoneTbl->select($oWh)->count();
 
             # Load Dailytasks
             $oWh = new Where();

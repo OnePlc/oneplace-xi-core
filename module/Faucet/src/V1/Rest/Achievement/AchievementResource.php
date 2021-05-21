@@ -78,6 +78,37 @@ class AchievementResource extends AbstractResourceListener
     protected $mUserSetTbl;
 
     /**
+     * Shortlink Table User Table
+     *
+     * Relation between Shortlink and User
+     * to determine if user has completed a Shortlink
+     *
+     * @var TableGateway $mShortDoneTbl
+     * @since 1.0.0
+     */
+    protected $mShortDoneTbl;
+
+    /**
+     * Offerwall Table User Table
+     *
+     * Relation between Offerwall and User
+     * to determine if user has complete an offer
+     * from an Offerwall
+     *
+     * @var TableGateway $mOfferwallUserTbl
+     * @since 1.0.0
+     */
+    protected $mOfferwallUserTbl;
+
+    /**
+     * Claim Table
+     *
+     * @var TableGateway $mClaimTbl
+     * @since 1.0.0
+     */
+    protected $mClaimTbl;
+
+    /**
      * Constructor
      *
      * AchievementResource constructor.
@@ -92,6 +123,9 @@ class AchievementResource extends AbstractResourceListener
         $this->mMinerTbl = new TableGateway('faucet_miner', $mapper);
         $this->mUserSetTbl = new TableGateway('user_setting', $mapper);
         $this->mAchievDoneTbl = new TableGateway('faucet_achievement_user', $mapper);
+        $this->mShortDoneTbl = new TableGateway('shortlink_link_user', $mapper);
+        $this->mOfferwallUserTbl = new TableGateway('offerwall_user', $mapper);
+        $this->mClaimTbl = new TableGateway('faucet_claim', $mapper);
         $this->mSecTools = new SecurityTools($mapper);
     }
 
@@ -141,6 +175,59 @@ class AchievementResource extends AbstractResourceListener
     public function fetch($id)
     {
         return new ApiProblem(405, 'The GET method has not been defined for individual resources');
+    }
+
+    private function getNextLevelAchievement($achiev, $user) {
+        $id = (isset($achiev->Achievement_ID)) ? $achiev->Achievement_ID : $achiev->id;
+        $nextSel = new Select($this->mAchievTbl->getTable());
+        $nextSel->where(['series' => $id]);
+        $nextSel->order('reward ASC');
+        $nextSel->limit(1);
+        $hasNext = $this->mAchievTbl->selectWith($nextSel);
+        if(count($hasNext) > 0) {
+            $achiev = $hasNext->current();
+            $progress = 0;
+            switch($achiev->type) {
+                case 'xplevel':
+                    $progress = $user->xp_level;
+                    break;
+                case 'faucetclaim':
+                    $progress = $this->mClaimTbl->select(['user_idfs' => $user->User_ID,'source' => 'website'])->count();
+                    break;
+                case 'shortlink':
+                    $progress = $this->mShortDoneTbl->select(['user_idfs' => $user->User_ID])->count();
+                    break;
+                case 'offerwall':
+                    $progress = $this->mOfferwallUserTbl->select(['user_idfs' => $user->User_ID])->count();
+                    break;
+                case 'offer-ayet':
+                    $progress = $this->mOfferwallUserTbl->select(['user_idfs' => $user->User_ID,'offerwall_idfs' => 5])->count();
+                    break;
+                case 'offer-asiamag':
+                    $progress = $this->mOfferwallUserTbl->select(['user_idfs' => $user->User_ID,'offerwall_idfs' => 6])->count();
+                    break;
+                case 'offer-wannads':
+                    $progress = $this->mOfferwallUserTbl->select(['user_idfs' => $user->User_ID,'offerwall_idfs' => 8])->count();
+                    break;
+                case 'offer-cpx':
+                    $progress = $this->mOfferwallUserTbl->select(['user_idfs' => $user->User_ID,'offerwall_idfs' => 1])->count();
+                    break;
+                default:
+                    break;
+            }
+            return (object)[
+                'id' => $achiev->Achievement_ID,
+                'name' => $achiev->label,
+                'icon' => $achiev->icon,
+                'description' => $achiev->description,
+                'goal' => $achiev->goal,
+                'reward' => $achiev->reward,
+                'mode' => $achiev->mode,
+                'progress' => $progress
+            ];
+        }
+
+        return false;
     }
 
     /**
@@ -234,11 +321,6 @@ class AchievementResource extends AbstractResourceListener
             if(array_key_exists($achiev->Achievement_ID, $userAchievementsDone)) {
                 $progress = $achiev->goal;
                 $achievementCategories[$achiev->category_idfs]->progress++;
-                $nextSel = new Select($this->mAchievTbl->getTable());
-                $nextSel->where(['series' => $achiev->Achievement_ID]);
-                $nextSel->order('reward ASC');
-                $nextSel->limit(1);
-                $hasNext = $this->mAchievTbl->selectWith($nextSel);
                 $achievementCategories[$achiev->category_idfs]->user_achievements[] = (object)[
                     'id' => $achiev->Achievement_ID,
                     'name' => $achiev->label,
@@ -249,31 +331,59 @@ class AchievementResource extends AbstractResourceListener
                     'mode' => $achiev->mode,
                     'progress' => $progress
                 ];
-                if(count($hasNext) > 0) {
-                    $achiev = $hasNext->current();
-                    $progress = 0;
-                    switch($achiev->type) {
-                        case 'xplevel':
-                            $progress = $me->xp_level;
-                            break;
-                        default:
-                            break;
+                $nextLevel = $this->getNextLevelAchievement($achiev, $me);
+                if(is_object($nextLevel)) {
+                    if($nextLevel->progress >= $nextLevel->goal) {
+                        $achievementCategories[$achiev->category_idfs]->user_achievements[] = $nextLevel;
+                        $nextLevel2 = $this->getNextLevelAchievement($nextLevel, $me);
+                        if(is_object($nextLevel2)) {
+                            if($nextLevel2->progress >= $nextLevel2->goal) {
+                                $achievementCategories[$achiev->category_idfs]->user_achievements[] = $nextLevel2;
+                                $nextLevel3 = $this->getNextLevelAchievement($nextLevel2, $me);
+                                if(is_object($nextLevel3)) {
+                                    if($nextLevel3->progress >= $nextLevel3->goal) {
+                                        $achievementCategories[$achiev->category_idfs]->user_achievements[] = $nextLevel3;
+                                        $nextLevel4 = $this->getNextLevelAchievement($nextLevel3, $me);
+                                        if(is_object($nextLevel4)) {
+
+                                        }
+                                    } else {
+                                        $achievementCategories[$achiev->category_idfs]->achievements[] = $nextLevel3;
+                                    }
+                                }
+                            } else {
+                                $achievementCategories[$achiev->category_idfs]->achievements[] = $nextLevel2;
+                            }
+                        }
+                    } else {
+                        $achievementCategories[$achiev->category_idfs]->achievements[] = $nextLevel;
                     }
-                    $achievementCategories[$achiev->category_idfs]->achievements[] = (object)[
-                        'id' => $achiev->Achievement_ID,
-                        'name' => $achiev->label,
-                        'icon' => $achiev->icon,
-                        'description' => $achiev->description,
-                        'goal' => $achiev->goal,
-                        'reward' => $achiev->reward,
-                        'mode' => $achiev->mode,
-                        'progress' => $progress
-                    ];
                 }
             } else {
                 switch($achiev->type) {
                     case 'xplevel':
                         $progress = $me->xp_level;
+                        break;
+                    case 'shortlink':
+                        $progress = $this->mShortDoneTbl->select(['user_idfs' => $me->User_ID])->count();
+                        break;
+                    case 'faucetclaim':
+                        $progress = $this->mClaimTbl->select(['user_idfs' => $me->User_ID,'source' => 'website'])->count();
+                        break;
+                    case 'offerwall':
+                        $progress = $this->mOfferwallUserTbl->select(['user_idfs' => $me->User_ID])->count();
+                        break;
+                    case 'offer-ayet':
+                        $progress = $this->mOfferwallUserTbl->select(['user_idfs' => $me->User_ID,'offerwall_idfs' => 5])->count();
+                        break;
+                    case 'offer-asiamag':
+                        $progress = $this->mOfferwallUserTbl->select(['user_idfs' => $me->User_ID,'offerwall_idfs' => 6])->count();
+                        break;
+                    case 'offer-wannads':
+                        $progress = $this->mOfferwallUserTbl->select(['user_idfs' => $me->User_ID,'offerwall_idfs' => 8])->count();
+                        break;
+                    case 'offer-cpx':
+                        $progress = $this->mOfferwallUserTbl->select(['user_idfs' => $me->User_ID,'offerwall_idfs' => 1])->count();
                         break;
                     default:
                         break;

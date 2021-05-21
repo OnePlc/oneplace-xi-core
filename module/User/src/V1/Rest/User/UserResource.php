@@ -185,6 +185,7 @@ class UserResource extends AbstractResourceListener
             $data->captcha,
             $data->terms,
             $data->ref_id,
+            $data->development
         ];
         $secResult = $this->mSecTools->basicInputCheck($checkFields);
         if($secResult !== 'ok') {
@@ -197,6 +198,8 @@ class UserResource extends AbstractResourceListener
         $captcha = filter_var($data->captcha, FILTER_SANITIZE_STRING);
         $terms = filter_var($data->terms, FILTER_SANITIZE_NUMBER_INT);
         $refId = filter_var($data->ref_id, FILTER_SANITIZE_NUMBER_INT);
+        $development = filter_var($data->development, FILTER_SANITIZE_NUMBER_INT);
+
 
         # check captcha
 
@@ -257,6 +260,11 @@ class UserResource extends AbstractResourceListener
             }
         }
 
+        if($development == 1) {
+            return [
+                'state' => 'success',
+            ];
+        }
         # add user
         $passwordHash = password_hash($password, PASSWORD_DEFAULT);
         $this->mapper->insert([

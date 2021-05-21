@@ -183,7 +183,7 @@ class WithdrawController extends AbstractActionController
              * Double check amount
              */
             $amount = filter_var($json->amount, FILTER_SANITIZE_NUMBER_INT);
-            $withdrawLimit = 1000 * (1 + (($me->xp_level - 1) / 6));
+            $withdrawLimit = 1000 + (200 * ($me->xp_level - 1));
             if($amount > $withdrawLimit) {
                 return new ApiProblemResponse(new ApiProblem(409, 'Amount is bigger than daily withdrawal limit'));
             }

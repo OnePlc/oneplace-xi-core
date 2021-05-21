@@ -22,6 +22,7 @@ use Laminas\ApiTools\ApiProblem\ApiProblem;
 use Laminas\ApiTools\ApiProblem\ApiProblemResponse;
 use Laminas\Db\TableGateway\TableGateway;
 use Laminas\Session\Container;
+use Laminas\Db\Sql\Where;
 
 class LoginController extends AbstractActionController
 {
@@ -50,6 +51,7 @@ class LoginController extends AbstractActionController
      */
     public function __construct($mapper)
     {
+        $this->mapper = $mapper;
         $this->mUserTbl = new TableGateway('user', $mapper);
         $this->mUserSetTbl = new TableGateway('user_setting', $mapper);
     }

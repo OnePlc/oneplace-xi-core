@@ -61,6 +61,14 @@ class ClaimController extends AbstractActionController
     private $mMapper;
 
     /**
+     * Shortlink Achievements
+     *
+     * @var array $mAchievementPoints
+     * @since 1.0.0
+     */
+    protected $mAchievementPoints;
+
+    /**
      * Constructor
      *
      * UserResource constructor.
@@ -73,6 +81,19 @@ class ClaimController extends AbstractActionController
         $this->mSecTools = new SecurityTools($mapper);
         $this->mUserTools = new UserTools($mapper);
         $this->mMapper = $mapper;
+
+        /**
+         * Load Achievements to Cache
+         */
+        $achievTbl = new TableGateway('faucet_achievement', $mapper);
+        $achievsXP = $achievTbl->select(['type' => 'faucetclaim', 'mode' => 'website']);
+        $achievsFinal = [];
+        if(count($achievsXP) > 0) {
+            foreach($achievsXP as $achiev) {
+                $achievsFinal[$achiev->goal] = $achiev;
+            }
+        }
+        $this->mAchievementPoints = $achievsFinal;
     }
 
     /**
@@ -194,6 +215,14 @@ class ClaimController extends AbstractActionController
                     }
                 }
                 $tokenValue = $oTransHelper->getTokenValue();
+
+                # check for achievement completetion
+                $currentClaimsDone = $this->mClaimTbl->select(['user_idfs' => $me->User_ID,'source' => $platform])->count();
+
+                # check if user has completed an achievement
+                if(array_key_exists($currentClaimsDone,$this->mAchievementPoints)) {
+                    $this->mUserTools->completeAchievement($this->mAchievementPoints[$currentClaimsDone]->Achievement_ID, $me->User_ID);
+                }
 
                 # Show Timer
                 return new ViewModel([

@@ -188,7 +188,7 @@ class UserTools extends AbstractResourceListener {
         ];
     }
 
-    private function completeAchievement($achievementId, $userId) {
+    public function completeAchievement($achievementId, $userId) {
         # check if achievement is still lactive
         $achiev = $this->mAchievTbl->select(['Achievement_ID' => $achievementId]);
         if(count($achiev) == 0) {

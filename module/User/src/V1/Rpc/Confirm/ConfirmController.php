@@ -88,6 +88,19 @@ class ConfirmController extends AbstractActionController
         $token = filter_var($json->token, FILTER_SANITIZE_STRING);
         $action = filter_var($json->action, FILTER_SANITIZE_STRING);
 
+        if(strlen($action) < 5) {
+            return new ApiProblemResponse(new ApiProblem(418, 'No coffee here'));
+        }
+
+        # Prevent 500 error
+        if(!$this->getIdentity()) {
+            return new ApiProblem(401, 'Not logged in');
+        }
+        $user = $this->mSecTools->getSecuredUserSession($this->getIdentity()->getName());
+        if(get_class($user) == 'Laminas\\ApiTools\\ApiProblem\\ApiProblem') {
+            return $user;
+        }
+
         /**
          * Send Request E-Mail is special action
          */
@@ -124,6 +137,9 @@ class ConfirmController extends AbstractActionController
                 ];
             }
         } else {
+            if(strlen($token) < 10) {
+                return new ApiProblemResponse(new ApiProblem(418, 'No coffee here'));
+            }
             $user = $this->mUserTbl->select(['password_reset_token' => $token]);
             if(count($user) == 0) {
                 return new ApiProblemResponse(new ApiProblem(404, 'Invalid token - not user found'));
