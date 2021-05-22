@@ -57,6 +57,7 @@ class InventoryHelper {
         $inventory = [];
         $userItems = $this->mItemUserTbl->select([
             'user_idfs' => $userId,
+            'used' => 0,
         ]);
         if (count($userItems) > 0) {
             foreach ($userItems as $userItem) {
@@ -69,6 +70,7 @@ class InventoryHelper {
                         'date_received' => $userItem->date_received,
                         'used' => $userItem->used,
                         'icon' => $itemInfo->icon,
+                        'rarity' => $itemInfo->level,
                         'description' => $itemInfo->description
                     ];
                 }

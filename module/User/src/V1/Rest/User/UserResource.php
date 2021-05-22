@@ -17,12 +17,14 @@ namespace User\V1\Rest\User;
 
 use Faucet\Tools\EmailTools;
 use Faucet\Tools\SecurityTools;
+use Faucet\Tools\UserTools;
 use Faucet\Transaction\InventoryHelper;
 use Faucet\Transaction\TransactionHelper;
 use Laminas\ApiTools\ApiProblem\ApiProblem;
 use Laminas\ApiTools\Rest\AbstractResourceListener;
 use Laminas\Db\TableGateway\TableGateway;
 use Laminas\Db\Sql\Where;
+use Laminas\Http\ClientStatic;
 
 class UserResource extends AbstractResourceListener
 {
@@ -119,12 +121,28 @@ class UserResource extends AbstractResourceListener
     protected $mMailTools;
 
     /**
+     * User Tools Helper
+     *
+     * @var UserTools $mUserTools
+     * @since 1.0.0
+     */
+    protected $mUserTools;
+
+    /**
      * User Settings Table
      *
      * @var TableGateway $mUserSetTbl
      * @since 1.0.0
      */
     protected $mUserSetTbl;
+
+    /**
+     * Settings Table
+     *
+     * @var TableGateway $mSettingsTbl
+     * @since 1.0.0
+     */
+    protected $mSettingsTbl;
 
     /**
      * Transaction Helper
@@ -157,11 +175,13 @@ class UserResource extends AbstractResourceListener
         $this->mGuildTbl = new TableGateway('faucet_guild', $mapper);
         $this->mWalletTbl = new TableGateway('faucet_wallet', $mapper);
         $this->mGuildRankTbl = new TableGateway('faucet_guild_rank', $mapper);
+        $this->mSettingsTbl = new TableGateway('settings', $mapper);
         $this->mGuildUserTbl = new TableGateway('faucet_guild_user', $mapper);
         $this->mWithdrawTbl = new TableGateway('faucet_withdraw', $mapper);
         $this->mSessionTbl = new TableGateway('user_session', $mapper);
         $this->mTransaction = new TransactionHelper($mapper);
         $this->mSecTools = new SecurityTools($mapper);
+        $this->mUserTools = new UserTools($mapper);
         $this->mInventory = new InventoryHelper($mapper);
         $this->mMailTools = new EmailTools($mapper, $viewRenderer);
         $this->mUserSetTbl = new TableGateway('user_setting', $mapper);
@@ -200,8 +220,25 @@ class UserResource extends AbstractResourceListener
         $refId = filter_var($data->ref_id, FILTER_SANITIZE_NUMBER_INT);
         $development = filter_var($data->development, FILTER_SANITIZE_NUMBER_INT);
 
-
         # check captcha
+        $captchaSecret = $this->mSettingsTbl->select(['settings_key' => 'recaptcha-secret-login']);
+        if(count($captchaSecret) > 0) {
+            $captchaSecret = $captchaSecret->current()->settings_value;
+            $response = ClientStatic::post(
+                'https://www.google.com/recaptcha/api/siteverify', [
+                'secret' => $captchaSecret,
+                'response' => $captcha
+            ]);
+
+            $status = $response->getStatusCode();
+            $googleResponse = $response->getBody();
+
+            $googleJson = json_decode($googleResponse);
+
+            if(!$googleJson->success) {
+                return new ApiProblem(400, 'Captcha not valid. Please try again or contact support.');
+            }
+        }
 
         # check terms
         if($terms != 1) {
@@ -224,7 +261,7 @@ class UserResource extends AbstractResourceListener
             foreach($sessCheck as $oSess) {
                 $aUsersByIp[$oSess->user_idfs] = 1;
             }
-            if(count($aUsersByIp) > 25) {
+            if(count($aUsersByIp) > 5) {
                 return new ApiProblem(400, 'It is not allowed to have multiple accounts per household / ip. Please contact admin@swissfaucet.io if this is your first account.');
             }
         }
@@ -405,6 +442,9 @@ class UserResource extends AbstractResourceListener
             }
         }
 
+        /**
+         * Load User Withdrawals
+         */
         $withdrawals = ['done' => [],'cancel' => [],'new' => [], 'total_items' => 0];
         $userWithdrawals = $this->mWithdrawTbl->select(['user_idfs' => $user->User_ID]);
         if(count($userWithdrawals) > 0) {
@@ -413,8 +453,10 @@ class UserResource extends AbstractResourceListener
             }
         }
 
+        /**
+         * Calculate Crypto Balance
+         */
         $tokenValue = $this->mTransaction->getTokenValue();
-
         $coinInfo = $this->mWalletTbl->select(['coin_sign' => $user->prefered_coin]);
         $cryptoBalance = 0;
         if(count($coinInfo) > 0) {
@@ -428,21 +470,33 @@ class UserResource extends AbstractResourceListener
             $cryptoBalance = number_format($cryptoBalance,8,'.','');
         }
 
-        # only send public fields
-        return (object)[
+        /**
+         * Public User Object
+         */
+        $returnData = [
             'id' => (int)$user->User_ID,
             'name' => $user->username,
             'email' => $user->email,
+            'emp_mode' => ($user->is_employee == 1) ? 'mod' : '',
             'verified' => (int)$user->email_verified,
             'token_balance' => (float)$user->token_balance,
             'crypto_balance' => (float)$cryptoBalance,
             'xp_level' => (int)$user->xp_level,
             'xp_percent' => (float)$dPercent,
+            'time_zone' => $user->timezone,
             'prefered_coin' => $user->prefered_coin,
             'guild' => $guild,
             'withdrawals' => $withdrawals,
             'inventory' => $this->mInventory->getInventory($user->User_ID)
         ];
+
+        $systemAlert = $this->mSettingsTbl->select(['settings_key' => 'system_alert']);
+        if(count($systemAlert) > 0) {
+            $returnData['system_alert'] = $systemAlert->current()->settings_value;
+        }
+
+        # only send public fields
+        return (object)$returnData;
     }
 
     /**
@@ -536,6 +590,9 @@ class UserResource extends AbstractResourceListener
             $update['username'] = $name;
         }
 
+        /**
+         * Change E-Mail Address
+         */
         if($email != $user->email && $email != '') {
             # check if email is already taken
             $mailCheck = $this->mapper->select(['email' => $email]);
@@ -555,6 +612,22 @@ class UserResource extends AbstractResourceListener
             $messages[] = 'Please check the Inbox of your current E-Mail to confirm the change of your Account E-Mail';
         }
 
+        /**
+         * Update Timezone
+         */
+        if($time_zone != $user->time_zone && $time_zone != '' && substr($time_zone,0,4) == '(GMT') {
+            $update['timezone'] = $time_zone;
+            $user->time_zone = $update['timezone'];
+
+            # timezone achievement
+            if(!$this->mUserTools->hasAchievementCompleted(28, $user->User_ID)) {
+                $this->mUserTools->completeAchievement(28, $user->User_ID);
+            }
+        }
+
+        /**
+         * Update Favorite Coin
+         */
         if($favCoin != '') {
             # check if coin has changed
             if($user->prefered_coin != $favCoin) {
@@ -567,10 +640,11 @@ class UserResource extends AbstractResourceListener
             }
         }
 
-
-        $this->mapper->update($update,[
-            'User_ID' => $this->mSession->auth->User_ID
-        ]);
+        if(count($update) > 0) {
+            $this->mapper->update($update,[
+                'User_ID' => $user->User_ID
+            ]);
+        }
 
         # get user next level xp
         $oNextLvl = $this->mXPLvlTbl->select(['Level_ID' => ($user->xp_level + 1)])->current();
@@ -651,6 +725,7 @@ class UserResource extends AbstractResourceListener
             'xp_level' => $user->xp_level,
             'xp_percent' => $dPercent,
             'prefered_coin' => $favCoin,
+            'time_zone' => $user->timezone,
             'guild' => $guild,
             'messages' => $messages,
             'link' => $confirmLink,

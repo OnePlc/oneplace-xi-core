@@ -93,6 +93,7 @@ class ReferralController extends AbstractActionController
         $checkWh = new Where();
         $checkWh->equalTo('ref_user_idfs', $me->User_ID);
         $memberSel->where($checkWh);
+        $memberSel->order('User_ID DESC');
         # Create a new pagination adapter object
         $oPaginatorAdapter = new DbSelect(
         # our configured select object

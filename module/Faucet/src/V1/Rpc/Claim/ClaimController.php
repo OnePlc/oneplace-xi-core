@@ -136,9 +136,6 @@ class ClaimController extends AbstractActionController
         # Only show timer if GET
         $oRequest = $this->getRequest();
         if(!$oRequest->isPost()) {
-            if($platform == 'android') {
-                $sTime = 60;
-            }
             return new ViewModel([
                 'status' => 'wait',
                 'next_claim' => $sTime,
@@ -181,8 +178,13 @@ class ClaimController extends AbstractActionController
                     break;
             }
 
+            $nextTimer = 3600;
+            if($platform == 'android') {
+                $nextTimer = 60;
+            }
+
             # Set next claim date
-            $nextDate = date('Y-m-d H:i:s', time()+3600);
+            $nextDate = date('Y-m-d H:i:s', time()+$nextTimer);
 
             # Execute Claim Transaction
             $oTransHelper = new TransactionHelper($this->mMapper);
@@ -214,7 +216,6 @@ class ClaimController extends AbstractActionController
                         $achievDone = $newLevel['achievement'];
                     }
                 }
-                $tokenValue = $oTransHelper->getTokenValue();
 
                 # check for achievement completetion
                 $currentClaimsDone = $this->mClaimTbl->select(['user_idfs' => $me->User_ID,'source' => $platform])->count();

@@ -17,11 +17,7 @@ namespace Faucet\Tools;
 use Faucet\Transaction\TransactionHelper;
 use Laminas\ApiTools\Rest\AbstractResourceListener;
 use Laminas\Db\TableGateway\TableGateway;
-use Laminas\Mail;
-use Laminas\Mail\Transport\Smtp as SmtpTransport;
-use Laminas\Mail\Transport\SmtpOptions;
-use Laminas\Mime\Message as MimeMessage;
-use Laminas\Mime\Part as MimePart;
+use Laminas\Db\Sql\Where;
 
 
 class UserTools extends AbstractResourceListener {
@@ -90,6 +86,14 @@ class UserTools extends AbstractResourceListener {
      */
     protected $mTransaction;
 
+    /**
+     * User Buff Table
+     *
+     * @var TableGateway $mUserBuffTbl
+     * @since 1.0.0
+     */
+    protected $mUserBuffTbl;
+
 
     /**
      * Constructor
@@ -108,6 +112,7 @@ class UserTools extends AbstractResourceListener {
         $this->mAchievUserTbl = new TableGateway('faucet_achievement_user', $mapper);
         $this->mUserTbl = new TableGateway('user', $mapper);
         $this->mTransaction = new TransactionHelper($mapper);
+        $this->mUserBuffTbl = new TableGateway('user_buff', $mapper);
 
         /**
          * Load Achievements to Cache
@@ -208,5 +213,34 @@ class UserTools extends AbstractResourceListener {
         } else {
             return false;
         }
+    }
+
+    public function hasAchievementCompleted($achievementId, $userId) {
+        $check = $this->mAchievUserTbl->select([
+            'achievement_idfs' => $achievementId,
+            'user_idfs' => $userId
+        ]);
+        if(count($check) == 0) {
+            return false;
+        } else {
+            return true;
+        }
+    }
+
+    public function getUserActiveBuffs($buffType, $date, $userId) {
+        $buffWh = new Where();
+        $buffWh->like('buff_type', $buffType);
+        $buffWh->equalTo('user_idfs', $userId);
+        $buffWh->like('date', $date.'%');
+        $buffsActive = $this->mUserBuffTbl->select($buffWh);
+        $buffs = [];
+
+        if(count($buffsActive) > 0) {
+            foreach($buffsActive as $buff) {
+                $buffs[] = $buff;
+            }
+        }
+
+        return $buffs;
     }
 }

@@ -22,6 +22,7 @@ use Laminas\ApiTools\ApiProblem\ApiProblemResponse;
 use Laminas\ApiTools\ContentNegotiation\ViewModel;
 use Laminas\Db\TableGateway\TableGateway;
 use Laminas\Mvc\Controller\AbstractActionController;
+use Laminas\Http\ClientStatic;
 
 class AyetstudiosController extends AbstractActionController
 {
@@ -80,8 +81,13 @@ class AyetstudiosController extends AbstractActionController
         $sUrl = str_replace(['##USERID##'],[$me->User_ID],$baseUrl);
         $ayetResponse = file_get_contents($sUrl);
 
+        $response = ClientStatic::get($sUrl);
+
+        $status = $response->getStatusCode();
+        $googleResponse = $response->getBody();
+
         return new ViewModel([
-            'response' => json_decode($ayetResponse),
+            'response' => json_decode($googleResponse),
         ]);
     }
 }

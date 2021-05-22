@@ -3,10 +3,12 @@ namespace Faucet\V1\Rpc\Withdraw;
 
 use Application\Controller\IndexController;
 use Faucet\Tools\SecurityTools;
+use Faucet\Tools\UserTools;
 use Faucet\Transaction\TransactionHelper;
 use Laminas\ApiTools\ApiProblem\ApiProblem;
 use Laminas\ApiTools\ApiProblem\ApiProblemResponse;
 use Laminas\ApiTools\ContentNegotiation\ViewModel;
+use Laminas\Db\Sql\Predicate\PredicateSet;
 use Laminas\Db\TableGateway\TableGateway;
 use Laminas\Db\Sql\Where;
 use Laminas\Db\Sql\Select;
@@ -30,6 +32,14 @@ class WithdrawController extends AbstractActionController
      * @since 1.0.0
      */
     protected $mWalletTbl;
+
+    /**
+     * User Basic Tools
+     *
+     * @var UserTools $mUserTools
+     * @since 1.0.0
+     */
+    protected $mUserTools;
 
     /**
      * Transaction Helper
@@ -69,6 +79,7 @@ class WithdrawController extends AbstractActionController
         $this->mUserSetTbl = new TableGateway('user_setting', $mapper);
         $this->mTransaction = new TransactionHelper($mapper);
         $this->mSecTools = new SecurityTools($mapper);
+        $this->mUserTools = new UserTools($mapper);
     }
 
     public function withdrawAction()
@@ -85,6 +96,18 @@ class WithdrawController extends AbstractActionController
         $request = $this->getRequest();
 
         $tokenValue = $this->mTransaction->getTokenValue();
+
+        $coinsWithdrawnToday = 0;
+        $oWh = new Where();
+        $oWh->equalTo('user_idfs', $me->User_ID);
+        $oWh->notLike('state', 'cancel');
+        $oWh->like('date_requested', date('Y-m-d', time()) . '%');
+        $oWithdrawsToday = $this->mWithdrawTbl->select($oWh);
+        if (count($oWithdrawsToday) > 0) {
+            foreach ($oWithdrawsToday as $oWth) {
+                $coinsWithdrawnToday += $oWth->amount;
+            }
+        }
 
         if($request->isGet()) {
             $wallets = [];
@@ -132,24 +155,23 @@ class WithdrawController extends AbstractActionController
 
             $withdrawLimit = 1000 + (200 * ($me->xp_level - 1));
 
-            $coinsWithdrawnToday = 0;
-            $oWh = new Where();
-            $oWh->equalTo('user_idfs', $me->User_ID);
-            $oWh->notLike('state', 'cancel');
-            $oWh->like('date_requested', date('Y-m-d', time()) . '%');
-            $oWithdrawsToday = $this->mWithdrawTbl->select($oWh);
-            if (count($oWithdrawsToday) > 0) {
-                foreach ($oWithdrawsToday as $oWth) {
-                    $coinsWithdrawnToday += $oWth->amount;
+            $withdrawBonus = 0;
+            # check for active withdrawal buffs
+            $activeBuffs = $this->mUserTools->getUserActiveBuffs('daily-withdraw-buff', date('Y-m-d', time()), $me->User_ID);
+            if(count($activeBuffs) > 0) {
+                foreach($activeBuffs as $buff) {
+                    $withdrawBonus+=$buff->buff;
                 }
             }
 
             return [
                 '_links' => [],
                 'wallet' => $wallets,
-                'daily_limit' => $withdrawLimit,
+                'daily_limit_base' => $withdrawLimit,
+                'daily_limit_bonus' => $withdrawBonus,
+                'daily_limit' => $withdrawLimit+$withdrawBonus,
                 'token_val' => $tokenValue,
-                'daily_left' => ($withdrawLimit - $coinsWithdrawnToday)
+                'daily_left' => (($withdrawLimit+$withdrawBonus) - $coinsWithdrawnToday)
             ];
         }
 
@@ -184,6 +206,23 @@ class WithdrawController extends AbstractActionController
              */
             $amount = filter_var($json->amount, FILTER_SANITIZE_NUMBER_INT);
             $withdrawLimit = 1000 + (200 * ($me->xp_level - 1));
+
+            /**
+             * Add Buffs to Limit
+             */
+            $withdrawBonus = 0;
+            # check for active withdrawal buffs
+            $activeBuffs = $this->mUserTools->getUserActiveBuffs('daily-withdraw-buff', date('Y-m-d', time()), $me->User_ID);
+            if(count($activeBuffs) > 0) {
+                foreach($activeBuffs as $buff) {
+                    $withdrawBonus+=$buff->buff;
+                }
+            }
+
+            /**
+             * Check Limits
+             */
+            $withdrawLimit+=$withdrawBonus;
             if($amount > $withdrawLimit) {
                 return new ApiProblemResponse(new ApiProblem(409, 'Amount is bigger than daily withdrawal limit'));
             }
@@ -254,7 +293,7 @@ class WithdrawController extends AbstractActionController
 
                         # push new info to view
                         return new ViewModel([
-                            'daily_left' => ($withdrawLimit - $json->amount),
+                            'daily_left' => ($withdrawLimit - $json->amount - $coinsWithdrawnToday),
                             'token_balance' => $newBalance,
                             'withdrawals' => $withdrawals,
                         ]);

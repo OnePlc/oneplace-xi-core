@@ -22,13 +22,14 @@ return [
                 'Game\\V1' => 'oneplace',
                 'Support\\V1' => 'oneplace',
                 'Laminas\\ApiTools\\OAuth2' => 'session',
+                'Mining\\V1' => 'oneplace',
             ],
         ],
         'adapters' => [
             'session' => [
-                'adapter' => 'Application\\Authentication\\Adapter\\SessionAdapter',
+                'adapter' => \Application\Authentication\Adapter\SessionAdapter::class,
             ],
-        ]
+        ],
     ],
     'router' => [
         'routes' => [

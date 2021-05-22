@@ -72,4 +72,9 @@ return [
             'description' => 'Get Hall of Fame Numbers & Stats',
         ],
     ],
+    'Faucet\\V1\\Rpc\\Item\\Controller' => [
+        'POST' => [
+            'description' => 'Use an item',
+        ],
+    ],
 ];

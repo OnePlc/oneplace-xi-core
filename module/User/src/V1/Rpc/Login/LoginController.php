@@ -16,6 +16,7 @@
 namespace User\V1\Rpc\Login;
 
 use Application\Controller\IndexController;
+use Laminas\Http\ClientStatic;
 use Laminas\Mvc\Controller\AbstractActionController;
 use Laminas\ApiTools\ContentNegotiation\ViewModel;
 use Laminas\ApiTools\ApiProblem\ApiProblem;
@@ -43,6 +44,14 @@ class LoginController extends AbstractActionController
     protected $mUserSetTbl;
 
     /**
+     * Settings Table
+     *
+     * @var TableGateway $mSettingsTbl
+     * @since 1.0.0
+     */
+    protected $mSettingsTbl;
+
+    /**
      * Constructor
      *
      * LoginController constructor.
@@ -54,6 +63,7 @@ class LoginController extends AbstractActionController
         $this->mapper = $mapper;
         $this->mUserTbl = new TableGateway('user', $mapper);
         $this->mUserSetTbl = new TableGateway('user_setting', $mapper);
+        $this->mSettingsTbl = new TableGateway('settings', $mapper);
     }
 
     /**
@@ -65,9 +75,38 @@ class LoginController extends AbstractActionController
     public function loginAction()
     {
         # Get Data from Request Body
-        $json = IndexController::loadJSONFromRequestBody(['username','password'],$this->getRequest()->getContent());
+        $json = IndexController::loadJSONFromRequestBody(['username','password','captcha','captcha_mode'],$this->getRequest()->getContent());
         if(!$json) {
             return new ApiProblemResponse(new ApiProblem(400, 'Invalid Response Body (missing required fields)'));
+        }
+
+        $captcha = filter_var($json->captcha, FILTER_SANITIZE_STRING);
+        $captchaMode = filter_var($json->captcha_mode, FILTER_SANITIZE_STRING);
+
+        # Check which captcha secret key we should load
+        $captchaKey = 'recaptcha-secret-login';
+        if($captchaMode == 'app') {
+            $captchaKey = 'recaptcha-app-secretkey';
+        }
+
+        # check captcha (google v2)
+        $captchaSecret = $this->mSettingsTbl->select(['settings_key' => $captchaKey]);
+        if(count($captchaSecret) > 0) {
+            $captchaSecret = $captchaSecret->current()->settings_value;
+            $response = ClientStatic::post(
+                'https://www.google.com/recaptcha/api/siteverify', [
+                'secret' => $captchaSecret,
+                'response' => $captcha
+            ]);
+
+            $status = $response->getStatusCode();
+            $googleResponse = $response->getBody();
+
+            $googleJson = json_decode($googleResponse);
+
+            if(!$googleJson->success) {
+                return new ApiProblemResponse(new ApiProblem(400, 'Captcha not valid. Please try again or contact support.'));
+            }
         }
 
         # Try to find user by username

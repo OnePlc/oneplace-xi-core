@@ -6,7 +6,7 @@
  * The previous config file has been stored in ./config/modules.config.old
  */
 return [
-    'Laminas\Mail',
+    'Laminas\\Mail',
     'Laminas\\Session',
     'Laminas\\Db',
     'Laminas\\Filter',
@@ -38,4 +38,5 @@ return [
     'Offerwall',
     'News',
     'Support',
+    'Mining',
 ];

@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project version="4">
+  <component name="WebServers">
+    <option name="servers">
+      <webServer id="054838f5-e025-477b-b21a-5d8f3fb4a8a4" name="XI CORE PROD API">
+        <fileTransfer rootFolder="/var/www/api/xi" accessType="SFTP" host="157.90.241.85" port="2424" sshConfigId="e51c9bca-c197-476c-ac34-aaa4b5cfdee4" sshConfig="root@157.90.241.85:2424 password">
+          <advancedOptions>
+            <advancedOptions dataProtectionLevel="Private" keepAliveTimeout="0" passiveMode="true" shareSSLContext="true" />
+          </advancedOptions>
+        </fileTransfer>
+      </webServer>
+    </option>
+  </component>
+</project>

@@ -6,6 +6,7 @@ return [
             'Faucet\\V1\\Rpc\\Referral\\Controller' => \Faucet\V1\Rpc\Referral\ReferralControllerFactory::class,
             'Faucet\\V1\\Rpc\\HallOfFame\\Controller' => \Faucet\V1\Rpc\HallOfFame\HallOfFameControllerFactory::class,
             'Faucet\\V1\\Rpc\\Withdraw\\Controller' => \Faucet\V1\Rpc\Withdraw\WithdrawControllerFactory::class,
+            'Faucet\\V1\\Rpc\\Item\\Controller' => \Faucet\V1\Rpc\Item\ItemControllerFactory::class,
         ],
     ],
     'router' => [
@@ -68,6 +69,16 @@ return [
                     ],
                 ],
             ],
+            'faucet.rpc.item' => [
+                'type' => 'Segment',
+                'options' => [
+                    'route' => '/item/use',
+                    'defaults' => [
+                        'controller' => 'Faucet\\V1\\Rpc\\Item\\Controller',
+                        'action' => 'item',
+                    ],
+                ],
+            ],
         ],
     ],
     'api-tools-versioning' => [
@@ -78,6 +89,7 @@ return [
             3 => 'faucet.rpc.referral',
             4 => 'faucet.rpc.hall-of-fame',
             5 => 'faucet.rpc.withdraw',
+            6 => 'faucet.rpc.item',
         ],
     ],
     'api-tools-rpc' => [
@@ -111,6 +123,13 @@ return [
             ],
             'route_name' => 'faucet.rpc.withdraw',
         ],
+        'Faucet\\V1\\Rpc\\Item\\Controller' => [
+            'service_name' => 'Item',
+            'http_methods' => [
+                0 => 'POST',
+            ],
+            'route_name' => 'faucet.rpc.item',
+        ],
     ],
     'api-tools-content-negotiation' => [
         'controllers' => [
@@ -120,6 +139,7 @@ return [
             'Faucet\\V1\\Rpc\\Referral\\Controller' => 'Json',
             'Faucet\\V1\\Rpc\\HallOfFame\\Controller' => 'Json',
             'Faucet\\V1\\Rpc\\Withdraw\\Controller' => 'Json',
+            'Faucet\\V1\\Rpc\\Item\\Controller' => 'Json',
         ],
         'accept_whitelist' => [
             'Faucet\\V1\\Rpc\\Claim\\Controller' => [
@@ -152,6 +172,11 @@ return [
                 1 => 'application/json',
                 2 => 'application/*+json',
             ],
+            'Faucet\\V1\\Rpc\\Item\\Controller' => [
+                0 => 'application/vnd.faucet.v1+json',
+                1 => 'application/json',
+                2 => 'application/*+json',
+            ],
         ],
         'content_type_whitelist' => [
             'Faucet\\V1\\Rpc\\Claim\\Controller' => [
@@ -175,6 +200,10 @@ return [
                 1 => 'application/json',
             ],
             'Faucet\\V1\\Rpc\\Withdraw\\Controller' => [
+                0 => 'application/vnd.faucet.v1+json',
+                1 => 'application/json',
+            ],
+            'Faucet\\V1\\Rpc\\Item\\Controller' => [
                 0 => 'application/vnd.faucet.v1+json',
                 1 => 'application/json',
             ],
@@ -253,6 +282,17 @@ return [
                         'GET' => true,
                         'POST' => true,
                         'PUT' => true,
+                        'PATCH' => false,
+                        'DELETE' => false,
+                    ],
+                ],
+            ],
+            'Faucet\\V1\\Rpc\\Item\\Controller' => [
+                'actions' => [
+                    'item' => [
+                        'GET' => false,
+                        'POST' => true,
+                        'PUT' => false,
                         'PATCH' => false,
                         'DELETE' => false,
                     ],
@@ -339,6 +379,9 @@ return [
         'Faucet\\V1\\Rest\\Achievement\\Controller' => [
             'input_filter' => 'Faucet\\V1\\Rest\\Achievement\\Validator',
         ],
+        'Faucet\\V1\\Rpc\\Item\\Controller' => [
+            'input_filter' => 'Faucet\\V1\\Rpc\\Item\\Validator',
+        ],
     ],
     'input_filter_specs' => [
         'Faucet\\V1\\Rest\\Dailytask\\Validator' => [
@@ -383,6 +426,21 @@ return [
                 'name' => 'platform',
                 'description' => 'The Platform for the Dailytasks',
                 'error_message' => 'You must provide a valid platform',
+            ],
+        ],
+        'Faucet\\V1\\Rpc\\Item\\Validator' => [
+            0 => [
+                'required' => true,
+                'validators' => [],
+                'filters' => [
+                    0 => [
+                        'name' => \Laminas\Filter\ToInt::class,
+                        'options' => [],
+                    ],
+                ],
+                'name' => 'item_id',
+                'description' => 'The item you want to use',
+                'error_message' => 'You must provide a valid Item ID',
             ],
         ],
     ],

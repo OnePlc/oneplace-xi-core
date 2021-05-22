@@ -1,4 +1,18 @@
 <?php
+/**
+ * SupportController.php - Support Controller
+ *
+ * Main Controller for User Support Frontend
+ *
+ * @category Controller
+ * @package Support
+ * @author Praesidiarius
+ * @copyright (C) 2021 Praesidiarius <admin@1plc.ch>
+ * @license https://opensource.org/licenses/BSD-3-Clause
+ * @version 1.0.0
+ * @since 1.1.1
+ */
+
 namespace Support\V1\Rpc\Support;
 
 use Application\Controller\IndexController;
@@ -111,11 +125,14 @@ class SupportController extends AbstractActionController
      */
     public function supportAction()
     {
-        # Check if user is logged in
-        if(!isset($this->mSession->auth)) {
-            return new ApiProblemResponse(new ApiProblem(401, 'You are not logged in'));
+        # Prevent 500 error
+        if(!$this->getIdentity()) {
+            return new ApiProblemResponse(new ApiProblem(401, 'Not logged in'));
         }
-        $me = $this->mSession->auth;
+        $me = $this->mSecTools->getSecuredUserSession($this->getIdentity()->getName());
+        if(get_class($me) == 'Laminas\\ApiTools\\ApiProblem\\ApiProblem') {
+            return new ApiProblemResponse($me);
+        }
 
         $request = $this->getRequest();
 
