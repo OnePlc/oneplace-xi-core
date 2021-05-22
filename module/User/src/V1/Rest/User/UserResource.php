@@ -327,7 +327,18 @@ class UserResource extends AbstractResourceListener
             'modified_date' => date('Y-m-d H:i:s', time()),
         ]);
 
+        # get new user's id
         $userId = $this->mapper->lastInsertValue;
+
+        # add user session
+        $this->mSessionTbl->insert([
+            'user_idfs' => $userId,
+            'ipaddress' => strip_tags($sIpAddr),
+            'browser' => substr($_SERVER['HTTP_USER_AGENT'],0,25),
+            'date_created' => date('Y-m-d H:i:s', time()),
+            'date_last_login' => date('Y-m-d H:i:s', time()),
+        ]);
+
         $this->mApiTbl->insert([
             'username' => $userId,
             'password' => $passwordHash,

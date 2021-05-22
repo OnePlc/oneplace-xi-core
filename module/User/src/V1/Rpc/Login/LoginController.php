@@ -52,6 +52,14 @@ class LoginController extends AbstractActionController
     protected $mSettingsTbl;
 
     /**
+     * User Session Table
+     *
+     * @var TableGateway $mSessionTbl
+     * @since 1.0.0
+     */
+    protected $mSessionTbl;
+
+    /**
      * Constructor
      *
      * LoginController constructor.
@@ -64,6 +72,7 @@ class LoginController extends AbstractActionController
         $this->mUserTbl = new TableGateway('user', $mapper);
         $this->mUserSetTbl = new TableGateway('user_setting', $mapper);
         $this->mSettingsTbl = new TableGateway('settings', $mapper);
+        $this->mSessionTbl = new TableGateway('user_session', $mapper);
     }
 
     /**
@@ -141,10 +150,44 @@ class LoginController extends AbstractActionController
             return new ApiProblemResponse(new ApiProblem(403, 'You are temporarly banned. Please contact support.'));
         }
 
+        if($oUser->User_ID <= 0) {
+            return new ApiProblemResponse(new ApiProblem(400, 'Invalid user id'));
+        }
+
         # Create user session
         $session = new Container('webauth');
-        $session->auth =  $oUser;
+        $session->auth = $oUser;
 
+        # check if ip is blacklisted
+        if (!empty($_SERVER['HTTP_CLIENT_IP'])) {
+            $sIpAddr = filter_var ($_SERVER['HTTP_CLIENT_IP'], FILTER_SANITIZE_STRING);
+        } elseif (!empty($_SERVER['HTTP_X_FORWARDED_FOR'])) {
+            $sIpAddr = filter_var ($_SERVER['HTTP_X_FORWARDED_FOR'], FILTER_SANITIZE_STRING);
+        } else {
+            $sIpAddr = filter_var ($_SERVER['REMOTE_ADDR'], FILTER_SANITIZE_STRING);
+        }
+
+        # add user session
+        $sessCheck = $this->mSessionTbl->select([
+            'user_idfs' => $oUser->User_ID,
+            'ipaddress' => strip_tags($sIpAddr),
+        ]);
+        if(count($sessCheck) == 0) {
+            $this->mSessionTbl->insert([
+                'user_idfs' => $oUser->User_ID,
+                'ipaddress' => strip_tags($sIpAddr),
+                'browser' => substr($_SERVER['HTTP_USER_AGENT'],0,25),
+                'date_created' => date('Y-m-d H:i:s', time()),
+                'date_last_login' => date('Y-m-d H:i:s', time()),
+            ]);
+        } else {
+            $this->mSessionTbl->update([
+                'date_last_login' => date('Y-m-d H:i:s', time()),
+            ],[
+                'user_idfs' => $oUser->User_ID,
+                'ipaddress' => strip_tags($sIpAddr),
+            ]);
+        }
         # return user_id so client can get token
         return new ViewModel([
             'user_id' => $oUser->User_ID,
