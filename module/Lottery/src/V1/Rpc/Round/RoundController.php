@@ -106,54 +106,58 @@ class RoundController extends AbstractActionController
         $roundSel->limit(1);
         $currentRound = $this->mLotteryTbl->selectWith($roundSel)->current();
         $roundID = $currentRound->Round_ID;
-        
-        # Get Winners of last round
-        $winnersLastRound = [];
-        $winSel = new Select($this->mLotteryWInTbl->getTable());
-        $winSel->order('rank ASC');
-        $winSel->where(['round_idfs' => $roundID-1]);
-        $lastWinners = $this->mLotteryWInTbl->selectWith($winSel);
-        if(count($lastWinners) > 0) {
-            foreach($lastWinners as $win) {
-                $winnerDB = $this->mUserTbl->select(['User_ID' => $win->user_idfs]);
-                # Skip deleted users
-                if(count($winnerDB) > 0) {
-                    $winnerDB = $winnerDB->current();
-                    $winner = (object)['name' => $winnerDB->username,'id' => $winnerDB->User_ID];
-                    $winner->rank = $win->rank;
-                    $winner->coins_won = $win->coins_won;
-                    $winner->tickets = $win->tickets;
-                    $winnersLastRound[] = $winner;
+
+        $request = $this->getRequest();
+
+        if($request->isGet()) {
+            # Get Winners of last round
+            $winnersLastRound = [];
+            $winSel = new Select($this->mLotteryWInTbl->getTable());
+            $winSel->order('rank ASC');
+            $winSel->where(['round_idfs' => $roundID-1]);
+            $lastWinners = $this->mLotteryWInTbl->selectWith($winSel);
+            if(count($lastWinners) > 0) {
+                foreach($lastWinners as $win) {
+                    $winnerDB = $this->mUserTbl->select(['User_ID' => $win->user_idfs]);
+                    # Skip deleted users
+                    if(count($winnerDB) > 0) {
+                        $winnerDB = $winnerDB->current();
+                        $winner = (object)['name' => $winnerDB->username,'id' => $winnerDB->User_ID];
+                        $winner->rank = $win->rank;
+                        $winner->coins_won = $win->coins_won;
+                        $winner->tickets = $win->tickets;
+                        $winnersLastRound[] = $winner;
+                    }
                 }
             }
-        }
 
-        # Get Tickets for current Round
-        $totalTickets = 0;
-        $myTickets = 0;
-        $ticketsRound = $this->mLotteryTkTbl->select(['round_idfs' => $roundID]);
-        if(count($ticketsRound) > 0) {
-            foreach($ticketsRound as $tk) {
-                $totalTickets+=$tk->tickets;
-                if($tk->user_idfs == $me->User_ID) {
-                    $myTickets = $tk->tickets;
+            # Get Tickets for current Round
+            $totalTickets = 0;
+            $myTickets = 0;
+            $ticketsRound = $this->mLotteryTkTbl->select(['round_idfs' => $roundID]);
+            if(count($ticketsRound) > 0) {
+                foreach($ticketsRound as $tk) {
+                    $totalTickets+=$tk->tickets;
+                    if($tk->user_idfs == $me->User_ID) {
+                        $myTickets = $tk->tickets;
+                    }
                 }
             }
+
+            # Calculate Users Winning Chance
+            $chanceWin = 0;
+            if($myTickets > 0 && $totalTickets > 0) {
+                $chanceWin = number_format(100/($totalTickets/$myTickets),8,'.','\'');
+            }
+
+            # Attach additional information to round
+            $currentRound->winners_last_round = $winnersLastRound;
+            $currentRound->my_tickets = $myTickets;
+            $currentRound->my_chance = $chanceWin;
+            $currentRound->tickets = $totalTickets;
+
+            # Print Round Info
+            return new ViewModel($currentRound);
         }
-
-        # Calculate Users Winning Chance
-        $chanceWin = 0;
-        if($myTickets > 0 && $totalTickets > 0) {
-            $chanceWin = number_format(100/($totalTickets/$myTickets),8,'.','\'');
-        }
-
-        # Attach additional information to round
-        $currentRound->winners_last_round = $winnersLastRound;
-        $currentRound->my_tickets = $myTickets;
-        $currentRound->my_chance = $chanceWin;
-        $currentRound->tickets = $totalTickets;
-
-        # Print Round Info
-        return new ViewModel($currentRound);
     }
 }

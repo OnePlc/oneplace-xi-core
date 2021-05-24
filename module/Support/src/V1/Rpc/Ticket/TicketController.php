@@ -18,6 +18,7 @@
 namespace Support\V1\Rpc\Ticket;
 
 use Application\Controller\IndexController;
+use Faucet\Tools\EmailTools;
 use Faucet\Tools\SecurityTools;
 use Faucet\Tools\UserTools;
 use Faucet\Transaction\TransactionHelper;
@@ -62,6 +63,14 @@ class TicketController extends AbstractActionController
     protected $mUserTools;
 
     /**
+     * E-Mail Tools
+     *
+     * @var EmailTools $mEmailTools
+     * @since 1.0.0
+     */
+    protected $mEmailTools;
+
+    /**
      * Transaction Helper
      *
      * @var TransactionHelper $mTransaction
@@ -84,13 +93,14 @@ class TicketController extends AbstractActionController
      * @param $mapper
      * @since 1.0.0
      */
-    public function __construct(Adapter $mapper)
+    public function __construct(Adapter $mapper, $viewRender)
     {
         # Init Tables for this API
         $this->mSecTools = new SecurityTools($mapper);
         $this->mUserTbl = new TableGateway('user', $mapper);
         $this->mSupportTbl = new TableGateway('user_request', $mapper);
         $this->mUserTools = new UserTools($mapper);
+        $this->mEmailTools = new EmailTools($mapper, $viewRender);
         $this->mTransaction = new TransactionHelper($mapper);
         $this->mUserSetTbl = new TableGateway('user_setting', $mapper);
     }
@@ -148,6 +158,18 @@ class TicketController extends AbstractActionController
         }
         $member = $member->current();
 
+        $moderator = (object)[];
+        if($ticket->reply_user_idfs != 0) {
+            $moderatorDB = $this->mUserTbl->select(['User_ID' => $ticket->reply_user_idfs]);
+            if(count($moderatorDB) > 0) {
+                $moderatorDB = $moderatorDB->current();
+                $moderator = (object)[
+                    'id' => $moderatorDB->User_ID,
+                    'name' => $moderatorDB->username
+                ];
+            }
+        }
+
         /**
          * Get Ticket Info (POST)
          */
@@ -156,11 +178,15 @@ class TicketController extends AbstractActionController
                 'ticket' => (object)[
                     'id' => $ticket->Request_ID,
                     'message' => $ticket->message,
+                    'reply' => $ticket->reply,
+                    'replied' => ($ticket->reply != "") ? true : false,
                     'user' => [
                         'id' => $member->User_ID,
                         'name' => $member->username,
-                        'token_balance' => $member->token_balance
+                        'token_balance' => $member->token_balance,
+                        'verified' => (boolean)$member->email_verified
                     ],
+                    'moderator' => $moderator,
                     'date'=> $ticket->date,
                 ]
             ];
@@ -170,6 +196,12 @@ class TicketController extends AbstractActionController
          * Send Ticket Reply (PUT)
          */
         if($request->isPut()) {
+            if($ticket->reply != '' || $ticket->reply_user_idfs != 0) {
+                return new ApiProblemResponse(new ApiProblem(400, 'Ticket is already done!'));
+            }
+            if($ticket->user_idfs == $me->User_ID) {
+                return new ApiProblemResponse(new ApiProblem(400, 'You cannot reply to your own tickets...please...dont do that, its stupid.'));
+            }
             # get data from body
             $replyInfo = IndexController::loadJSONFromRequestBody(['message'],$this->getRequest()->getContent());
             # check for attack vendors
@@ -204,6 +236,14 @@ class TicketController extends AbstractActionController
             ]);
 
             # send e-mail
+            $emailSent = $this->mEmailTools->sendMail('ticket_reply', [
+                'reply' => $replyMessage,
+                'moderator' => $me->username,
+                'username' => $member->username,
+                'ticketId' => $ticketId,
+                'footerInfo' => 'Swissfaucet.io - Your #1 Crypto Community',
+                'sEmailTitle' => 'Reply to Support Ticket #'.$ticketId
+            ], $this->mEmailTools->getAdminEmail(), $member->email, 'Reply to Support Ticket #'.$ticketId);
 
             # add xp for moderator
             $newLevel = $this->mUserTools->addXP('support-ticket-reply', $me->User_ID);

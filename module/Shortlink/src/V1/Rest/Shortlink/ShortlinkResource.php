@@ -235,7 +235,10 @@ class ShortlinkResource extends AbstractResourceListener
                 }
 
                 # return next usable provider shortlink
-                $provider->link = $finalLink->current();
+                $finLink = $finalLink->current();
+                $provider->link = (object)[
+                    'href' => $finLink->href,
+                ];
                 return $provider;
             } else {
                 return new ApiProblem(404, 'No links for provider '.$provider->label.' found');
@@ -262,7 +265,9 @@ class ShortlinkResource extends AbstractResourceListener
         }
 
         # Load Shortlink Provider List
-        $shortlinksDB = $this->mShortProviderTbl->select();
+        $provSel = new Select($this->mShortProviderTbl->getTable());
+        $provSel->order('sort_id ASC');
+        $shortlinksDB = $this->mShortProviderTbl->selectWith($provSel);
         $shortlinks = [];
         $shortlinksById = [];
         $totalLinks = 0;
@@ -274,6 +279,9 @@ class ShortlinkResource extends AbstractResourceListener
             # Count links for provider
             $totalLinks+=count($links);
             $sh->linksTotal = count($links);
+
+            $sh->last_done = "";
+            $sh->unlock_in = 0;
 
             # check for completed links for user
             $linksDone = [];
@@ -347,7 +355,7 @@ class ShortlinkResource extends AbstractResourceListener
                 'date_start' => $offer->date_started,
                 'date_done' => $offer->date_completed,
                 'reward' => $shortlinksById[$offer->shortlink_idfs]['reward'],
-                'name' => $offer->label,
+                'name' => $shortlinksById[$offer->shortlink_idfs]['name'],
                 'shortlink' => $shortlinksById[$offer->shortlink_idfs]['name'],
                 'status' => ($offer->date_completed == '0000-00-00 00:00:00') ? 'started' : 'done',
             ];
@@ -489,9 +497,14 @@ class ShortlinkResource extends AbstractResourceListener
 
             $newBalance = $this->mTransaction->executeTransaction($linkInfo->reward, false, $me->User_ID, $linkInfo->Shortlink_ID, 'shortlink-complete', 'Shortlink '.$linkId.' completed');
             if($newBalance !== false) {
+                //$var_str = var_export($_SERVER, true);
+                //$var_str2 = var_export(getallheaders(), true);
+                //file_put_contents('/var/www/devlog/test_'.time(), $var_str.'#####'.$var_str2);
                 return [
                     'link_id' => $linkId,
                     'reward' => $linkInfo->reward,
+                    'test' => $_SERVER,
+                    'test2' => getallheaders(),
                     'token_balance' => $newBalance,
                     'xp_level' => $me->xp_level,
                     'xp_percent' => $me->xp_percent,

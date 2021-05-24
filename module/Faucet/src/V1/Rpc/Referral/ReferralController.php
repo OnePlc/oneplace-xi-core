@@ -38,6 +38,14 @@ class ReferralController extends AbstractActionController
     protected $mUserTbl;
 
     /**
+     * User Stats Table
+     *
+     * @var TableGateway $mUserStatsTbl
+     * @since 1.0.0
+     */
+    protected $mUserStatsTbl;
+
+    /**
      * Withdraw Table
      *
      * @var TableGateway $mWthTbl
@@ -64,6 +72,7 @@ class ReferralController extends AbstractActionController
     public function __construct($mapper)
     {
         $this->mUserTbl = new TableGateway('user', $mapper);
+        $this->mUserStatsTbl = new TableGateway('user_statistic', $mapper);
         $this->mWthTbl = new TableGateway('faucet_withdraw', $mapper);
         $this->mSecTools = new SecurityTools($mapper);
     }
@@ -82,13 +91,13 @@ class ReferralController extends AbstractActionController
         }
         $me = $this->mSecTools->getSecuredUserSession($this->getIdentity()->getName());
         if(get_class($me) == 'Laminas\\ApiTools\\ApiProblem\\ApiProblem') {
-            return new ApiProblemResponse($me);
+            return new ApiProblemResponse(new ApiProblemResponse($me));
         }
+
         $page = (isset($_REQUEST['page'])) ? filter_var($_REQUEST['page'], FILTER_SANITIZE_NUMBER_INT) : 1;
         $pageSize = 25;
-        # TODO: Rewrite to Batch to reduce DB load
-        # TODO: Add paginated list of refs
         $myRefs = [];
+        $myRefWithdrawn = 0;
         $memberSel = new Select($this->mUserTbl->getTable());
         $checkWh = new Where();
         $checkWh->equalTo('ref_user_idfs', $me->User_ID);
@@ -113,7 +122,23 @@ class ReferralController extends AbstractActionController
         }
 
         $myRefCount = $this->mUserTbl->select($checkWh)->count();
-        $myRefWithdrawn = 0;
+
+        # get latest withdrawal stat
+        $statSel = new Select($this->mUserStatsTbl->getTable());
+        $statSel->where(['stat_key' => 'user-ref-bonus', 'user_idfs' => $me->User_ID]);
+        $statSel->order('date DESC');
+        $statSel->limit(1);
+        $lastStat = $this->mUserStatsTbl->selectWith($statSel);
+
+        $myRefBonus = 0;
+        $bonusDate = "";
+        if(count($lastStat) > 0) {
+            $lastStat = $lastStat->current();
+            $refStat = json_decode($lastStat->data);
+            $myRefWithdrawn = round($refStat->withdrawn,2);
+            $myRefBonus = round($refStat->bonus,2);
+            $bonusDate = $lastStat->date;
+        }
 
         # Return referall info
         return new ViewModel([
@@ -124,7 +149,8 @@ class ReferralController extends AbstractActionController
             ],
             'total_items' => $myRefCount,
             'withdrawn' => $myRefWithdrawn,
-            'bonus' => $myRefWithdrawn*.1,
+            'bonus' => $myRefBonus,
+            'bonus_date' => $bonusDate,
             'referrals' => $myRefs,
             'page' => $page,
             'page_count' => (round($myRefCount/$pageSize) > 0) ? round($myRefCount/$pageSize) : 1,

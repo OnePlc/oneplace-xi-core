@@ -1,4 +1,17 @@
 <?php
+/**
+ * HistoryController.php - Mining History Controller
+ *
+ * Main Controller for Faucet Mining History
+ *
+ * @category Controller
+ * @package Mining
+ * @author Praesidiarius
+ * @copyright (C) 2021 Praesidiarius <admin@1plc.ch>
+ * @license https://opensource.org/licenses/BSD-3-Clause
+ * @version 1.0.0
+ * @since 1.1.1
+ */
 namespace Mining\V1\Rpc\History;
 
 use Faucet\Tools\SecurityTools;
@@ -102,9 +115,17 @@ class HistoryController extends AbstractActionController
 
             $totalHistory = $this->mMinerTbl->select($checkWh)->count();
 
+            # get current hashrate for gpu miner
+            $gpuCurrentHash = 0;
+            $bHashFound = $this->mUserTools->getSetting($me->User_ID, 'gpuminer-currenthashrate');
+            if($bHashFound) {
+                $gpuCurrentHash = number_format($bHashFound, 2);
+            }
+
             return [
                 '_self' => [],
                 '_embedded' => [
+                    'gpu_current_hash' => $gpuCurrentHash,
                     'total_items' => $totalHistory,
                     'page' => $page,
                     'page_size' => $pageSize,

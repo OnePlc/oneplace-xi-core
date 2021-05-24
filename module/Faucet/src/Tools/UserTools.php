@@ -31,6 +31,14 @@ class UserTools extends AbstractResourceListener {
     protected $mSettingsTbl;
 
     /**
+     * User Settings Table
+     *
+     * @var TableGateway $mUserSettingsTbl
+     * @since 1.0.0
+     */
+    protected $mUserSettingsTbl;
+
+    /**
      * XP Activity Table
      *
      * @var TableGateway $mActivityTbl
@@ -106,6 +114,7 @@ class UserTools extends AbstractResourceListener {
     public function __construct($mapper)
     {
         $this->mSettingsTbl = new TableGateway('settings', $mapper);
+        $this->mUserSettingsTbl = new TableGateway('user_setting', $mapper);
         $this->mActivityTbl = new TableGateway('user_xp_activity', $mapper);
         $this->mLevelTbl = new TableGateway('user_xp_level', $mapper);
         $this->mAchievTbl = new TableGateway('faucet_achievement', $mapper);
@@ -242,5 +251,15 @@ class UserTools extends AbstractResourceListener {
         }
 
         return $buffs;
+    }
+
+    public function getSetting($userId, $key)
+    {
+        $settingFound = $this->mUserSettingsTbl->select(['user_idfs' => $userId, 'setting_name' => $key]);
+        if (count($settingFound) == 0) {
+            return false;
+        } else {
+            return $settingFound->current()->setting_value;
+        }
     }
 }

@@ -8,6 +8,11 @@ return [
             'Support\\V1\\Rpc\\Transaction\\Controller' => \Support\V1\Rpc\Transaction\TransactionControllerFactory::class,
         ],
     ],
+    'view_manager' => [
+        'template_path_stack' => [
+            'support' => __DIR__ . '/../view',
+        ],
+    ],
     'router' => [
         'routes' => [
             'support.rpc.support' => [

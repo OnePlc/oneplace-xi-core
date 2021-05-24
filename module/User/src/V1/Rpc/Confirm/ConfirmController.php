@@ -129,6 +129,7 @@ class ConfirmController extends AbstractActionController
                     'User_ID' => $me->User_ID
                 ]);
                 $this->mMailTools->sendMail('email_verify', [
+                    'sEmailTitle' => 'Verify your E-Mail Address',
                     'footerInfo' => 'Swissfaucet.io - Faucet #1',
                     'link' => $confirmLink
                 ], $this->mMailTools->getAdminEmail(), $me->email, 'Verify your E-Mail Address');

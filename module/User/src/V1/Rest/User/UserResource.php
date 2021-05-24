@@ -203,10 +203,14 @@ class UserResource extends AbstractResourceListener
             $data->password,
             $data->passverify,
             $data->captcha,
-            $data->terms,
-            $data->ref_id,
-            $data->development
+            $data->terms
         ];
+        if(isset($data->ref_id)) {
+            $checkFields[] = $data->ref_id;
+        }
+        if(isset($data->development)) {
+            $checkFields[] = $data->development;
+        }
         $secResult = $this->mSecTools->basicInputCheck($checkFields);
         if($secResult !== 'ok') {
             return new ApiProblem(418, 'Potential '.$secResult.' Attack - Goodbye');
@@ -217,8 +221,8 @@ class UserResource extends AbstractResourceListener
         $passwordCheck = filter_var($data->passverify, FILTER_SANITIZE_STRING);
         $captcha = filter_var($data->captcha, FILTER_SANITIZE_STRING);
         $terms = filter_var($data->terms, FILTER_SANITIZE_NUMBER_INT);
-        $refId = filter_var($data->ref_id, FILTER_SANITIZE_NUMBER_INT);
-        $development = filter_var($data->development, FILTER_SANITIZE_NUMBER_INT);
+        $refId = filter_var((isset($data->ref_id)) ? $data->ref_id : 0, FILTER_SANITIZE_NUMBER_INT);
+        $development = filter_var((isset($data->development)) ? $data->development : '', FILTER_SANITIZE_NUMBER_INT);
 
         # check captcha
         $captchaSecret = $this->mSettingsTbl->select(['settings_key' => 'recaptcha-secret-login']);

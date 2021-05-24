@@ -45,7 +45,7 @@ return [
     ],
     'api-tools-oauth2' => [
         'options' => [
-            'access_lifetime' => 1800,
+            'access_lifetime' => 84600,
             'always_issue_new_refresh_token' => true,
         ],
     ],

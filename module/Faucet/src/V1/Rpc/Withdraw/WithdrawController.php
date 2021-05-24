@@ -248,6 +248,13 @@ class WithdrawController extends AbstractActionController
             }
 
             /**
+             * Check if there is no double withdrawal
+             */
+            if($amount > ($withdrawLimit-$coinsWithdrawnToday)) {
+                return new ApiProblemResponse(new ApiProblem(409, 'You have already withdrawn your daily limit.'));
+            }
+
+            /**
              * Calculate Crypto Amount to Send
              */
             $wallet = filter_var($json->wallet, FILTER_SANITIZE_STRING);

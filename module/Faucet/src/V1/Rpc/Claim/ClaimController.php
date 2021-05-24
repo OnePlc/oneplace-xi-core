@@ -120,12 +120,15 @@ class ClaimController extends AbstractActionController
 
         # Set Timer for next claim
         $sTime = 0;
-
+        $timeCheck = '-1 hour';
+        if($platform == 'android') {
+            $timeCheck = '-60 seconds';
+        }
         # Lets check if there was a claim less than 60 minutes ago
         $oWh = new Where();
         $oWh->equalTo('user_idfs', $me->User_ID);
         $oWh->like('source', $platform);
-        $oWh->greaterThanOrEqualTo('date', date('Y-m-d H:i:s', strtotime('-1 hour')));
+        $oWh->greaterThanOrEqualTo('date', date('Y-m-d H:i:s', strtotime($timeCheck)));
         $oClaimCheck = $this->mClaimTbl->select($oWh);
         if(count($oClaimCheck) > 0) {
             $oClaimCheck = $oClaimCheck->current();
@@ -138,6 +141,7 @@ class ClaimController extends AbstractActionController
         if(!$oRequest->isPost()) {
             return new ViewModel([
                 'status' => 'wait',
+                'numbers' => [15,20,25],
                 'next_claim' => $sTime,
             ]);
         }
@@ -169,9 +173,11 @@ class ClaimController extends AbstractActionController
             $advertiser = filter_var($json->advertiser, FILTER_SANITIZE_STRING);
 
             # Default Claim
-            switch($advertiser) {
-                case 'adcolony':
-                    $claimAmount = rand(10,25);
+            switch($platform) {
+                case 'android':
+                    $claimAmount = rand(0,2);
+                    $numbers = [15,20,25];
+                    $claimAmount = $numbers[$claimAmount];
                     break;
                 default:
                     $claimAmount = 10;
