@@ -7,6 +7,7 @@ return [
             'Faucet\\V1\\Rpc\\HallOfFame\\Controller' => \Faucet\V1\Rpc\HallOfFame\HallOfFameControllerFactory::class,
             'Faucet\\V1\\Rpc\\Withdraw\\Controller' => \Faucet\V1\Rpc\Withdraw\WithdrawControllerFactory::class,
             'Faucet\\V1\\Rpc\\Item\\Controller' => \Faucet\V1\Rpc\Item\ItemControllerFactory::class,
+            'Faucet\\V1\\Rpc\\Webstats\\Controller' => \Faucet\V1\Rpc\Webstats\WebstatsControllerFactory::class,
         ],
     ],
     'router' => [
@@ -79,6 +80,16 @@ return [
                     ],
                 ],
             ],
+            'faucet.rpc.webstats' => [
+                'type' => 'Segment',
+                'options' => [
+                    'route' => '/faucet-stats',
+                    'defaults' => [
+                        'controller' => 'Faucet\\V1\\Rpc\\Webstats\\Controller',
+                        'action' => 'webstats',
+                    ],
+                ],
+            ],
         ],
     ],
     'api-tools-versioning' => [
@@ -90,6 +101,7 @@ return [
             4 => 'faucet.rpc.hall-of-fame',
             5 => 'faucet.rpc.withdraw',
             6 => 'faucet.rpc.item',
+            7 => 'faucet.rpc.webstats',
         ],
     ],
     'api-tools-rpc' => [
@@ -130,6 +142,13 @@ return [
             ],
             'route_name' => 'faucet.rpc.item',
         ],
+        'Faucet\\V1\\Rpc\\Webstats\\Controller' => [
+            'service_name' => 'Webstats',
+            'http_methods' => [
+                0 => 'GET',
+            ],
+            'route_name' => 'faucet.rpc.webstats',
+        ],
     ],
     'api-tools-content-negotiation' => [
         'controllers' => [
@@ -140,6 +159,7 @@ return [
             'Faucet\\V1\\Rpc\\HallOfFame\\Controller' => 'Json',
             'Faucet\\V1\\Rpc\\Withdraw\\Controller' => 'Json',
             'Faucet\\V1\\Rpc\\Item\\Controller' => 'Json',
+            'Faucet\\V1\\Rpc\\Webstats\\Controller' => 'Json',
         ],
         'accept_whitelist' => [
             'Faucet\\V1\\Rpc\\Claim\\Controller' => [
@@ -177,6 +197,11 @@ return [
                 1 => 'application/json',
                 2 => 'application/*+json',
             ],
+            'Faucet\\V1\\Rpc\\Webstats\\Controller' => [
+                0 => 'application/vnd.faucet.v1+json',
+                1 => 'application/json',
+                2 => 'application/*+json',
+            ],
         ],
         'content_type_whitelist' => [
             'Faucet\\V1\\Rpc\\Claim\\Controller' => [
@@ -204,6 +229,10 @@ return [
                 1 => 'application/json',
             ],
             'Faucet\\V1\\Rpc\\Item\\Controller' => [
+                0 => 'application/vnd.faucet.v1+json',
+                1 => 'application/json',
+            ],
+            'Faucet\\V1\\Rpc\\Webstats\\Controller' => [
                 0 => 'application/vnd.faucet.v1+json',
                 1 => 'application/json',
             ],

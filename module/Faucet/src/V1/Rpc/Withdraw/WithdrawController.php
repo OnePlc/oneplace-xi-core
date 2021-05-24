@@ -1,4 +1,17 @@
 <?php
+/**
+ * WithdrawController.php - Withdraw Controller
+ *
+ * Main Controller for Withdraw
+ *
+ * @category Controller
+ * @package Faucet
+ * @author Praesidiarius
+ * @copyright (C) 2021 Praesidiarius <admin@1plc.ch>
+ * @license https://opensource.org/licenses/BSD-3-Clause
+ * @version 1.0.0
+ * @since 1.1.1
+ */
 namespace Faucet\V1\Rpc\Withdraw;
 
 use Application\Controller\IndexController;
