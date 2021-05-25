@@ -120,7 +120,7 @@ class ConfirmController extends AbstractActionController
                 ];
             } else {
                 $secToken = $this->mMailTools->generateSecurityToken($me);
-                $confirmLink = $this->mMailTools->getSystemURL().'/#/verify-email/'.$secToken;
+                $confirmLink = $this->mMailTools->getApiURL().'/verify-email/'.$secToken;
                 $this->mUserTbl->update([
                     'send_verify' => date('Y-m-d H:i:s', time()),
                     'password_reset_token' => $secToken,
@@ -146,12 +146,18 @@ class ConfirmController extends AbstractActionController
                 return new ApiProblemResponse(new ApiProblem(404, 'Invalid token - not user found'));
             }
             $user = $user->current();
-
+            if($token != $user->password_reset_token) {
+                return new ApiProblemResponse(new ApiProblem(400, 'Invalid token'));
+            }
+            
             switch($action) {
                 /**
                  * Confirm E-Mail Change
                  */
                 case 'email_change':
+                    if($user->email_change == '') {
+                        return new ApiProblemResponse(new ApiProblem(400, 'Invalid new e-mail address'));
+                    }
                     $secToken = $this->mMailTools->generateSecurityToken($user);
                     $confirmLink = $this->mMailTools->getSystemURL().'/#/verify-email/'.$secToken;
                     $this->mUserTbl->update([
@@ -169,22 +175,6 @@ class ConfirmController extends AbstractActionController
                     ], $this->mMailTools->getAdminEmail(), $user->email_change, 'Verify your E-Mail Address');
                     return [
                         'state' => 'success',
-                    ];
-                /**
-                 * Verify E-Mail Address
-                 */
-                case 'verify_email':
-                    $this->mUserTbl->update([
-                        'email_verified' => 1,
-                        'password_reset_token' => '',
-                        'password_reset_date' => NULL,
-                        'send_verify' => NULL,
-                    ],[
-                        'User_ID' => $user->User_ID
-                    ]);
-                    return [
-                        'state' => 'success',
-                        'verified' => 1,
                     ];
                 default:
                     return new ApiProblemResponse(new ApiProblem(400, 'Invalid action'));

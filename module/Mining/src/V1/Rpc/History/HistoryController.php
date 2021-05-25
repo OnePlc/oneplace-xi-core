@@ -122,11 +122,21 @@ class HistoryController extends AbstractActionController
                 $gpuCurrentHash = number_format($bHashFound, 2);
             }
 
+            $bPoolFound = $this->mUserTools->getSetting($me->User_ID, 'gpuminer-currentpool');
+            $poolUrl = "#";
+            if($bPoolFound) {
+                $poolUrlDB = $this->mSecTools->getCoreSetting('nanopool-'.$bPoolFound);
+                if($poolUrlDB) {
+                    $poolUrl = $poolUrlDB;
+                }
+            }
+
             return [
                 '_self' => [],
                 '_embedded' => [
                     'gpu_current_hash' => $gpuCurrentHash,
                     'total_items' => $totalHistory,
+                    'pool_url' => $poolUrl.'/swissfaucetio'.$me->User_ID,
                     'page' => $page,
                     'page_size' => $pageSize,
                     'page_count' => (round($totalHistory / $pageSize) > 0) ? round($totalHistory / $pageSize) : 1,

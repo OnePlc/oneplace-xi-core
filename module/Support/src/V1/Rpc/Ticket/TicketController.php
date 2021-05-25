@@ -254,7 +254,7 @@ class TicketController extends AbstractActionController
             }
 
             # payment for moderator
-            $newBalance = $this->mTransaction->executeTransaction(100, false, $me->User_ID, $ticketId, 'ticket-reply', $replyMessage);
+            $newBalance = $this->mTransaction->executeTransaction(100, false, $me->User_ID, $ticketId, 'ticket-reply', substr($replyMessage,0,100));
             if($newBalance !== false) {
                 $me->token_balance = $newBalance;
             }

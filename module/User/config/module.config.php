@@ -8,7 +8,7 @@ return [
     'view_manager' => [
         'display_exceptions' => false,
         'template_path_stack' => [
-            'user' => __DIR__ . '/../view',
+            'user' => __DIR__.'/../view',
         ],
     ],
     'router' => [
@@ -62,6 +62,19 @@ return [
                     ],
                 ],
             ],
+            'user.rpc.verify' => [
+                'type' => 'Segment',
+                'options' => [
+                    'route' => '/verify-email[/:token]',
+                    'constraints' => [
+                        'token' => '[a-zA-Z0-9_-]*',
+                    ],
+                    'defaults' => [
+                        'controller' => 'User\\V1\\Rpc\\Verify\\Controller',
+                        'action' => 'verify',
+                    ],
+                ],
+            ],
         ],
     ],
     'api-tools-versioning' => [
@@ -71,6 +84,7 @@ return [
             2 => 'user.rpc.logout',
             3 => 'user.rpc.dashboard',
             4 => 'user.rpc.confirm',
+            5 => 'user.rpc.verify',
         ],
     ],
     'api-tools-rest' => [
@@ -104,6 +118,7 @@ return [
             'User\\V1\\Rpc\\Logout\\Controller' => 'Json',
             'User\\V1\\Rpc\\Dashboard\\Controller' => 'Json',
             'User\\V1\\Rpc\\Confirm\\Controller' => 'Json',
+            'User\\V1\\Rpc\\Verify\\Controller' => 'Json',
         ],
         'accept_whitelist' => [
             'User\\V1\\Rest\\User\\Controller' => [
@@ -131,6 +146,11 @@ return [
                 1 => 'application/json',
                 2 => 'application/*+json',
             ],
+            'User\\V1\\Rpc\\Verify\\Controller' => [
+                0 => 'application/vnd.user.v1+json',
+                1 => 'application/json',
+                2 => 'application/*+json',
+            ],
         ],
         'content_type_whitelist' => [
             'User\\V1\\Rest\\User\\Controller' => [
@@ -150,6 +170,10 @@ return [
                 1 => 'application/json',
             ],
             'User\\V1\\Rpc\\Confirm\\Controller' => [
+                0 => 'application/vnd.user.v1+json',
+                1 => 'application/json',
+            ],
+            'User\\V1\\Rpc\\Verify\\Controller' => [
                 0 => 'application/vnd.user.v1+json',
                 1 => 'application/json',
             ],
@@ -177,6 +201,7 @@ return [
             'User\\V1\\Rpc\\Logout\\Controller' => \User\V1\Rpc\Logout\LogoutControllerFactory::class,
             'User\\V1\\Rpc\\Dashboard\\Controller' => \User\V1\Rpc\Dashboard\DashboardControllerFactory::class,
             'User\\V1\\Rpc\\Confirm\\Controller' => \User\V1\Rpc\Confirm\ConfirmControllerFactory::class,
+            'User\\V1\\Rpc\\Verify\\Controller' => \User\V1\Rpc\Verify\VerifyControllerFactory::class,
         ],
     ],
     'api-tools-rpc' => [
@@ -208,6 +233,13 @@ return [
                 0 => 'POST',
             ],
             'route_name' => 'user.rpc.confirm',
+        ],
+        'User\\V1\\Rpc\\Verify\\Controller' => [
+            'service_name' => 'Verify',
+            'http_methods' => [
+                0 => 'GET',
+            ],
+            'route_name' => 'user.rpc.verify',
         ],
     ],
     'api-tools-content-validation' => [

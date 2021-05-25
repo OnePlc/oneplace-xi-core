@@ -218,4 +218,13 @@ class SecurityTools extends AbstractResourceListener {
         }
         return $blackIndex;
     }
+
+    public function getCoreSetting($key) {
+        $settingFound = $this->mSettingsTbl->select(['settings_key' => $key]);
+        if (count($settingFound) == 0) {
+            return false;
+        } else {
+            return $settingFound->current()->settings_value;
+        }
+    }
 }

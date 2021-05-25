@@ -133,6 +133,15 @@ class EmailTools extends AbstractResourceListener {
         return $url->current()->settings_value;
     }
 
+    public function getApiURL() {
+        $url = $this->mSettingsTbl->select(['settings_key' => 'api-url']);
+        if(count($url) == 0)
+        {
+            return false;
+        }
+        return $url->current()->settings_value;
+    }
+
     /**
      * Generate Secret Security Token for E-Mails
      *

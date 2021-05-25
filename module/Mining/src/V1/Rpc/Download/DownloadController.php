@@ -16,6 +16,7 @@ namespace Mining\V1\Rpc\Download;
 
 use Faucet\Tools\ApiTools;
 use Faucet\Tools\SecurityTools;
+use Faucet\Tools\UserTools;
 use Laminas\ApiTools\ApiProblem\ApiProblem;
 use Laminas\ApiTools\ApiProblem\ApiProblemResponse;
 use Laminas\ApiTools\ContentNegotiation\ViewModel;
@@ -32,12 +33,20 @@ class DownloadController extends AbstractActionController
     protected $mSecTools;
 
     /**
-     * Emal Tools Helper
+     * Api Tools Helper
      *
      * @var ApiTools $mApiTools
      * @since 1.0.0
      */
     protected $mApiTools;
+
+    /**
+     * User Tools Helper
+     *
+     * @var ApiTools $mUserTools
+     * @since 1.0.0
+     */
+    protected $mUserTools;
 
     /**
      * Constructor
@@ -50,6 +59,7 @@ class DownloadController extends AbstractActionController
     {
         $this->mSecTools = new SecurityTools($mapper);
         $this->mApiTools = new ApiTools($mapper);
+        $this->mUserTools = new UserTools($mapper);
     }
 
     /**
@@ -72,6 +82,7 @@ class DownloadController extends AbstractActionController
         $request = $this->getRequest();
 
         if($request->isGet()) {
+            $this->mUserTools->setSetting($me->User_ID, 'gpuminer-download', date('Y-m-d H:i:s', time()));
             if(file_exists('/var/nanominer/nanominer-'.$me->User_ID.'.zip')) {
                 $sLink = $this->mApiTools->getSystemURL().'/miner-download/nanominer-'.$me->User_ID.'.zip';
             } else {

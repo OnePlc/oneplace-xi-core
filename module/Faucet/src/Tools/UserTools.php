@@ -262,4 +262,23 @@ class UserTools extends AbstractResourceListener {
             return $settingFound->current()->setting_value;
         }
     }
+
+    public function setSetting($userId, $key, $value)
+    {
+        $settingFound = $this->mUserSettingsTbl->select(['user_idfs' => $userId, 'setting_name' => $key]);
+        if (count($settingFound) == 0) {
+            $this->mUserSettingsTbl->insert([
+                'user_idfs' => $userId,
+                'setting_name' => $key,
+                'setting_value' => $value]);
+        } else {
+            $this->mUserSettingsTbl->update([
+                'setting_value' => $value
+            ], [
+                'user_idfs' => $userId,
+                'setting_name' => $key,
+            ]);
+        }
+        return true;
+    }
 }

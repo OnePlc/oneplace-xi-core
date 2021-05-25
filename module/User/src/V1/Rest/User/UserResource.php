@@ -279,6 +279,11 @@ class UserResource extends AbstractResourceListener
         $existingUser = $this->mapper->select(['username' => $username]);
         if(count($existingUser) > 0) {
             return new ApiProblem(400, 'Username is already taken');
+        } else {
+            $existingUser2 = $this->mapper->select(['username' => trim($username)]);
+            if(count($existingUser2) > 0) {
+                return new ApiProblem(400, 'Username is already taken');
+            }
         }
         if(array_key_exists($username, $this->mSecTools->getUsernameBlacklist()) || empty($username) || strlen($username) < 3) {
             return new ApiProblem(400, 'Username not valid. Please choose another one.');
@@ -494,6 +499,7 @@ class UserResource extends AbstractResourceListener
             'email' => $user->email,
             'emp_mode' => ($user->is_employee == 1) ? 'mod' : '',
             'verified' => (int)$user->email_verified,
+            'show_verify_mail' => ($user->send_verify == null) ? ($user->email_verified == 1) ? false : true : false,
             'token_balance' => (float)$user->token_balance,
             'crypto_balance' => (float)$cryptoBalance,
             'xp_level' => (int)$user->xp_level,

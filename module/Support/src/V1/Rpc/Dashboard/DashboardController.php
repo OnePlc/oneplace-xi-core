@@ -20,6 +20,7 @@ use Faucet\Tools\SecurityTools;
 use Laminas\ApiTools\ApiProblem\ApiProblem;
 use Laminas\ApiTools\ApiProblem\ApiProblemResponse;
 use Laminas\Db\Adapter\Adapter;
+use Laminas\Db\Sql\Predicate\PredicateSet;
 use Laminas\Db\Sql\Select;
 use Laminas\Db\Sql\Where;
 use Laminas\Db\TableGateway\TableGateway;
@@ -164,6 +165,30 @@ class DashboardController extends AbstractActionController
             ];
         }
 
+        $meDone24hWh = new Where();
+        $meDone24hWh->equalTo('reply_user_idfs', $me->User_ID);
+        $meDone24hWh->greaterThanOrEqualTo('date', date('Y-m-d H:i:s', strtotime('-24 hours')));
+
+        $meDone = $this->mSupTicketTbl->select($meDone24hWh)->count();
+
+        $done24hWh = new Where();
+        $done24hWh->like('state', 'done');
+        $done24hWh->greaterThanOrEqualTo('date', date('Y-m-d H:i:s', strtotime('-24 hours')));
+
+        $done24h = $this->mSupTicketTbl->select($done24hWh)->count();
+
+        $meDone30dWh = new Where();
+        $meDone30dWh->equalTo('reply_user_idfs', $me->User_ID);
+        $meDone30dWh->greaterThanOrEqualTo('date', date('Y-m-d H:i:s', strtotime('-30 days')));
+
+        $meDone30d = $this->mSupTicketTbl->select($meDone30dWh)->count();
+
+        $done30dWh = new Where();
+        $done24hWh->like('state', 'done');
+        $done30dWh->greaterThanOrEqualTo('date', date('Y-m-d H:i:s', strtotime('-30 days')));
+
+        $done30d = $this->mSupTicketTbl->select($done30dWh)->count();
+
         return [
             'ticket' => [
                 'total_items' => $totalOpenTickets,
@@ -172,6 +197,10 @@ class DashboardController extends AbstractActionController
                 'page_count' => (round($totalOpenTickets/$pageSize) > 0) ? round($totalOpenTickets/$pageSize) : 1,
                 'items' => $openTickets
             ],
+            'tickets_done_24h_me' => $meDone,
+            'tickets_done_24h_total' => ($done24h-$meDone),
+            'tickets_done_30d_me' => $meDone30d,
+            'tickets_done_30d_total' => ($done30d-$meDone30d),
             'recent' => [
                 'items' => $recentlyClosed,
             ]

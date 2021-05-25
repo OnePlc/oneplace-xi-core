@@ -47,4 +47,13 @@ class ApiTools extends AbstractResourceListener {
         }
         return $url->current()->settings_value;
     }
+
+    public function getDashboardURL() {
+        $url = $this->mSettingsTbl->select(['settings_key' => 'dashboard-url']);
+        if(count($url) == 0)
+        {
+            return false;
+        }
+        return $url->current()->settings_value;
+    }
 }
