@@ -18,6 +18,7 @@ use Faucet\Tools\SecurityTools;
 use Laminas\ApiTools\ApiProblem\ApiProblem;
 use Laminas\ApiTools\Rest\AbstractResourceListener;
 use Laminas\ApiTools\ContentNegotiation\ViewModel;
+use Laminas\Db\Sql\Predicate\PredicateSet;
 use Laminas\Db\TableGateway\TableGateway;
 use Laminas\Db\Sql\Where;
 use Laminas\Db\Sql\Select;
@@ -70,6 +71,14 @@ class GuildResource extends AbstractResourceListener
     protected $mGuildAchievTbl;
 
     /**
+     * Guild Statistics Table
+     *
+     * @var TableGateway $mGuildStatTbl
+     * @since 1.0.0
+     */
+    protected $mGuildStatTbl;
+
+    /**
      * Guild Table User Table
      *
      * Relation between Guild and User
@@ -114,6 +123,14 @@ class GuildResource extends AbstractResourceListener
     protected $mUserSetTbl;
 
     /**
+     * Guild XP Level Table
+     *
+     * @var TableGateway $mXPLvlTbl
+     * @since 1.0.0
+     */
+    protected $mXPLvlTbl;
+
+    /**
      * Constructor
      *
      * AchievementResource constructor.
@@ -128,7 +145,9 @@ class GuildResource extends AbstractResourceListener
         $this->mGuildRankTbl = new TableGateway('faucet_guild_rank', $mapper);
         $this->mGuildTaskTbl = new TableGateway('faucet_guild_weekly', $mapper);
         $this->mGuildAchievTbl = new TableGateway('faucet_guild_achievement', $mapper);
+        $this->mGuildStatTbl = new TableGateway('faucet_guild_statistic', $mapper);
         $this->mUserTbl = new TableGateway('user', $mapper);
+        $this->mXPLvlTbl = new TableGateway('user_xp_level', $mapper);
         $this->mUserSetTbl = new TableGateway('user_setting', $mapper);
         $this->mSession = new Container('webauth');
         $this->mTransaction = new TransactionHelper($mapper);
@@ -376,6 +395,7 @@ class GuildResource extends AbstractResourceListener
         $checkWh->equalTo('guild_idfs', $id);
         $checkWh->notLike('date_joined', '0000-00-00 00:00:00');
         $memberSel->where($checkWh);
+        $memberSel->order('rank ASC');
         # Create a new pagination adapter object
         $oPaginatorAdapter = new DbSelect(
         # our configured select object
@@ -405,11 +425,38 @@ class GuildResource extends AbstractResourceListener
         $totalMembers = $this->mGuildUserTbl->select($checkWh)->count();
 
         /**
+         * Get Weekly Tasks Progress
+         */
+        $weeklyStats = (object)['faucet_claims' => 0,'shortlinks' => 0];
+        $statCheckWh = new Where();
+        $statCheckWh->equalTo('guild_idfs', $guild->Guild_ID);
+        $statCheckWh->like('stat_key', 'weekly-progress');
+        $statCheckWh->like('date', date('Y-m-d', strtotime("last wednesday")));
+        $statCheck = $this->mGuildStatTbl->select($statCheckWh);
+        if(count($statCheck) > 0) {
+            $weeklyStats = json_decode($statCheck->current()->data);
+        }
+
+        /**
          * Load Guild Tasks List (Weeklys)
          */
         $weeklyTasks = [];
         $weeklysDB = $this->mGuildTaskTbl->select();
         foreach($weeklysDB as $weekly) {
+            $progress = 0;
+            switch($weekly->target_mode) {
+                case 'faucet':
+                    $progress = $weeklyStats->faucet_claims;
+                    break;
+                case 'shortlink':
+                    $progress = $weeklyStats->shortlinks;
+                    break;
+                case 'gpushare':
+                    $progress = $weeklyStats->gpushares;
+                    break;
+                default:
+                    break;
+            }
             $weeklyTasks[] = (object)[
                 'id' => $weekly->Weekly_ID,
                 'name' => $weekly->label,
@@ -417,7 +464,7 @@ class GuildResource extends AbstractResourceListener
                 'target' => $weekly->target,
                 'target_mode' => $weekly->target_mode,
                 'reward' => $weekly->reward,
-                'current' => 0,
+                'current' => $progress,
             ];
         }
 
@@ -438,14 +485,34 @@ class GuildResource extends AbstractResourceListener
             ];
         }
 
+        $guildXPPercent = 0;
+        if ($guild->xp_current != 0) {
+            $guildNextLvl = $this->mXPLvlTbl->select(['Level_ID' => ($guild->xp_level + 1)])->current();
+            $guildXPPercent = round((100 / ($guildNextLvl->xp_total / $guild->xp_current)), 2);
+        }
+
+        /**
+         * Get open requests
+         */
+        $checkWh = new Where();
+        $checkWh->equalTo('guild_idfs', $id);
+        $checkWh->like('date_joined', '0000-00-00 00:00:00');
+        $checkWh->like('date_declined', '0000-00-00 00:00:00');
+        $totalRequests = $this->mGuildUserTbl->select($checkWh)->count();
+
         return (object)[
             'guild' => (object)[
                 'id' => $guild->Guild_ID,
                 'name'=> $guild->label,
+                'icon' => $guild->icon,
+                'token_balance' => $guild->token_balance,
+                'xp_level' => $guild->xp_level,
+                'xp_percent' => $guildXPPercent,
                 'members' => $guildMembers,
                 'tasks' => $weeklyTasks,
                 'achievements' => $achievements,
                 'total_members' => $totalMembers,
+                'total_requests' => $totalRequests,
                 'page_count' => round($totalMembers/25),
                 'page_size' => 25,
                 'page' => $page,

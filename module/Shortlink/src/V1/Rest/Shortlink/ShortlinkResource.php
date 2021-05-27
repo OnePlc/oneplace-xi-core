@@ -20,9 +20,11 @@ use Faucet\Transaction\TransactionHelper;
 use Laminas\ApiTools\ApiProblem\ApiProblem;
 use Laminas\ApiTools\Rest\AbstractResourceListener;
 use Laminas\ApiTools\ContentNegotiation\ViewModel;
+use Laminas\Db\Sql\Predicate\PredicateSet;
 use Laminas\Db\Sql\Select;
 use Laminas\Db\TableGateway\TableGateway;
 use Laminas\Db\Sql\Where;
+use Laminas\Http\ClientStatic;
 use Laminas\Paginator\Adapter\DbSelect;
 use Laminas\Paginator\Paginator;
 use Laminas\Session\Container;
@@ -190,54 +192,146 @@ class ShortlinkResource extends AbstractResourceListener
         } else {
             $provider = $shortlinksDB->current();
 
-            # get provider links
             $links = $this->mShortTbl->select(['shortlink_idfs' => $provider->Shortlink_ID]);
+
+            # get provider links
+            $linkCount = $this->mShortTbl->select(['shortlink_idfs' => $provider->Shortlink_ID])->count();
+            $oWhDone = new Where();
+            $oWhDone->equalTo('user_idfs', $me->User_ID);
+            $oWhDone->equalTo('shortlink_idfs',  $provider->Shortlink_ID);
+            $oWhDone->greaterThanOrEqualTo('date_started', date('Y-m-d H:i:s', strtotime('-24 hours')));
+            $linksDone = $this->mShortDoneTbl->select($oWhDone)->count();
+
+
+            $finLink = "#";
             if(count($links) > 0) {
                 foreach($links as $lnk) {
-                    # Check if link is already started
-                    $oWhDone = new Where();
-                    $oWhDone->equalTo('user_idfs', $me->User_ID);
-                    $oWhDone->like('link_id', $lnk->link_id);
-                    $oWhDone->equalTo('shortlink_idfs', $lnk->shortlink_idfs);
-                    $oWhDone->greaterThanOrEqualTo('date_started', date('Y-m-d H:i:s', strtotime('-24 hours')));
-                    $checkLnk = $this->mShortDoneTbl->select($oWhDone);
+                    if($provider->url_api == "") {
+                        $dev = '1';
+                        # Check if link is already started
+                        $oWhDone = new Where();
+                        $oWhDone->equalTo('user_idfs', $me->User_ID);
+                        $oWhDone->like('link_id', $lnk->link_id);
+                        $oWhDone->equalTo('shortlink_idfs', $lnk->shortlink_idfs);
+                        $oWhDone->greaterThanOrEqualTo('date_started', date('Y-m-d H:i:s', strtotime('-24 hours')));
+                        $checkLnk = $this->mShortDoneTbl->select($oWhDone);
 
-                    # if not started, start it now and choose this link
-                    if(count($checkLnk) == 0) {
+                        # if not started, start it now and choose this link
+                        if(count($checkLnk) == 0) {
+                            $newLink = [
+                                'user_idfs' => $me->User_ID,
+                                'link_id' => $lnk->link_id,
+                                'shortlink_idfs' => $lnk->shortlink_idfs,
+                                'date_started' => date('Y-m-d H:i:s', time()),
+                                'date_claimed' => '0000-00-00 00:00:00',
+                                'date_completed' => '0000-00-00 00:00:00'
+                            ];
+                            $this->mShortDoneTbl->insert($newLink);
+                            $provider->link = (object)$newLink;
+                        } else {
+                            # link already started - give same link again
+                            $checkLnk = $checkLnk->current();
+                            if($checkLnk->date_claimed == '0000-00-00 00:00:00') {
+                                $provider->link = $checkLnk;
+                            }
+                        }
+
+                        # get final link info
+                        $finalLink = $this->mShortTbl->select([
+                            'link_id' => $lnk->link_id,
+                            'shortlink_idfs' => $lnk->shortlink_idfs
+                        ]);
+                        if(count($finalLink) == 0) {
+                            return new ApiProblem(404, 'Shortlink final link not found');
+                        }
+
+
+                        # return next usable provider shortlink
+                        $finLink = $finalLink->current()->href;
+                    }
+                }
+
+                if(($linksDone < $linkCount) && $provider->url_api != '') {
+                    $time = date('Y-m-d H:i:s', time());
+                    $dev = '2';
+                    $destHash = hash('sha256', $provider->url_api.$me->User_ID.$time);
+                    $destLink = $this->mSecTools->getCoreSetting('api-url').'/task/complete/'.$destHash;
+                    /**
+                    $result = @json_decode(file_get_contents($provider->url_api."&url=".$destLink),TRUE);
+                    if($result["status"] === 'error') {
+                        //echo $result["message"];
+                        $finLink = "errror";
+                    } else {
+                        $finLink = $result["shortenedUrl"];
                         $newLink = [
                             'user_idfs' => $me->User_ID,
-                            'link_id' => $lnk->link_id,
+                            'link_id' => $destHash,
+                            'link_url' => $finLink,
                             'shortlink_idfs' => $lnk->shortlink_idfs,
-                            'date_started' => date('Y-m-d H:i:s', time()),
+                            'date_started' => $time,
                             'date_claimed' => '0000-00-00 00:00:00',
                             'date_completed' => '0000-00-00 00:00:00'
                         ];
                         $this->mShortDoneTbl->insert($newLink);
-                        $provider->link = (object)$newLink;
-                        break;
+                    } **/
+                    $response = ClientStatic::get($provider->url_api."&url=".$destLink, []);
+
+                    $status = $response->getStatusCode();
+                    $googleResponse = $response->getBody();
+
+                    $googleJson = json_decode($googleResponse);
+                    $status = "errror";
+                    if(is_array($googleJson)) {
+                        $status = $googleJson["status"];
                     } else {
-                        # link already started - give same link again
-                        $checkLnk = $checkLnk->current();
-                        if($checkLnk->date_claimed == '0000-00-00 00:00:00') {
-                            $provider->link = $checkLnk;
-                            break;
+                        $status = $googleJson->status;
+                    }
+                    if($status === 'error') {
+                        $finLink = "sherror";
+                        $dev = '3';
+                    } else {
+                        $dev = '4';
+                        if(is_array($googleJson)) {
+                            $finLink = $googleJson["shortenedUrl"];
+                        } else {
+                            $finLink = $googleJson->shortenedUrl;
                         }
+                        $newLink = [
+                            'user_idfs' => $me->User_ID,
+                            'link_id' => $destHash,
+                            'link_url' => $finLink,
+                            'shortlink_idfs' => $lnk->shortlink_idfs,
+                            'date_started' => $time,
+                            'date_claimed' => '0000-00-00 00:00:00',
+                            'date_completed' => '0000-00-00 00:00:00'
+                        ];
+                        $this->mShortDoneTbl->insert($newLink);
+                    }
+                } elseif($provider->url_api != '') {
+                    $dev = '5';
+                    $oWhDone = new Where();
+                    $oWhDone->equalTo('user_idfs', $me->User_ID);
+                    $oWhDone->notLike('link_url', null);
+                    $oWhDone->equalTo('shortlink_idfs', $lnk->shortlink_idfs);
+                    $oWhDone->greaterThanOrEqualTo('date_started', strtotime('-24 hours'));
+                    $oWhDone->like('date_claimed', '0000-00-00 00:00:00');
+                    $oWhDone->like('date_completed', '0000-00-00 00:00:00');
+                    $checkLnk = $this->mShortDoneTbl->select($oWhDone);
+                    if(count($checkLnk) > 0) {
+                        $finLink = $checkLnk->current()->link_url;
+                    } else {
+                        $time = date('Y-m-d H:i:s', time());
+                        $dev = '2 - '.$linksDone.'/'.$linkCount.'/'.$me->User_ID.'/'.$provider->Shortlink_ID;
                     }
                 }
 
-                # get final link info
-                $finalLink = $this->mShortTbl->select([
-                    'link_id' => $provider->link->link_id,
-                    'shortlink_idfs' => $provider->link->shortlink_idfs
-                ]);
-                if(count($finalLink) == 0) {
-                    return new ApiProblem(404, 'Shortlink final link not found');
+                if($finLink == null) {
+                    $finLink = "#";
                 }
 
-                # return next usable provider shortlink
-                $finLink = $finalLink->current();
                 $provider->link = (object)[
-                    'href' => $finLink->href,
+                    'href' => $finLink,
+                    'dev' => $dev
                 ];
                 return $provider;
             } else {
@@ -266,6 +360,7 @@ class ShortlinkResource extends AbstractResourceListener
 
         # Load Shortlink Provider List
         $provSel = new Select($this->mShortProviderTbl->getTable());
+        $provSel->where(['active' => 1]);
         $provSel->order('sort_id ASC');
         $shortlinksDB = $this->mShortProviderTbl->selectWith($provSel);
         $shortlinks = [];
@@ -285,36 +380,21 @@ class ShortlinkResource extends AbstractResourceListener
 
             # check for completed links for user
             $linksDone = [];
-            foreach($links as $lnk) {
-                $oWh = new Where();
-                $oWh->equalTo('shortlink_idfs', $lnk->shortlink_idfs);
-                $oWh->like('link_id', $lnk->link_id);
-                $oWh->equalTo('user_idfs', $me->User_ID);
-                $oWh->greaterThanOrEqualTo('date_completed', date('Y-m-d H:i:s', strtotime('-24 hours')));
-                $slCheck = $this->mShortDoneTbl->select($oWh);
-                if(count($slCheck) > 0) {
-                    $sl = $slCheck->current();
-                    $linksDone[] = $sl;
-                    $sh->last_done = $sl->date_completed;
-                    $sh->unlock_in = strtotime($sl->date_completed)+(24*3600)-time();
+            $oWh = new Where();
+            $oWh->equalTo('shortlink_idfs', $sh->Shortlink_ID);
+            //$oWh->like('link_id', $lnk->link_id);
+            $oWh->equalTo('user_idfs', $me->User_ID);
+            $oWh->greaterThanOrEqualTo('date_completed', date('Y-m-d H:i:s', strtotime('-24 hours')));
+            $slCheck = $this->mShortDoneTbl->select($oWh);
+            if(count($slCheck) > 0) {
+                foreach($slCheck as $check) {
+                    $linksDone[] = $check;
+                    $sh->last_done = $check->date_completed;
+                    $sh->unlock_in = strtotime($check->date_completed)+(24*3600)-time();
                 }
             }
             $sh->linksDone = count($linksDone);
             $totalReward+=($sh->linksTotal-$sh->linksDone)*$sh->reward;
-
-            # get link global statistics over all users
-            $doneCheck = $this->mShortDoneTbl->select(['shortlink_idfs' => $sh->Shortlink_ID]);
-            if(count($doneCheck) > 0) {
-                $sh->count_complete = 0;
-                $sh->count_started = 0;
-                foreach($doneCheck as $ck) {
-                    if($ck->date_completed == '0000-00-00 00:00:00') {
-                        $sh->count_started++;
-                    } else {
-                        $sh->count_complete++;
-                    }
-                }
-            }
 
             $shortlinks[] = (object)[
                 'id' => $sh->Shortlink_ID,
@@ -323,8 +403,9 @@ class ShortlinkResource extends AbstractResourceListener
                 'url' => $sh->url,
                 'links_done' => $sh->linksDone,
                 'links_total' => $sh->linksTotal,
-                'count_started' => $sh->count_started,
-                'count_complete' => $sh->count_complete,
+                'count_started' => 0,
+                'count_complete' => 0,
+                'difficulty' => $sh->difficulty,
                 'count_percent' => number_format((100/(($sh->count_complete+$sh->count_started)/$sh->count_complete)),2),
                 'last_done' => $sh->last_done,
                 'unlock_in' =>  $sh->unlock_in,
@@ -360,12 +441,21 @@ class ShortlinkResource extends AbstractResourceListener
                 'status' => ($offer->date_completed == '0000-00-00 00:00:00') ? 'started' : 'done',
             ];
         }
-        $totalLinksDone = $this->mShortDoneTbl->select(['user_idfs' => $me->User_ID])->count();
+
+        $totalDone24Wh = new Where();
+        $totalDone24Wh->equalTo('user_idfs', $me->User_ID);
+        $totalDone24Wh->greaterThanOrEqualTo('date_completed', date('Y-m-d H:i:s', strtotime('-24 hours')));
+        $totalLinksDone24h = $this->mShortDoneTbl->select($totalDone24Wh)->count();
+
+        $totalDoneWh = new Where();
+        $totalDoneWh->equalTo('user_idfs', $me->User_ID);
+        $totalLinksDone = $this->mShortDoneTbl->select($totalDoneWh)->count();
 
         $return = (object)[
             'provider' => $shortlinks,
             'total_reward' => $totalReward,
             'total_links' => $totalLinks,
+            'links_done' => $totalLinksDone24h,
             'history' => [
                 'items' => $history,
                 'total_items' => $totalLinksDone,

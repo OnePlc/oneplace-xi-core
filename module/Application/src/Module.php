@@ -18,22 +18,4 @@ class Module
     {
         return include __DIR__ . '/../config/module.config.php';
     }
-
-    public function onBootstrap(EventInterface $e)
-    {
-        $app       = $e->getApplication();
-        $container = $app->getServiceManager();
-
-        // Add Authentication Adapter for session
-        $defaultAuthenticationListener = $container->get(DefaultAuthenticationListener::class);
-        $defaultAuthenticationListener->attach(new Authentication\Adapter\SessionAdapter());
-
-        // Add Authorization
-        $eventManager = $app->getEventManager();
-        $eventManager->attach(
-            MvcAuthEvent::EVENT_AUTHORIZATION,
-            new Authorization\AuthorizationListener(),
-            100
-        );
-    }
 }

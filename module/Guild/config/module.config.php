@@ -26,12 +26,23 @@ return [
                     ],
                 ],
             ],
+            'guild.rpc.join' => [
+                'type' => 'Segment',
+                'options' => [
+                    'route' => '/guild-joins',
+                    'defaults' => [
+                        'controller' => 'Guild\\V1\\Rpc\\Join\\Controller',
+                        'action' => 'join',
+                    ],
+                ],
+            ],
         ],
     ],
     'api-tools-versioning' => [
         'uri' => [
             0 => 'guild.rest.guild',
             1 => 'guild.rpc.bank',
+            2 => 'guild.rpc.join',
         ],
     ],
     'api-tools-rest' => [
@@ -62,6 +73,7 @@ return [
         'controllers' => [
             'Guild\\V1\\Rest\\Guild\\Controller' => 'HalJson',
             'Guild\\V1\\Rpc\\Bank\\Controller' => 'Json',
+            'Guild\\V1\\Rpc\\Join\\Controller' => 'Json',
         ],
         'accept_whitelist' => [
             'Guild\\V1\\Rest\\Guild\\Controller' => [
@@ -74,6 +86,11 @@ return [
                 1 => 'application/json',
                 2 => 'application/*+json',
             ],
+            'Guild\\V1\\Rpc\\Join\\Controller' => [
+                0 => 'application/vnd.guild.v1+json',
+                1 => 'application/json',
+                2 => 'application/*+json',
+            ],
         ],
         'content_type_whitelist' => [
             'Guild\\V1\\Rest\\Guild\\Controller' => [
@@ -81,6 +98,10 @@ return [
                 1 => 'application/json',
             ],
             'Guild\\V1\\Rpc\\Bank\\Controller' => [
+                0 => 'application/vnd.guild.v1+json',
+                1 => 'application/json',
+            ],
+            'Guild\\V1\\Rpc\\Join\\Controller' => [
                 0 => 'application/vnd.guild.v1+json',
                 1 => 'application/json',
             ],
@@ -108,6 +129,9 @@ return [
         ],
         'Guild\\V1\\Rpc\\Bank\\Controller' => [
             'input_filter' => 'Guild\\V1\\Rpc\\Bank\\Validator',
+        ],
+        'Guild\\V1\\Rpc\\Join\\Controller' => [
+            'input_filter' => 'Guild\\V1\\Rpc\\Join\\Validator',
         ],
     ],
     'input_filter_specs' => [
@@ -167,6 +191,34 @@ return [
                 'error_message' => 'You must provide a valid amount',
             ],
         ],
+        'Guild\\V1\\Rpc\\Join\\Validator' => [
+            0 => [
+                'required' => true,
+                'validators' => [],
+                'filters' => [
+                    0 => [
+                        'name' => \Laminas\Filter\ToInt::class,
+                        'options' => [],
+                    ],
+                ],
+                'name' => 'user_id',
+                'description' => 'ID of User you want to process join',
+                'error_message' => 'You must provide a valid User ID',
+            ],
+            1 => [
+                'required' => true,
+                'validators' => [],
+                'filters' => [
+                    0 => [
+                        'name' => \Laminas\Filter\ToInt::class,
+                        'options' => [],
+                    ],
+                ],
+                'name' => 'accept',
+                'description' => 'Accept or decline the join request',
+                'error_message' => 'You must provide a valid accept command',
+            ],
+        ],
     ],
     'api-tools-mvc-auth' => [
         'authorization' => [
@@ -197,11 +249,23 @@ return [
                     ],
                 ],
             ],
+            'Guild\\V1\\Rpc\\Join\\Controller' => [
+                'actions' => [
+                    'join' => [
+                        'GET' => true,
+                        'POST' => true,
+                        'PUT' => false,
+                        'PATCH' => false,
+                        'DELETE' => false,
+                    ],
+                ],
+            ],
         ],
     ],
     'controllers' => [
         'factories' => [
             'Guild\\V1\\Rpc\\Bank\\Controller' => \Guild\V1\Rpc\Bank\BankControllerFactory::class,
+            'Guild\\V1\\Rpc\\Join\\Controller' => \Guild\V1\Rpc\Join\JoinControllerFactory::class,
         ],
     ],
     'api-tools-rpc' => [
@@ -213,6 +277,14 @@ return [
                 2 => 'GET',
             ],
             'route_name' => 'guild.rpc.bank',
+        ],
+        'Guild\\V1\\Rpc\\Join\\Controller' => [
+            'service_name' => 'Join',
+            'http_methods' => [
+                0 => 'GET',
+                1 => 'POST',
+            ],
+            'route_name' => 'guild.rpc.join',
         ],
     ],
 ];

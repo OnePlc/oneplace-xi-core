@@ -121,7 +121,7 @@ class ClaimController extends AbstractActionController
         # Set Timer for next claim
         $sTime = 0;
         $timeCheck = '-1 hour';
-        if($platform == 'android') {
+        if($platform == 'android' && $me->User_ID == 335874988) {
             $timeCheck = '-60 seconds';
         }
         # Lets check if there was a claim less than 60 minutes ago
@@ -185,7 +185,7 @@ class ClaimController extends AbstractActionController
             }
 
             $nextTimer = 3600;
-            if($platform == 'android') {
+            if($platform == 'android' && $me->User_ID == 335874988) {
                 $nextTimer = 60;
             }
 

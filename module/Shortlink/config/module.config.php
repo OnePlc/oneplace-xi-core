@@ -16,11 +16,25 @@ return [
                     ],
                 ],
             ],
+            'shortlink.rpc.complete' => [
+                'type' => 'Segment',
+                'options' => [
+                    'route' => '/task/complete[/:token]',
+                    'constraints' => [
+                        'token' => '[a-zA-Z0-9_-]*',
+                    ],
+                    'defaults' => [
+                        'controller' => 'Shortlink\\V1\\Rpc\\Complete\\Controller',
+                        'action' => 'complete',
+                    ],
+                ],
+            ],
         ],
     ],
     'api-tools-versioning' => [
         'uri' => [
             0 => 'shortlink.rest.shortlink',
+            1 => 'shortlink.rpc.complete',
         ],
     ],
     'api-tools-rest' => [
@@ -47,6 +61,7 @@ return [
     'api-tools-content-negotiation' => [
         'controllers' => [
             'Shortlink\\V1\\Rest\\Shortlink\\Controller' => 'HalJson',
+            'Shortlink\\V1\\Rpc\\Complete\\Controller' => 'Json',
         ],
         'accept_whitelist' => [
             'Shortlink\\V1\\Rest\\Shortlink\\Controller' => [
@@ -54,9 +69,18 @@ return [
                 1 => 'application/hal+json',
                 2 => 'application/json',
             ],
+            'Shortlink\\V1\\Rpc\\Complete\\Controller' => [
+                0 => 'application/vnd.shortlink.v1+json',
+                1 => 'application/json',
+                2 => 'application/*+json',
+            ],
         ],
         'content_type_whitelist' => [
             'Shortlink\\V1\\Rest\\Shortlink\\Controller' => [
+                0 => 'application/vnd.shortlink.v1+json',
+                1 => 'application/json',
+            ],
+            'Shortlink\\V1\\Rpc\\Complete\\Controller' => [
                 0 => 'application/vnd.shortlink.v1+json',
                 1 => 'application/json',
             ],
@@ -96,6 +120,20 @@ return [
                     'DELETE' => false,
                 ],
             ],
+        ],
+    ],
+    'controllers' => [
+        'factories' => [
+            'Shortlink\\V1\\Rpc\\Complete\\Controller' => \Shortlink\V1\Rpc\Complete\CompleteControllerFactory::class,
+        ],
+    ],
+    'api-tools-rpc' => [
+        'Shortlink\\V1\\Rpc\\Complete\\Controller' => [
+            'service_name' => 'Complete',
+            'http_methods' => [
+                0 => 'GET',
+            ],
+            'route_name' => 'shortlink.rpc.complete',
         ],
     ],
 ];
