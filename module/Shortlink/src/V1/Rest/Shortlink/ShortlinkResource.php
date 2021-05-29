@@ -321,7 +321,6 @@ class ShortlinkResource extends AbstractResourceListener
                         $finLink = $checkLnk->current()->link_url;
                     } else {
                         $time = date('Y-m-d H:i:s', time());
-                        $dev = '2 - '.$linksDone.'/'.$linkCount.'/'.$me->User_ID.'/'.$provider->Shortlink_ID;
                     }
                 }
 
@@ -329,11 +328,14 @@ class ShortlinkResource extends AbstractResourceListener
                     $finLink = "#";
                 }
 
-                $provider->link = (object)[
+                $link = (object)[
                     'href' => $finLink,
-                    'dev' => $dev
                 ];
-                return $provider;
+                return (object)[
+                    'link' =>$link,
+                    'id' => $provider->Shortlink_ID,
+                    'name' => $provider->label
+                ];
             } else {
                 return new ApiProblem(404, 'No links for provider '.$provider->label.' found');
             }
@@ -403,10 +405,7 @@ class ShortlinkResource extends AbstractResourceListener
                 'url' => $sh->url,
                 'links_done' => $sh->linksDone,
                 'links_total' => $sh->linksTotal,
-                'count_started' => 0,
-                'count_complete' => 0,
                 'difficulty' => $sh->difficulty,
-                'count_percent' => number_format((100/(($sh->count_complete+$sh->count_started)/$sh->count_complete)),2),
                 'last_done' => $sh->last_done,
                 'unlock_in' =>  $sh->unlock_in,
             ];
@@ -576,6 +575,11 @@ class ShortlinkResource extends AbstractResourceListener
             # check if user has completed an achievement
             if(array_key_exists($currentLinksDone,$this->mAchievementPoints)) {
                 $this->mUserTools->completeAchievement($this->mAchievementPoints[$currentLinksDone]->Achievement_ID, $me->User_ID);
+            }
+
+            # drive me crazy achievement
+            if($linkInfo->difficulty == 'ultra') {
+                $this->mUserTools->completeAchievement(29, $me->User_ID);
             }
 
             # Add User XP

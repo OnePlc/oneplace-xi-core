@@ -15,10 +15,10 @@
 namespace Faucet\Transaction;
 
 use Laminas\Db\Sql\Select;
+use Laminas\Db\Sql\Where;
 use Laminas\Db\TableGateway\TableGateway;
 use Laminas\Paginator\Adapter\DbSelect;
 use Laminas\Paginator\Paginator;
-use phpDocumentor\Reflection\Types\Float_;
 
 class TransactionHelper {
 
@@ -153,6 +153,7 @@ class TransactionHelper {
                 # update user balance
                 TransactionHelper::$mUserTbl->update([
                     'token_balance' => $newBalance,
+                    'last_action' => date('Y-m-d H:i:s', time()),
                 ],[
                     'User_ID' => $userId
                 ]);
@@ -215,7 +216,7 @@ class TransactionHelper {
                 'date' => date('Y-m-d H:i:s', time()),
                 'ref_idfs' => $refId,
                 'ref_type' => $refType,
-                'comment' => $description,
+                'comment' => utf8_encode($description),
                 'guild_idfs' => $guildId,
                 'created_by' => $createdBy,
             ])) {
@@ -331,5 +332,18 @@ class TransactionHelper {
         }
 
         return $cryptoBalance;
+    }
+
+    public function findGuildTransaction($guildId, $date, $refType) {
+        $transWh = new Where();
+        $transWh->equalTo('guild_idfs', $guildId);
+        $transWh->greaterThanOrEqualTo('date', date('Y-m-d H:i:s', strtotime($date)));
+        $transWh->like('ref_type', $refType);
+        $transaction = TransactionHelper::$mGuildTransTbl->select($transWh);
+        if(count($transaction) > 0) {
+            return true;
+        } else {
+            return false;
+        }
     }
 }

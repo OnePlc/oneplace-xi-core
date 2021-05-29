@@ -485,6 +485,7 @@ class GuildResource extends AbstractResourceListener
             ];
         }
 
+        # calculate guild xp percent
         $guildXPPercent = 0;
         if ($guild->xp_current != 0) {
             $guildNextLvl = $this->mXPLvlTbl->select(['Level_ID' => ($guild->xp_level + 1)])->current();
@@ -500,16 +501,33 @@ class GuildResource extends AbstractResourceListener
         $checkWh->like('date_declined', '0000-00-00 00:00:00');
         $totalRequests = $this->mGuildUserTbl->select($checkWh)->count();
 
+        /**
+         * Get Guild Ranks
+         */
+        $ranks = [];
+        $guildRanks = $this->mGuildRankTbl->select(['guild_idfs' => $guild->Guild_ID]);
+        if(count($guildRanks) > 0) {
+            foreach($guildRanks as $rank) {
+                $ranks[] = (object)[
+                    'id' => $rank->level,
+                    'name' => $rank->label,
+                ];
+            }
+        }
+
         return (object)[
             'guild' => (object)[
                 'id' => $guild->Guild_ID,
-                'name'=> $guild->label,
+                'name'=> utf8_decode($guild->label),
+                'description'=> utf8_decode($guild->description),
                 'icon' => $guild->icon,
+                'is_vip' => ($guild->is_vip == 1) ? true : false,
                 'token_balance' => $guild->token_balance,
                 'xp_level' => $guild->xp_level,
                 'xp_percent' => $guildXPPercent,
                 'members' => $guildMembers,
                 'tasks' => $weeklyTasks,
+                'ranks' => $ranks,
                 'achievements' => $achievements,
                 'total_members' => $totalMembers,
                 'total_requests' => $totalRequests,
@@ -574,9 +592,15 @@ class GuildResource extends AbstractResourceListener
         foreach($guildsPaginated as $guild) {
             # count guild members
             $guild->members = $this->mGuildUserTbl->select(['guild_idfs' => $guild->Guild_ID])->count();
-            $guildAPI = (object)['id' => $guild->Guild_ID,'name' => $guild->label,'members' => $guild->members,
-                'xp_level' => $guild->xp_level,'xp_current' => $guild->xp_current,'xp_total' => $guild->xp_total,
-                'icon' => $guild->icon];
+            $guildAPI = (object)[
+                'id' => $guild->Guild_ID,
+                'name' => utf8_decode($guild->label),
+                'description' => utf8_decode($guild->description),
+                'members' => $guild->members,
+                'xp_level' => $guild->xp_level,
+                'xp_current' => $guild->xp_current,
+                'xp_total' => $guild->xp_total,
+                'icon' => $guild->icon,'is_vip' => ($guild->is_vip == 1) ? true : false];
             if(array_key_exists($guild->Guild_ID,$userRequests)) {
                 $guildAPI->userHasRequestOpen = 1;
             } else {
@@ -721,80 +745,203 @@ class GuildResource extends AbstractResourceListener
             return $me;
         }
 
-        # check if user already has joined or created a guild
-        $checkWh = new Where();
-        $checkWh->equalTo('user_idfs', $me->User_ID);
-        $checkWh->notLike('date_joined', '0000-00-00 00:00:00');
-        $userHasGuild = $this->mGuildUserTbl->select($checkWh);
+        if($id == 'update') {
+            # check if user is guildmaster of a guild
+            $checkWh = new Where();
+            $checkWh->equalTo('user_idfs', $me->User_ID);
+            $checkWh->equalTo('rank', 0);
+            $checkWh->notLike('date_joined', '0000-00-00 00:00:00');
+            $userHasGuild = $this->mGuildUserTbl->select($checkWh);
 
-        if(count($userHasGuild) == 0) {
-            # get information about the desired guild
-            $secResult = $this->mSecTools->basicInputCheck([$data->guild]);
-            if($secResult !== 'ok') {
-                # ban user and force logout on client
-                $this->mUserSetTbl->insert([
-                    'user_idfs' => $me->User_ID,
-                    'setting_name' => 'user-tempban',
-                    'setting_value' => 'Potential '.$secResult.' Attack @ '.date('Y-m-d H:i:s').' Guild Join',
-                ]);
-                return new ApiProblem(418, 'Potential '.$secResult.' Attack - Goodbye');
-            }
-            $guildId = filter_var($data->guild, FILTER_SANITIZE_NUMBER_INT);
-            $guild = $this->mGuildTbl->select(['Guild_ID' => $guildId]);
-            if(count($guild) > 0) {
-                # load guild info
-                $guild = $guild->current();
-
-                # check if user does not have too much open requests in general
-                $maxOpenRequests = 5;
-                $checkWh = new Where();
-                $checkWh->equalTo('user_idfs', $me->User_ID);
-                $checkWh->like('date_joined', '0000-00-00 00:00:00');
-                $userOpenRequests = $this->mGuildUserTbl->select($checkWh);
-                if($userOpenRequests->count() >= $maxOpenRequests) {
-                    return new ApiProblem(403, 'You have reached the limit of '.$maxOpenRequests.' guild join requests. Wait for approval or cancel requests.');
+            if(count($userHasGuild) == 0) {
+                return new ApiProblem(404, 'You are not guildmaster of any guild');
+            } else {
+                $userGuildRole = $userHasGuild->current();
+                # double check we have no 0 guild id
+                if($userGuildRole->guild_idfs == 0) {
+                    return new ApiProblem(400, 'Seems like you are guildmaster of an invalid guild. Please contact admin.');
                 }
-                $guildAlreadyRequested = false;
-                # check if user already has an open request for this guild
-                if(count($userOpenRequests) > 0) {
-                    foreach($userOpenRequests as $userReq) {
-                        if($userReq->guild_idfs == $guildId) {
-                            $guildAlreadyRequested = true;
+                $guild = $this->mGuildTbl->select(['Guild_ID' => $userGuildRole->guild_idfs]);
+                if(count($guild) == 0) {
+                    return new ApiProblem(404, 'Guild not found');
+                }
+                $guild = $guild->current();
+                # check if name should be updated
+                if(isset($data->name)) {
+                    $secResult = $this->mSecTools->basicInputCheck([$data->name]);
+                    if($secResult !== 'ok') {
+                        # ban user and force logout on client
+                        $this->mUserSetTbl->insert([
+                            'user_idfs' => $me->User_ID,
+                            'setting_name' => 'user-tempban',
+                            'setting_value' => 'Potential '.$secResult.' Attack @ '.date('Y-m-d H:i:s').' Guild Rename',
+                        ]);
+                        return new ApiProblem(418, 'Potential '.$secResult.' Attack - Goodbye');
+                    }
+                    # guild can be renamed only once per 7 days
+                    $lastRenameCounter = $this->mTransaction->findGuildTransaction($userGuildRole->guild_idfs, date('Y-m-d H:i:s', strtotime('-7 days')),'guild-rename');
+                    if($lastRenameCounter) {
+                        return new ApiProblem(400, 'You can rename your guild only once per week (7 days)');
+                    }
+
+                    # get new name
+                    $newName = filter_var($data->name, FILTER_SANITIZE_STRING);
+
+                    # check if there is already a guild with a likely name
+                    $likeWh = new Where();
+                    $likeWh->like('label', utf8_encode($newName).'%');
+                    $nameUsed = $this->mGuildTbl->select($likeWh);
+                    if(count($nameUsed) > 0) {
+                        return new ApiProblem(400, 'There is already a guild with that name. Please choose another one');
+                    }
+                    # check if guild has enough balance for renaming
+                    $renamePrice = 1000;
+                    if($this->mTransaction->checkGuildBalance($renamePrice, $userGuildRole->guild_idfs)) {
+
+                        $newBalance = $this->mTransaction->executeGuildTransaction($renamePrice, true,
+                            $userGuildRole->guild_idfs, $userGuildRole->guild_idfs,
+                            'guild-rename', 'Renamed Guild from '.$guild->label.' to '.$newName, $me->User_ID);
+
+                        # rename
+                        if($newBalance !== false) {
+                            $this->mGuildTbl->update([
+                                'label' => utf8_encode($newName),
+                            ],[
+                                'Guild_ID' => $userGuildRole->guild_idfs,
+                            ]);
+
+                            return [
+                                'token_balance' => $newBalance,
+                                'name' => $newName,
+                            ];
+                        } else {
+                            return new ApiProblem(500, 'Transaction error. Please contact support.');
+                        }
+                    } else {
+                        return new ApiProblem(400, 'Guild Balance is too low for rename');
+                    }
+
+                }
+
+                # check if description should be updated
+                if(isset($data->description)) {
+                    $secResult = $this->mSecTools->basicInputCheck([$data->description]);
+                    if($secResult !== 'ok') {
+                        # ban user and force logout on client
+                        $this->mUserSetTbl->insert([
+                            'user_idfs' => $me->User_ID,
+                            'setting_name' => 'user-tempban',
+                            'setting_value' => 'Potential '.$secResult.' Attack @ '.date('Y-m-d H:i:s').' Guild Description Update',
+                        ]);
+                        return new ApiProblem(418, 'Potential '.$secResult.' Attack - Goodbye');
+                    }
+                    $newDescription = filter_var($data->description, FILTER_SANITIZE_STRING);
+                    $this->mGuildTbl->update([
+                        'description' => utf8_encode($newDescription),
+                    ],[
+                        'Guild_ID' => $userGuildRole->guild_idfs,
+                    ]);
+                }
+
+                # check if name should be updated
+                if(isset($data->icon)) {
+                    $secResult = $this->mSecTools->basicInputCheck([$data->icon]);
+                    if($secResult !== 'ok') {
+                        # ban user and force logout on client
+                        $this->mUserSetTbl->insert([
+                            'user_idfs' => $me->User_ID,
+                            'setting_name' => 'user-tempban',
+                            'setting_value' => 'Potential '.$secResult.' Attack @ '.date('Y-m-d H:i:s').' Guild Icon Change',
+                        ]);
+                        return new ApiProblem(418, 'Potential '.$secResult.' Attack - Goodbye');
+                    }
+                    $newIcon = filter_var($data->icon, FILTER_SANITIZE_STRING);
+                    $this->mGuildTbl->update([
+                        'icon' => $newIcon,
+                    ],[
+                        'Guild_ID' => $userGuildRole->guild_idfs,
+                    ]);
+                }
+
+                return $this->mGuildTbl->select(['Guild_ID' => $userGuildRole->guild_idfs])->current();
+
+            }
+        } elseif($id == 'join') {
+            # check if user already has joined or created a guild
+            $checkWh = new Where();
+            $checkWh->equalTo('user_idfs', $me->User_ID);
+            $checkWh->notLike('date_joined', '0000-00-00 00:00:00');
+            $userHasGuild = $this->mGuildUserTbl->select($checkWh);
+
+            if(count($userHasGuild) == 0) {
+                # get information about the desired guild
+                $secResult = $this->mSecTools->basicInputCheck([$data->guild]);
+                if($secResult !== 'ok') {
+                    # ban user and force logout on client
+                    $this->mUserSetTbl->insert([
+                        'user_idfs' => $me->User_ID,
+                        'setting_name' => 'user-tempban',
+                        'setting_value' => 'Potential '.$secResult.' Attack @ '.date('Y-m-d H:i:s').' Guild Join',
+                    ]);
+                    return new ApiProblem(418, 'Potential '.$secResult.' Attack - Goodbye');
+                }
+                $guildId = filter_var($data->guild, FILTER_SANITIZE_NUMBER_INT);
+                $guild = $this->mGuildTbl->select(['Guild_ID' => $guildId]);
+                if(count($guild) > 0) {
+                    # load guild info
+                    $guild = $guild->current();
+
+                    # check if user does not have too much open requests in general
+                    $maxOpenRequests = 5;
+                    $checkWh = new Where();
+                    $checkWh->equalTo('user_idfs', $me->User_ID);
+                    $checkWh->like('date_joined', '0000-00-00 00:00:00');
+                    $userOpenRequests = $this->mGuildUserTbl->select($checkWh);
+                    if($userOpenRequests->count() >= $maxOpenRequests) {
+                        return new ApiProblem(403, 'You have reached the limit of '.$maxOpenRequests.' guild join requests. Wait for approval or cancel requests.');
+                    }
+                    $guildAlreadyRequested = false;
+                    # check if user already has an open request for this guild
+                    if(count($userOpenRequests) > 0) {
+                        foreach($userOpenRequests as $userReq) {
+                            if($userReq->guild_idfs == $guildId) {
+                                $guildAlreadyRequested = true;
+                            }
                         }
                     }
-                }
 
-                if(!$guildAlreadyRequested) {
-                    # create a new join request
-                    $this->mGuildUserTbl->insert([
-                        'user_idfs' => $me->User_ID,
-                        'guild_idfs' => $guildId,
-                        'rank' => 9,
-                        'date_requested' => date('Y-m-d H:i:s', time()),
-                        'date_joined' => '0000-00-00 00:00:00',
-                        'date_declined' => '0000-00-00 00:00:00',
-                    ]);
+                    if(!$guildAlreadyRequested) {
+                        # create a new join request
+                        $this->mGuildUserTbl->insert([
+                            'user_idfs' => $me->User_ID,
+                            'guild_idfs' => $guildId,
+                            'rank' => 9,
+                            'date_requested' => date('Y-m-d H:i:s', time()),
+                            'date_joined' => '0000-00-00 00:00:00',
+                            'date_declined' => '0000-00-00 00:00:00',
+                        ]);
 
-                    # success
-                    return (object)[
-                        'state' => 'success',
-                        'message' => 'Successfully sent a join request to guild '.$guild->label.'. Please wait for approval by guild.',
-                    ];
+                        # success
+                        return (object)[
+                            'state' => 'success',
+                            'message' => 'Successfully sent a join request to guild '.$guild->label.'. Please wait for approval by guild.',
+                        ];
+                    } else {
+                        return new ApiProblem(409, 'You already have an open request for the guild '.$guild->label.'. Please wait for approval by guild.');
+                    }
                 } else {
-                    return new ApiProblem(409, 'You already have an open request for the guild '.$guild->label.'. Please wait for approval by guild.');
+                    return new ApiProblem(404, 'The guild you want to join does not exist');
                 }
             } else {
-                return new ApiProblem(404, 'The guild you want to join does not exist');
-            }
-        } else {
-            # load existing guild info
-            $guild = $this->mGuildTbl->select(['Guild_ID' => $userHasGuild->current()->guild_idfs]);
-            # make sure guild does still exist
-            if(count($guild) > 0) {
-                $guild = $guild->current();
-                return new ApiProblem(409, 'User is already member of the guild '.$guild->label.'. Please leave guild before joining another one');
-            } else {
-                return new ApiProblem(409, 'User is already member of a removed guild. please contact admin.');
+                # load existing guild info
+                $guild = $this->mGuildTbl->select(['Guild_ID' => $userHasGuild->current()->guild_idfs]);
+                # make sure guild does still exist
+                if(count($guild) > 0) {
+                    $guild = $guild->current();
+                    return new ApiProblem(409, 'User is already member of the guild '.$guild->label.'. ('.$id.') Please leave guild before joining another one');
+                } else {
+                    return new ApiProblem(409, 'User is already member of a removed guild. please contact admin.');
+                }
             }
         }
 

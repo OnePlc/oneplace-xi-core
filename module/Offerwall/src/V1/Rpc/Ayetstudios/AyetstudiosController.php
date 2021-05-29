@@ -78,9 +78,7 @@ class AyetstudiosController extends AbstractActionController
         }
         $baseUrl = $baseUrl->current()->settings_value;
 
-        $sUrl = str_replace(['##USERID##'],[$me->User_ID],$baseUrl);
-        $ayetResponse = file_get_contents($sUrl);
-
+        $sUrl = str_replace(['##USERID##','##USERAGENT##','##IP##'],[$me->User_ID,urlencode($_SERVER['HTTP_USER_AGENT']),$_SERVER['REMOTE_ADDR']],$baseUrl);
         $response = ClientStatic::get($sUrl);
 
         $status = $response->getStatusCode();

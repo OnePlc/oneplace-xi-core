@@ -24,6 +24,7 @@ use Laminas\ApiTools\ApiProblem\ApiProblemResponse;
 use Laminas\Db\TableGateway\TableGateway;
 use Laminas\Db\Sql\Where;
 use Laminas\Mvc\Controller\AbstractActionController;
+use Laminas\Http\Client;
 
 class TokenController extends AbstractActionController
 {
@@ -156,10 +157,16 @@ class TokenController extends AbstractActionController
                 $amountCryptoLTC = number_format($amountCrypto*$coinInfoLTC->dollar_val,8,'.','');
             }
 
+            $coinInfoZEN = $this->mWalletTbl->select(['coin_sign' => 'ZEN'])->current();
+            if($coinInfoZEN->dollar_val > 0) {
+                $amountCryptoZEN = number_format($amountCrypto/$coinInfoZEN->dollar_val,8,'.','');
+            } else {
+                $amountCryptoZEN = number_format($amountCrypto*$coinInfoZEN->dollar_val,8,'.','');
+            }
+
             # get wallets for crypto payments
             $walletBCH = $this->mSecTools->getCoreSetting('tokenbuy-BCH');
             $walletLTC = $this->mSecTools->getCoreSetting('tokenbuy-LTC');
-
             $payWallets = [
                 'COINS' => 'Swissfaucet.io Coin Burn',
                 'BCH' => $walletBCH,
@@ -178,8 +185,9 @@ class TokenController extends AbstractActionController
                         'wallet' => $tk->wallet,
                         'amount' => $tk->amount,
                         'price' => $tk->price,
-                        'wallet_pay' => $payWallets[$tk->coin],
+                        'wallet_pay' => ($tk->wallet_receive == null) ? $payWallets[$tk->coin] : $tk->wallet_receive,
                         'sent' => ($tk->sent == 1) ? true : false,
+                        'cancelled' => ($tk->cancelled == 1) ? true : false,
                         'received' => ($tk->received == 1) ? true : false,
                     ];
                 }
@@ -209,16 +217,175 @@ class TokenController extends AbstractActionController
                     ],
                     'token' => [
                         'price' => 2500,
-                        'bch_price' => number_format($amountCryptoBCH, 8),
                         'wallet_bch' => $walletBCH,
-                        'ltc_price' => number_format($amountCryptoLTC,8),
                         'wallet_ltc' => $walletLTC,
+                        'bch_price' => number_format($amountCryptoBCH, 8),
+                        'ltc_price' => number_format($amountCryptoLTC,8),
+                        'zen_price' => number_format($amountCryptoZEN,8),
                         'total' => 21000000,
                         'sold' => (int)$soldToken,
                         'last_payment' => 1,
                         'value' => 0.001,
                     ],
                 ]
+            ];
+        }
+
+        if($request->isPost()) {
+            # Get Data from Request Body
+            $json = IndexController::loadJSONFromRequestBody(['amount','coin','wallet'],$this->getRequest()->getContent());
+            if(!$json) {
+                return new ApiProblemResponse(new ApiProblem(400, 'Invalid Response Body (missing required fields)'));
+            }
+
+            # check for attack vendors
+            $secResult = $this->mSecTools->basicInputCheck([$json->amount,$json->coin,$json->wallet]);
+            if($secResult !== 'ok') {
+                # ban user and force logout on client
+                $this->mUserSetTbl->insert([
+                    'user_idfs' => $me->User_ID,
+                    'setting_name' => 'user-tempban',
+                    'setting_value' => 'Potential '.$secResult.' Attack @ '.date('Y-m-d H:i:s').' Buy Token',
+                ]);
+                return new ApiProblemResponse(new ApiProblem(418, 'Potential '.$secResult.' Attack - Goodbye'));
+            }
+
+            # Check if user is verified
+            if($me->email_verified == 0) {
+                return new ApiProblemResponse(new ApiProblem(400, 'Account is not verified. Please verify E-Mail before buying tokens'));
+            }
+
+            $wallet = filter_var($json->wallet, FILTER_SANITIZE_STRING);
+            if(strtolower(substr($wallet,0,1)) != 'r') {
+                return new ApiProblemResponse(new ApiProblem(400, 'Invalid Ravencoin address'));
+            }
+
+            $amount = filter_var($json->amount, FILTER_SANITIZE_NUMBER_INT);
+            if($amount <= 0) {
+                return new ApiProblemResponse(new ApiProblem(400, 'Invalid Amount'));
+            }
+
+            $coin = filter_var($json->coin, FILTER_SANITIZE_STRING);
+            if($coin != 'COINS' && $coin != 'BCH' && $coin != 'LTC' && $coin != 'ZEN') {
+                return new ApiProblemResponse(new ApiProblem(400, 'Invalid Coin'));
+            }
+
+            $todayWh = new Where();
+            $todayWh->like('date', date('Y-m-d', time()).'%');
+            $todayWh->equalTo('user_idfs', $me->User_ID);
+            $tokenBuyToday = $this->mTokenBuyTbl->select($todayWh);
+            $tokenBuyedToday = 0;
+            if(count($tokenBuyToday) > 0) {
+                foreach($tokenBuyToday as $tkbuy) {
+                    $tokenBuyedToday+=$tkbuy->amount;
+                }
+            }
+            $tokenLeft = 100-$tokenBuyedToday;
+            if($tokenLeft-$amount < 0) {
+                return new ApiProblemResponse(new ApiProblem(400, 'You have already reached the daily limit of 100 token. You can buy more tomorrow.'));
+            }
+
+            $walletReceive = "";
+
+            $tokenPrice = 2500;
+            # get price per token in crypto
+            $tokenValue = $this->mTransaction->getTokenValue();
+            $amountCrypto = ($amount*$tokenPrice)*$tokenValue;
+            $price = 0;
+
+            switch(strtolower($coin)) {
+                case 'bch':
+                    $sBCHNodeUrl = $this->mSecTools->getCoreSetting('bchnode-rpcurl');
+                    if($sBCHNodeUrl) {
+                        $client = new Client();
+                        $client->setUri($sBCHNodeUrl);
+                        $client->setMethod('POST');
+                        $client->setRawBody('{"jsonrpc":"2.0","id":"curltext","method":"getnewaddress","params":[]}');
+                        $response = $client->send();
+                        $googleResponse = json_decode($response->getBody());
+                        $walletReceive = $googleResponse->result;
+                    }
+                    $coinInfoBCH = $this->mWalletTbl->select(['coin_sign' => 'BCH'])->current();
+                    if($coinInfoBCH->dollar_val > 0) {
+                        $price = number_format($amountCrypto/$coinInfoBCH->dollar_val,8,'.','');
+                    } else {
+                        $price = number_format($amountCrypto*$coinInfoBCH->dollar_val,8,'.','');
+                    }
+                    break;
+                case 'ltc':
+                    $sLTCNodeUrl = $this->mSecTools->getCoreSetting('ltcnode-rpcurl');
+                    if($sLTCNodeUrl) {
+                        $client = new Client();
+                        $client->setUri($sLTCNodeUrl);
+                        $client->setMethod('POST');
+                        $client->setRawBody('{"jsonrpc":"2.0","id":"curltext","method":"getnewaddress","params":[]}');
+                        $response = $client->send();
+                        $googleResponse = json_decode($response->getBody());
+                        $walletReceive = $googleResponse->result;
+                    }
+                    $coinInfoLTC = $this->mWalletTbl->select(['coin_sign' => 'LTC'])->current();
+                    if($coinInfoLTC->dollar_val > 0) {
+                        $price = number_format($amountCrypto/$coinInfoLTC->dollar_val,8,'.','');
+                    } else {
+                        $price = number_format($amountCrypto*$coinInfoLTC->dollar_val,8,'.','');
+                    }
+                    break;
+                case 'zen':
+                    $sZENNodeUrl = $this->mSecTools->getCoreSetting('zennode-rpcurl');
+                    if($sZENNodeUrl) {
+                        $client = new Client();
+                        $client->setUri($sZENNodeUrl);
+                        $client->setMethod('POST');
+                        $client->setRawBody('{"jsonrpc":"2.0","id":"curltext","method":"getnewaddress","params":[]}');
+                        $response = $client->send();
+                        $googleResponse = json_decode($response->getBody());
+                        $walletReceive = $googleResponse->result;
+                    }
+                    $coinInfoZEN = $this->mWalletTbl->select(['coin_sign' => 'ZEN'])->current();
+                    if($coinInfoZEN->dollar_val > 0) {
+                        $price = number_format($amountCrypto/$coinInfoZEN->dollar_val,8,'.','');
+                    } else {
+                        $price = number_format($amountCrypto*$coinInfoZEN->dollar_val,8,'.','');
+                    }
+                    break;
+                case 'coins':
+                    if (!$this->mTransaction->checkUserBalance(($amount * $tokenPrice), $me->User_ID)) {
+                        return new ApiProblemResponse(new ApiProblem(400, 'Your balance is too low to buy ' . $amount . ' tokens'));
+                    }
+                    $newBalance = $this->mTransaction->executeTransaction(($amount * $tokenPrice), true, $me->User_ID, $amount, 'token-buy', 'Bought '.$amount.' Tokens with COINS');
+                    /**
+                     * Send Coins to Admins - do not Burn
+                     */
+                    if($newBalance !== false) {
+                        $me->token_balance = $newBalance;
+                        $adminUserIds = explode(',',$this->mSecTools->getCoreSetting('admin-user-ids'));
+                        foreach($adminUserIds as $adminid) {
+                            $newBalanceAdmin = $this->mTransaction->executeTransaction((($amount * $tokenPrice)/count($adminUserIds)), false, $adminid, $amount, 'token-buy', 'User Bought '.$amount.' Tokens with COINS');
+                        }
+                    }
+                    $walletReceive = $me->User_ID;
+                    break;
+                default:
+                    break;
+            }
+
+            $this->mTokenBuyTbl->insert([
+                'user_idfs' => $me->User_ID,
+                'date' => date('Y-m-d H:i:s', time()),
+                'coin' => $coin,
+                'wallet' => $wallet,
+                'wallet_receive' => $walletReceive,
+                'amount' => $amount,
+                'price' => $price,
+                'received' => ($coin == 'COINS') ? 1 : 0,
+                'sent' => 0,
+            ]);
+
+            return [
+                'coin' => $coin,
+                'wallet' => $walletReceive,
+                'token_balance' => $me->token_balance,
+                'price' => $price,
             ];
         }
 

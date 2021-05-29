@@ -21,6 +21,7 @@ use Laminas\ApiTools\Rest\AbstractResourceListener;
 use Laminas\ApiTools\ContentNegotiation\ViewModel;
 use Laminas\Db\TableGateway\TableGateway;
 use Laminas\Db\Sql\Where;
+use Laminas\Db\Sql\Select;
 
 class DailytaskResource extends AbstractResourceListener
 {
@@ -209,7 +210,10 @@ class DailytaskResource extends AbstractResourceListener
             ->OR
             ->equalTo('mode', 'global')
             ->UNNEST;
-        $achievementsDB = $this->mTaskTbl->select($oWh);
+        $dailySel = new Select($this->mTaskTbl->getTable());
+        $dailySel->where($oWh);
+        $dailySel->order('sort_id ASC');
+        $achievementsDB = $this->mTaskTbl->selectWith($dailySel);
         $achievements = [];
         foreach($achievementsDB as $achiev) {
             switch($achiev->type) {

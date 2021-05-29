@@ -166,6 +166,7 @@ return [
             'http_methods' => [
                 0 => 'GET',
                 1 => 'PUT',
+                2 => 'POST',
             ],
             'route_name' => 'faucet.rpc.token',
         ],
@@ -361,7 +362,7 @@ return [
                 'actions' => [
                     'token' => [
                         'GET' => true,
-                        'POST' => false,
+                        'POST' => true,
                         'PUT' => true,
                         'PATCH' => false,
                         'DELETE' => false,

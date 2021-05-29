@@ -71,6 +71,14 @@ class CompleteController extends AbstractActionController
     protected $mSecTools;
 
     /**
+     * Shortlink Achievements
+     *
+     * @var array $mAchievementPoints
+     * @since 1.0.0
+     */
+    protected $mAchievementPoints;
+
+    /**
      * Constructor
      *
      * ConfirmController constructor.
@@ -87,6 +95,19 @@ class CompleteController extends AbstractActionController
         $this->mTransaction = new TransactionHelper($mapper);
         $this->mSecTools = new SecurityTools($mapper);
         $this->mUserTools = new UserTools($mapper);
+
+        /**
+         * Load Achievements to Cache
+         */
+        $achievTbl = new TableGateway('faucet_achievement', $mapper);
+        $achievsXP = $achievTbl->select(['type' => 'shortlink']);
+        $achievsFinal = [];
+        if(count($achievsXP) > 0) {
+            foreach($achievsXP as $achiev) {
+                $achievsFinal[$achiev->goal] = $achiev;
+            }
+        }
+        $this->mAchievementPoints = $achievsFinal;
     }
 
     public function completeAction()
@@ -133,6 +154,20 @@ class CompleteController extends AbstractActionController
                         $newBalance = $this->mTransaction->executeTransaction($linkInfo->reward, false, $shFound->user_idfs, $shFound->shortlink_idfs, 'shortlink-complete', 'Shortlink '.$shFound->link_id.' completed');
                         if($newBalance !== false) {
                             $xpInfo = $this->mUserTools->addXP('shortlink-claim', $shFound->user_idfs);
+
+                            # check for achievement completetion
+                            $currentLinksDone = $this->mShortDoneTbl->select(['user_idfs' => $shFound->user_idfs])->count();
+
+                            # check if user has completed an achievement
+                            if(array_key_exists($currentLinksDone,$this->mAchievementPoints)) {
+                                $this->mUserTools->completeAchievement($this->mAchievementPoints[$currentLinksDone]->Achievement_ID, $shFound->user_idfs);
+                            }
+
+                            # drive me crazy achievement
+                            if($linkInfo->difficulty == 'ultra') {
+                                $this->mUserTools->completeAchievement(29, $shFound->user_idfs);
+                            }
+
                             $redirectUrl = $this->mSecTools->getCoreSetting('sh-complete-url');
                             return $this->redirect()->toUrl($redirectUrl);
                         }

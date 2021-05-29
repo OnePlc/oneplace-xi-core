@@ -497,6 +497,7 @@ class UserResource extends AbstractResourceListener
             'id' => (int)$user->User_ID,
             'name' => $user->username,
             'email' => $user->email,
+            'servertime' => date('Y-m-d H:i:s', time()),
             'emp_mode' => ($user->is_employee == 1) ? 'mod' : '',
             'verified' => (int)$user->email_verified,
             'show_verify_mail' => ($user->send_verify == null) ? ($user->email_verified == 1) ? false : true : false,

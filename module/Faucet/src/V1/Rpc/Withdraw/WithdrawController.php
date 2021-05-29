@@ -124,7 +124,7 @@ class WithdrawController extends AbstractActionController
 
         if($request->isGet()) {
             $wallets = [];
-            $walletsDB = $this->mWalletTbl->select();
+            $walletsDB = $this->mWalletTbl->select(['status' => 'open']);
             foreach ($walletsDB as $wall) {
                 $oWh = new Where();
                 $oWh->equalTo('user_idfs', $me->User_ID);
