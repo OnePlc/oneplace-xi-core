@@ -212,6 +212,66 @@ class AchievementResource extends AbstractResourceListener
                 case 'offer-cpx':
                     $progress = $this->mOfferwallUserTbl->select(['user_idfs' => $user->User_ID,'offerwall_idfs' => 1])->count();
                     break;
+                case 'miningtime':
+                    $progressFound = $this->mUserSetTbl->select(['setting_name' => 'gpuminer-totalhours','user_idfs' => $user->User_ID]);
+                    if(count($progressFound) > 0) {
+                        $progress = (int)$progressFound->current()->setting_value;
+                    }
+                    break;
+                case 'gpushares':
+                    $progressFound = $this->mUserSetTbl->select(['setting_name' => 'gpuminer-totalshares','user_idfs' => $user->User_ID]);
+                    if(count($progressFound) > 0) {
+                        $progress = (int)$progressFound->current()->setting_value;
+                    }
+                    break;
+                case 'nighthours':
+                    $progressFound = $this->mUserSetTbl->select(['setting_name' => 'gpuminer-nighthours','user_idfs' => $user->User_ID]);
+                    if(count($progressFound) > 0) {
+                        $progress = (int)$progressFound->current()->setting_value;
+                    }
+                    break;
+                case 'nightdays':
+                    $progressFound = $this->mUserSetTbl->select(['setting_name' => 'gpuminer-nighthours','user_idfs' => $user->User_ID]);
+                    if(count($progressFound) > 0) {
+                        $progress = round($progressFound->current()->setting_value/5);
+                    }
+                    break;
+                case 'miningmonth':
+                    $progressFound = $this->mUserSetTbl->select(['setting_name' => 'gpuminer-totaldays','user_idfs' => $user->User_ID]);
+                    if(count($progressFound) > 0) {
+                        $progress = (int)$progressFound->current()->setting_value;
+                    }
+                    break;
+                case 'faucethour':
+                    $progressFound = $this->mUserSetTbl->select(['setting_name' => 'faucet-claimtimes','user_idfs' => $user->User_ID]);
+                    if(count($progressFound) > 0) {
+                        $progress = (int)$progressFound->current()->setting_value;
+                    }
+                    break;
+                case 'faucetdaily':
+                    $progressFound = $this->mUserSetTbl->select(['setting_name' => 'faucet-claimdays','user_idfs' => $user->User_ID]);
+                    if(count($progressFound) > 0) {
+                        $progress = (int)$progressFound->current()->setting_value;
+                    }
+                    break;
+                case 'wthcurrency':
+                    $progressFound = $this->mUserSetTbl->select(['setting_name' => 'withdraw-coins','user_idfs' => $user->User_ID]);
+                    if(count($progressFound) > 0) {
+                        $progress = count((array)json_decode($progressFound->current()->setting_value));
+                    }
+                    break;
+                case 'withdrawal':
+                    $progressFound = $this->mUserSetTbl->select(['setting_name' => 'withdraw-total','user_idfs' => $user->User_ID]);
+                    if(count($progressFound) > 0) {
+                        $progress = (int)$progressFound->current()->setting_value;
+                    }
+                    break;
+                case 'earning':
+                    $progressFound = $this->mUserSetTbl->select(['setting_name' => 'totalearned-coins','user_idfs' => $user->User_ID]);
+                    if(count($progressFound) > 0) {
+                        $progress = (int)$progressFound->current()->setting_value;
+                    }
+                    break;
                 default:
                     break;
             }
@@ -345,7 +405,65 @@ class AchievementResource extends AbstractResourceListener
                                         $achievementCategories[$achiev->category_idfs]->user_achievements[] = $nextLevel3;
                                         $nextLevel4 = $this->getNextLevelAchievement($nextLevel3, $me);
                                         if(is_object($nextLevel4)) {
-
+                                            if($nextLevel4->progress >= $nextLevel4->goal) {
+                                                $achievementCategories[$achiev->category_idfs]->user_achievements[] = $nextLevel4;
+                                                $nextLevel5 = $this->getNextLevelAchievement($nextLevel4, $me);
+                                                if(is_object($nextLevel5)) {
+                                                    if($nextLevel5->progress >= $nextLevel5->goal) {
+                                                        $achievementCategories[$achiev->category_idfs]->user_achievements[] = $nextLevel5;
+                                                        $nextLevel6 = $this->getNextLevelAchievement($nextLevel5, $me);
+                                                        if(is_object($nextLevel6)) {
+                                                            if($nextLevel6->progress >= $nextLevel6->goal) {
+                                                                $achievementCategories[$achiev->category_idfs]->user_achievements[] = $nextLevel6;
+                                                                $nextLevel7 = $this->getNextLevelAchievement($nextLevel6, $me);
+                                                                if(is_object($nextLevel7)) {
+                                                                    if($nextLevel7->progress >= $nextLevel7->goal) {
+                                                                        $achievementCategories[$achiev->category_idfs]->user_achievements[] = $nextLevel7;
+                                                                        $nextLevel8 = $this->getNextLevelAchievement($nextLevel7, $me);
+                                                                        if(is_object($nextLevel8)) {
+                                                                            if($nextLevel8->progress >= $nextLevel8->goal) {
+                                                                                $achievementCategories[$achiev->category_idfs]->user_achievements[] = $nextLevel8;
+                                                                                $nextLevel9 = $this->getNextLevelAchievement($nextLevel8, $me);
+                                                                                if(is_object($nextLevel9)) {
+                                                                                    if($nextLevel9->progress >= $nextLevel9->goal) {
+                                                                                        $achievementCategories[$achiev->category_idfs]->user_achievements[] = $nextLevel9;
+                                                                                        $nextLevel10 = $this->getNextLevelAchievement($nextLevel9, $me);
+                                                                                        if(is_object($nextLevel10)) {
+                                                                                            if($nextLevel10->progress >= $nextLevel10->goal) {
+                                                                                                $achievementCategories[$achiev->category_idfs]->user_achievements[] = $nextLevel10;
+                                                                                                $nextLevel11 = $this->getNextLevelAchievement($nextLevel10, $me);
+                                                                                                if (is_object($nextLevel11)) {
+                                                                                                    if($nextLevel11->progress >= $nextLevel11->goal) {
+                                                                                                        $achievementCategories[$achiev->category_idfs]->user_achievements[] = $nextLevel11;
+                                                                                                    }
+                                                                                                }
+                                                                                            } else {
+                                                                                                $achievementCategories[$achiev->category_idfs]->achievements[] = $nextLevel10;
+                                                                                            }
+                                                                                        }
+                                                                                    } else {
+                                                                                        $achievementCategories[$achiev->category_idfs]->achievements[] = $nextLevel9;
+                                                                                    }
+                                                                                }
+                                                                            } else {
+                                                                                $achievementCategories[$achiev->category_idfs]->achievements[] = $nextLevel8;
+                                                                            }
+                                                                        }
+                                                                    } else {
+                                                                        $achievementCategories[$achiev->category_idfs]->achievements[] = $nextLevel7;
+                                                                    }
+                                                                }
+                                                            } else {
+                                                                $achievementCategories[$achiev->category_idfs]->achievements[] = $nextLevel6;
+                                                            }
+                                                        }
+                                                    } else {
+                                                        $achievementCategories[$achiev->category_idfs]->achievements[] = $nextLevel5;
+                                                    }
+                                                }
+                                            } else {
+                                                $achievementCategories[$achiev->category_idfs]->achievements[] = $nextLevel4;
+                                            }
                                         }
                                     } else {
                                         $achievementCategories[$achiev->category_idfs]->achievements[] = $nextLevel3;
@@ -384,6 +502,66 @@ class AchievementResource extends AbstractResourceListener
                         break;
                     case 'offer-cpx':
                         $progress = $this->mOfferwallUserTbl->select(['user_idfs' => $me->User_ID,'offerwall_idfs' => 1])->count();
+                        break;
+                    case 'miningtime':
+                        $progressFound = $this->mUserSetTbl->select(['setting_name' => 'gpuminer-totalhours','user_idfs' => $me->User_ID]);
+                        if(count($progressFound) > 0) {
+                            $progress = (int)$progressFound->current()->setting_value;
+                        }
+                        break;
+                    case 'gpushares':
+                        $progressFound = $this->mUserSetTbl->select(['setting_name' => 'gpuminer-totalshares','user_idfs' => $me->User_ID]);
+                        if(count($progressFound) > 0) {
+                            $progress = (int)$progressFound->current()->setting_value;
+                        }
+                        break;
+                    case 'nighthours':
+                        $progressFound = $this->mUserSetTbl->select(['setting_name' => 'gpuminer-nighthours','user_idfs' => $me->User_ID]);
+                        if(count($progressFound) > 0) {
+                            $progress = (int)$progressFound->current()->setting_value;
+                        }
+                        break;
+                    case 'nightdays':
+                        $progressFound = $this->mUserSetTbl->select(['setting_name' => 'gpuminer-nighthours','user_idfs' => $me->User_ID]);
+                        if(count($progressFound) > 0) {
+                            $progress = round($progressFound->current()->setting_value/5);
+                        }
+                        break;
+                    case 'miningmonth':
+                        $progressFound = $this->mUserSetTbl->select(['setting_name' => 'gpuminer-totaldays','user_idfs' => $me->User_ID]);
+                        if(count($progressFound) > 0) {
+                            $progress = (int)$progressFound->current()->setting_value;
+                        }
+                        break;
+                    case 'faucethour':
+                        $progressFound = $this->mUserSetTbl->select(['setting_name' => 'faucet-claimtimes','user_idfs' => $me->User_ID]);
+                        if(count($progressFound) > 0) {
+                            $progress = (int)$progressFound->current()->setting_value;
+                        }
+                        break;
+                    case 'faucetdaily':
+                        $progressFound = $this->mUserSetTbl->select(['setting_name' => 'faucet-claimdays','user_idfs' => $me->User_ID]);
+                        if(count($progressFound) > 0) {
+                            $progress = (int)$progressFound->current()->setting_value;
+                        }
+                        break;
+                    case 'wthcurrency':
+                        $progressFound = $this->mUserSetTbl->select(['setting_name' => 'withdraw-coins','user_idfs' => $me->User_ID]);
+                        if(count($progressFound) > 0) {
+                            $progress = count((array)json_decode($progressFound->current()->setting_value));
+                        }
+                        break;
+                    case 'withdrawal':
+                        $progressFound = $this->mUserSetTbl->select(['setting_name' => 'withdraw-total','user_idfs' => $me->User_ID]);
+                        if(count($progressFound) > 0) {
+                            $progress = (int)$progressFound->current()->setting_value;
+                        }
+                        break;
+                    case 'earning':
+                        $progressFound = $this->mUserSetTbl->select(['setting_name' => 'totalearned-coins','user_idfs' => $user->User_ID]);
+                        if(count($progressFound) > 0) {
+                            $progress = (int)$progressFound->current()->setting_value;
+                        }
                         break;
                     default:
                         break;
@@ -522,6 +700,12 @@ class AchievementResource extends AbstractResourceListener
                             }
                         }
                         $achievement->done = $totalShares;
+                        break;
+                    case 'miningtime':
+                        $progressFound = $this->mUserSetTbl->select(['setting_name' => 'gpuminer-totalhours','user_idfs' => $me->User_ID]);
+                        if(count($progressFound) > 0) {
+                            $achievement->done = $progressFound->current()->setting_value;
+                        }
                         break;
                     default:
                         $achievement->done = 0;

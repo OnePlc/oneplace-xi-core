@@ -21,10 +21,13 @@ use Faucet\Tools\UserTools;
 use Faucet\Transaction\TransactionHelper;
 use Laminas\ApiTools\ApiProblem\ApiProblem;
 use Laminas\ApiTools\ApiProblem\ApiProblemResponse;
+use Laminas\Db\Sql\Select;
 use Laminas\Db\TableGateway\TableGateway;
 use Laminas\Db\Sql\Where;
 use Laminas\Mvc\Controller\AbstractActionController;
 use Laminas\Http\Client;
+use Laminas\Paginator\Adapter\DbSelect;
+use Laminas\Paginator\Paginator;
 
 class TokenController extends AbstractActionController
 {
@@ -77,6 +80,22 @@ class TokenController extends AbstractActionController
     protected $mTokenBuyTbl;
 
     /**
+     * Token Pay Table
+     *
+     * @var TableGateway $mTokenPayTbl
+     * @since 1.0.0
+     */
+    protected $mTokenPayTbl;
+
+    /**
+     * Token Pay History Table
+     *
+     * @var TableGateway $mTokenPayHistoryTbl
+     * @since 1.0.0
+     */
+    protected $mTokenPayHistoryTbl;
+
+    /**
      * Constructor
      *
      * TokenController constructor.
@@ -91,6 +110,8 @@ class TokenController extends AbstractActionController
         $this->mWalletTbl = new TableGateway('faucet_wallet', $mapper);
         $this->mUserSetTbl = new TableGateway('user_setting', $mapper);
         $this->mTokenBuyTbl = new TableGateway('faucet_tokenbuy', $mapper);
+        $this->mTokenPayTbl = new TableGateway('faucet_tokenpay', $mapper);
+        $this->mTokenPayHistoryTbl = new TableGateway('faucet_tokenpay_history', $mapper);
     }
 
     /**
@@ -206,6 +227,48 @@ class TokenController extends AbstractActionController
             }
             $tokenLeft = 100-$tokenBuyedToday;
 
+            $paymentInfo = $this->mTokenPayTbl->select(['week' => 22, 'year' => 2021]);
+            $lastPayment = 0;
+            $tokenValue = 0;
+            $linkedTokens = 0;
+            if(count($paymentInfo) > 0) {
+                $paymentInfo = $paymentInfo->current();
+                $lastPayment = $paymentInfo->payment_total;
+                $tokenValue = $paymentInfo->coins_per_token;
+                $linkedTokens = $paymentInfo->tokens_circulating;
+            }
+
+            # Compile history
+            $page = (isset($_REQUEST['page'])) ? filter_var($_REQUEST['page'], FILTER_SANITIZE_NUMBER_INT) : 1;
+            $pageSize = 10;
+
+            $stakingHistory = [];
+            $historySel = new Select($this->mTokenPayHistoryTbl->getTable());
+            $historySel->where(['user_idfs' => $me->User_ID]);
+            $historySel->order('week DESC');
+            # Create a new pagination adapter object
+            $oPaginatorAdapterStak = new DbSelect(
+            # our configured select object
+                $historySel,
+                # the adapter to run it against
+                $this->mTokenPayHistoryTbl->getAdapter()
+            );
+            # Create Paginator with Adapter
+            $stakPaginated = new Paginator($oPaginatorAdapterStak);
+            $stakPaginated->setCurrentPageNumber($page);
+            $stakPaginated->setItemCountPerPage($pageSize);
+            foreach($stakPaginated as $stak) {
+                $stakingHistory[] = (object)[
+                    'week' => $stak->week,
+                    'year' => $stak->year,
+                    'wallet' => $stak->wallet,
+                    'coins' => $stak->coins,
+                    'token' => $stak->token,
+                ];
+            }
+
+            $totalStakingHistory = $this->mTokenPayHistoryTbl->select(['user_idfs' => $me->User_ID])->count();
+
             return [
                 '_links' => [],
                 '_embedded' => [
@@ -216,6 +279,13 @@ class TokenController extends AbstractActionController
                         'today_left' => $tokenLeft,
                     ],
                     'token' => [
+                        'history' => [
+                          'total_items' => $totalStakingHistory,
+                          'items' => $stakingHistory,
+                          'page' => $page,
+                          'page_size' => $pageSize,
+                          'page_count' => (round($totalStakingHistory/$pageSize) > 0) ? round($totalStakingHistory/$pageSize) : 1,
+                        ],
                         'price' => 2500,
                         'wallet_bch' => $walletBCH,
                         'wallet_ltc' => $walletLTC,
@@ -224,8 +294,9 @@ class TokenController extends AbstractActionController
                         'zen_price' => number_format($amountCryptoZEN,8),
                         'total' => 21000000,
                         'sold' => (int)$soldToken,
-                        'last_payment' => 1,
-                        'value' => 0.001,
+                        'linked' => $linkedTokens,
+                        'last_payment' => $lastPayment,
+                        'value' => $tokenValue,
                     ],
                 ]
             ];

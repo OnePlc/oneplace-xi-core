@@ -8,6 +8,7 @@
 
 namespace Application;
 
+use Application\Controller\IndexControllerFactory;
 use Laminas\ServiceManager\Factory\InvokableFactory;
 
 return [
@@ -51,7 +52,7 @@ return [
     ],
     'controllers' => [
         'factories' => [
-            Controller\IndexController::class => InvokableFactory::class,
+            Controller\IndexController::class => IndexControllerFactory::class,
             Controller\FirewallController::class => InvokableFactory::class,
         ],
     ],

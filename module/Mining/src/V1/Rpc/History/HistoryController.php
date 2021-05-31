@@ -131,12 +131,29 @@ class HistoryController extends AbstractActionController
                 }
             }
 
+            # get current hashrate for cpu miner
+            $cpuCurrentHash = 0;
+            $bcpuHashFound = $this->mUserTools->getSetting($me->User_ID, 'cpuminer-currenthashrate');
+            if($bcpuHashFound) {
+                $cpuCurrentHash = number_format($bcpuHashFound, 2);
+            }
+            $bcpuPoolFound = $this->mUserTools->getSetting($me->User_ID, 'cpuminer-currentpool');
+            $cpuPoolUrl = "#";
+            if($bcpuPoolFound) {
+                $poolUrlDB = $this->mSecTools->getCoreSetting('nanopool-'.$bcpuPoolFound);
+                if($poolUrlDB) {
+                    $cpuPoolUrl = $poolUrlDB;
+                }
+            }
+
             return [
                 '_self' => [],
                 '_embedded' => [
                     'gpu_current_hash' => $gpuCurrentHash,
+                    'cpu_current_hash' => $cpuCurrentHash,
                     'total_items' => $totalHistory,
                     'pool_url' => $poolUrl.'/swissfaucetio'.$me->User_ID,
+                    'cpu_pool_url' => $cpuPoolUrl.'/swissfaucetio'.$me->User_ID,
                     'page' => $page,
                     'page_size' => $pageSize,
                     'page_count' => (round($totalHistory / $pageSize) > 0) ? round($totalHistory / $pageSize) : 1,

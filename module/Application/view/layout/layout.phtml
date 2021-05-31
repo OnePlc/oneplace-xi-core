@@ -4,7 +4,7 @@
     <meta charset="utf-8">
     <meta name="robots" content="noindex">
 <?php
-echo $this->headTitle('Swissfaucet.io API Server');
+echo $this->headTitle($this->appTitle.' API Server');
 
 echo $this->headMeta()->appendName('viewport', 'width=device-width, initial-scale=1.0');
 
@@ -25,7 +25,9 @@ echo $this->headScript()
         <hr>
         <div class="container center-block"><div class="row">
             <div class="col-sm-4">
-                &copy; <?= date('Y') ?> <a href="https://swissfaucet.io">Swissfaucet.io</a>
+                &copy; <?= date('Y') ?> <a href="https://swissfaucet.io">
+                    <?=$this->appTitle?>
+                </a>
             </div>
         </div></div>
     </footer>

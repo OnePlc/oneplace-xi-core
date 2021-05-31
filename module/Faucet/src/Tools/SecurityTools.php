@@ -214,9 +214,25 @@ class SecurityTools extends AbstractResourceListener {
         $blacklist = json_decode($blacklist->current()->settings_value);
         $blackIndex = [];
         foreach($blacklist as $bl) {
-            $blackIndex[$bl] = true;
+            $blackIndex[strtolower($bl)] = true;
         }
         return $blackIndex;
+    }
+
+    public function usernameBlacklistCheck($username) {
+        $blacklist = $this->mSettingsTbl->select(['settings_key' => 'username-blacklist']);
+        if(count($blacklist) == 0) {
+            return true;
+        }
+        $blacklist = json_decode($blacklist->current()->settings_value);
+        foreach($blacklist as $bl) {
+            $check = stripos(strtolower($username), strtolower($bl));
+            if($check !== false) {
+                return false;
+            }
+        }
+
+        return true;
     }
 
     public function getCoreSetting($key) {

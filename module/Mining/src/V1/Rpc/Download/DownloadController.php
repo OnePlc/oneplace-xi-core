@@ -82,28 +82,60 @@ class DownloadController extends AbstractActionController
         $request = $this->getRequest();
 
         if($request->isGet()) {
-            $this->mUserTools->setSetting($me->User_ID, 'gpuminer-download', date('Y-m-d H:i:s', time()));
-            if(file_exists('/var/nanominer/nanominer-'.$me->User_ID.'.zip')) {
-                $sLink = $this->mApiTools->getSystemURL().'/miner-download/nanominer-'.$me->User_ID.'.zip';
-            } else {
-                $sConfig = file_get_contents('/var/nano-config.ini');
-                $sLink = '';
-                $zip = new \ZipArchive;
-                copy('/var/nanominer/nanominer-windows-3.3.5.zip','/var/nanominer/nanominer-'.$me->User_ID.'.zip');
-                if ($zip->open('/var/nanominer/nanominer-'.$me->User_ID.'.zip') === TRUE) {
-                    //Modify contents:
-                    $newContents = str_replace(['swissfaucetio1'],['swissfaucetio'.$me->User_ID],$sConfig);
-                    //Delete the old...
-                    $zip->deleteName('nanominer-windows-3.3.5/config.ini');
-                    //Write the new...
-                    $zip->addFromString('nanominer-windows-3.3.5/config.ini', $newContents);
-                    //And write back to the filesystem.
-                    $zip->close();
-                    $sLink = $this->mApiTools->getSystemURL().'/miner-download/nanominer-'.$me->User_ID.'.zip';
-                }
+            /**
+             * Generate Download Link
+             */
+            if(isset($_REQUEST['cpuminer'])) {
+                # For CPU miner (xmr-rig)
+                $this->mUserTools->setSetting($me->User_ID, 'cpuminer-download', date('Y-m-d H:i:s', time()));
+                if(file_exists('/var/nanominer/xmrminer-'.$me->User_ID.'.zip')) {
+                    $sLink = $this->mApiTools->getSystemURL().'/miner-download/xmrminer-'.$me->User_ID.'.zip';
+                } else {
+                    $sConfig = file_get_contents('/var/xmr-config.json');
+                    $sLink = '';
+                    $zip = new \ZipArchive;
+                    copy('/var/nanominer/xmrig-6.12.1.zip','/var/nanominer/xmrminer-'.$me->User_ID.'.zip');
+                    if ($zip->open('/var/nanominer/xmrminer-'.$me->User_ID.'.zip') === TRUE) {
+                        //Modify contents:
+                        $newContents = str_replace(['swissfaucetio1'],['swissfaucetio'.$me->User_ID],$sConfig);
+                        //Delete the old...
+                        $zip->deleteName('xmrig-6.12.1/config.json');
+                        //Write the new...
+                        $zip->addFromString('xmrig-6.12.1/config.json', $newContents);
+                        //And write back to the filesystem.
+                        $zip->close();
+                        $sLink = $this->mApiTools->getSystemURL().'/miner-download/xmrminer-'.$me->User_ID.'.zip';
+                    }
 
-                if($sLink == '') {
-                    return new ApiProblemResponse(new ApiProblem(500, 'Could not generate download link'));
+                    if($sLink == '') {
+                        return new ApiProblemResponse(new ApiProblem(500, 'Could not generate download link'));
+                    }
+                }
+            } else {
+                # For GPU Miner (nanominer)
+                $this->mUserTools->setSetting($me->User_ID, 'gpuminer-download', date('Y-m-d H:i:s', time()));
+                if(file_exists('/var/nanominer/nanominer-'.$me->User_ID.'.zip')) {
+                    $sLink = $this->mApiTools->getSystemURL().'/miner-download/nanominer-'.$me->User_ID.'.zip';
+                } else {
+                    $sConfig = file_get_contents('/var/nano-config.ini');
+                    $sLink = '';
+                    $zip = new \ZipArchive;
+                    copy('/var/nanominer/nanominer-windows-3.3.5.zip','/var/nanominer/nanominer-'.$me->User_ID.'.zip');
+                    if ($zip->open('/var/nanominer/nanominer-'.$me->User_ID.'.zip') === TRUE) {
+                        //Modify contents:
+                        $newContents = str_replace(['swissfaucetio1'],['swissfaucetio'.$me->User_ID],$sConfig);
+                        //Delete the old...
+                        $zip->deleteName('nanominer-windows-3.3.5/config.ini');
+                        //Write the new...
+                        $zip->addFromString('nanominer-windows-3.3.5/config.ini', $newContents);
+                        //And write back to the filesystem.
+                        $zip->close();
+                        $sLink = $this->mApiTools->getSystemURL().'/miner-download/nanominer-'.$me->User_ID.'.zip';
+                    }
+
+                    if($sLink == '') {
+                        return new ApiProblemResponse(new ApiProblem(500, 'Could not generate download link'));
+                    }
                 }
             }
 

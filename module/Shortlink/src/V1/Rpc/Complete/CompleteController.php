@@ -134,8 +134,8 @@ class CompleteController extends AbstractActionController
                 }
                 $linkInfo = $linkInfo->current();
                 $bHostFound = stripos($_SERVER['HTTP_REFERER'], $linkInfo->refer_check);
-                //$bCanSkip = ($_SERVER['HTTP_REFERER'] == NULL && $linkInfo->refer_check == NULL);
-                $bCanSkip = false;
+                $bCanSkip = ($_SERVER['HTTP_REFERER'] == NULL && $linkInfo->refer_check == NULL);
+                //$bCanSkip = false;
                 if($bHostFound === false && !$bCanSkip) {
                     echo 'invalid referer '.$_SERVER['HTTP_REFERER'].' != '.$linkInfo->refer_check;
                 } else {

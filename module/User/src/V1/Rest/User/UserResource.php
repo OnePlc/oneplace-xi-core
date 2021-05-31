@@ -208,6 +208,9 @@ class UserResource extends AbstractResourceListener
         if(isset($data->ref_id)) {
             $checkFields[] = $data->ref_id;
         }
+        if(isset($data->captcha_mode)) {
+            $checkFields[] = $data->captcha_mode;
+        }
         if(isset($data->development)) {
             $checkFields[] = $data->development;
         }
@@ -220,12 +223,19 @@ class UserResource extends AbstractResourceListener
         $password = filter_var($data->password, FILTER_SANITIZE_STRING);
         $passwordCheck = filter_var($data->passverify, FILTER_SANITIZE_STRING);
         $captcha = filter_var($data->captcha, FILTER_SANITIZE_STRING);
+        $captchaMode = filter_var($data->captcha_mode, FILTER_SANITIZE_STRING);
         $terms = filter_var($data->terms, FILTER_SANITIZE_NUMBER_INT);
         $refId = filter_var((isset($data->ref_id)) ? $data->ref_id : 0, FILTER_SANITIZE_NUMBER_INT);
         $development = filter_var((isset($data->development)) ? $data->development : '', FILTER_SANITIZE_NUMBER_INT);
 
-        # check captcha
-        $captchaSecret = $this->mSettingsTbl->select(['settings_key' => 'recaptcha-secret-login']);
+        # Check which captcha secret key we should load
+        $captchaKey = 'recaptcha-secret-login';
+        if($captchaMode == 'app') {
+            $captchaKey = 'recaptcha-app-secretkey';
+        }
+
+        # check captcha (google v2)
+        $captchaSecret = $this->mSettingsTbl->select(['settings_key' => $captchaKey]);
         if(count($captchaSecret) > 0) {
             $captchaSecret = $captchaSecret->current()->settings_value;
             $response = ClientStatic::post(
@@ -262,11 +272,20 @@ class UserResource extends AbstractResourceListener
         ]);
         if(count($sessCheck) > 0) {
             $aUsersByIp = [];
+            $lastTime = 0;
             foreach($sessCheck as $oSess) {
                 $aUsersByIp[$oSess->user_idfs] = 1;
+                $time = strtotime($oSess->date_created);
+                if($time > $lastTime) {
+                    $lastTime = $time;
+                }
             }
             if(count($aUsersByIp) > 5) {
                 return new ApiProblem(400, 'It is not allowed to have multiple accounts per household / ip. Please contact admin@swissfaucet.io if this is your first account.');
+            } else {
+                if(time()-$lastTime <= 3600) {
+                    return new ApiProblem(400, 'There is already an account created from this ip. Please contact support if you think this is wrong. admin@swissfaucet.io');
+                }
             }
         }
 
@@ -285,11 +304,18 @@ class UserResource extends AbstractResourceListener
                 return new ApiProblem(400, 'Username is already taken');
             }
         }
-        if(array_key_exists($username, $this->mSecTools->getUsernameBlacklist()) || empty($username) || strlen($username) < 3) {
+        /**
+        if(!$this->mSecTools->usernameBlacklistCheck($username) || empty($username) || strlen($username) < 3) {
+            return new ApiProblem(400, 'Username not valid. Please choose another one.');
+        }**/
+        if(empty($username) || strlen($username) < 3) {
+            return new ApiProblem(400, 'Username not valid. Please choose another one.');
+        }
+        if(!$this->mSecTools->usernameBlacklistCheck($username)) {
             return new ApiProblem(400, 'Username not valid. Please choose another one.');
         }
 
-        # check email
+            # check email
         $existingUser = $this->mapper->select(['email' => $email]);
         if(count($existingUser) > 0) {
             return new ApiProblem(400, 'There is already an account with that e-mail. please use login.');

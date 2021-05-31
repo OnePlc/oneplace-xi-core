@@ -15,13 +15,37 @@ use Laminas\Db\TableGateway\TableGateway;
 
 class IndexController extends AbstractActionController
 {
+    private $mapper;
+
+    /**
+     * Constructor
+     *
+     * IndexController constructor.
+     * @param $mapper
+     * @since 1.0.0
+     */
+    public function __construct($mapper)
+    {
+        $this->mapper = $mapper;
+    }
+
     public function indexAction()
     {
         /**
         if (class_exists(AdminModule::class, false)) {
             return $this->redirect()->toRoute('api-tools/ui');
         } **/
-        return new ViewModel();
+
+        $settingsTbl = new TableGateway('settings', $this->mapper);
+        $apiName = $settingsTbl->select(['settings_key' => 'app-title']);
+        $apiTitle = '-';
+        if(count($apiName) > 0) {
+            $apiTitle = $apiName->current()->settings_value;
+        }
+        $this->layout()->appTitle = $apiTitle;
+        return new ViewModel([
+            'title' => $apiTitle
+        ]);
     }
 
     /**
