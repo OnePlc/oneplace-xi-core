@@ -178,9 +178,13 @@ class DailytaskResource extends AbstractResourceListener
         if(!isset($_REQUEST['platform'])) {
             return new ApiProblem(400, 'You must specify a plattform (website|app)');
         }
+        $source = 'website';
         $platform = filter_var($_REQUEST['platform'], FILTER_SANITIZE_STRING);
         if($platform != 'website' && $platform != 'app') {
             return new ApiProblem(400, 'You must specify a plattform (website|app)');
+        }
+        if($platform == 'app') {
+            $source = 'android';
         }
 
         $sDate = date('Y-m-d', time());
@@ -196,11 +200,13 @@ class DailytaskResource extends AbstractResourceListener
         $oWh = new Where();
         $oWh->equalTo('user_idfs', $me->User_ID);
         $oWh->like('date', $sDate.'%');
+        $oWh->like('source', $source);
         $claimsDone = $this->mClaimTbl->select($oWh)->count();
 
         $oWh = new Where();
         $oWh->equalTo('user_idfs', $me->User_ID);
         $oWh->like('date', $sDate.'%');
+        $oWh->like('platform', 'web');
         $dailysDone = $this->mTaskDoneTbl->select($oWh)->count();
 
         # Load Dailytasks
@@ -373,6 +379,7 @@ class DailytaskResource extends AbstractResourceListener
                         $oWh = new Where();
                         $oWh->equalTo('user_idfs', $me->User_ID);
                         $oWh->like('date', $sDate.'%');
+                        $oWh->like('platform', 'web');
                         $iDailysDone = $this->mTaskDoneTbl->select($oWh)->count();
                         if($dailyTask->goal > $iDailysDone) {
                             return new ApiProblem(409, 'Daily Task '.$dailyTask->label.' is not completed ('.$iDailysDone.'/'.$dailyTask->goal.')');
@@ -389,6 +396,7 @@ class DailytaskResource extends AbstractResourceListener
                     $this->mTaskDoneTbl->insert([
                         'user_idfs' => $me->User_ID,
                         'task_idfs' => $iTaskID,
+                        'platform' => 'web',
                         'date' => date('Y-m-d H:i:s', time()),
                     ]);
                 } else {

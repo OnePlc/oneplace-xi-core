@@ -158,6 +158,8 @@ class HistoryController extends AbstractActionController
                     'page_size' => $pageSize,
                     'page_count' => (round($totalHistory / $pageSize) > 0) ? round($totalHistory / $pageSize) : 1,
                     'history' => $miningHistory,
+                    'show_info' => true,
+                    'show_info_msg' => 'There was a problem with the Mining Batch. Its working again. We will add the missing hours. Sorry for the bug.'
                 ]
             ];
         }

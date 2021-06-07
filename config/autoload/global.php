@@ -23,6 +23,7 @@ return [
                 'Support\\V1' => 'oneplace',
                 'Laminas\\ApiTools\\OAuth2' => 'session',
                 'Mining\\V1' => 'oneplace',
+                'PTC\\V1' => 'oneplace',
             ],
         ],
         'adapters' => [
