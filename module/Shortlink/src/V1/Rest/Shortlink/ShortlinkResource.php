@@ -199,7 +199,7 @@ class ShortlinkResource extends AbstractResourceListener
             $oWhDone = new Where();
             $oWhDone->equalTo('user_idfs', $me->User_ID);
             $oWhDone->equalTo('shortlink_idfs',  $provider->Shortlink_ID);
-            $oWhDone->greaterThanOrEqualTo('date_started', date('Y-m-d H:i:s', strtotime('-24 hours')));
+            $oWhDone->greaterThanOrEqualTo('date_started', date('Y-m-d H:i:s', strtotime('-23 hours')));
             $linksDone = $this->mShortDoneTbl->select($oWhDone)->count();
 
 
@@ -213,7 +213,7 @@ class ShortlinkResource extends AbstractResourceListener
                         $oWhDone->equalTo('user_idfs', $me->User_ID);
                         $oWhDone->like('link_id', $lnk->link_id);
                         $oWhDone->equalTo('shortlink_idfs', $lnk->shortlink_idfs);
-                        $oWhDone->greaterThanOrEqualTo('date_started', date('Y-m-d H:i:s', strtotime('-24 hours')));
+                        $oWhDone->greaterThanOrEqualTo('date_started', date('Y-m-d H:i:s', strtotime('-23 hours')));
                         $checkLnk = $this->mShortDoneTbl->select($oWhDone);
 
                         # if not started, start it now and choose this link
@@ -313,7 +313,7 @@ class ShortlinkResource extends AbstractResourceListener
                     $oWhDone->equalTo('user_idfs', $me->User_ID);
                     $oWhDone->notLike('link_url', null);
                     $oWhDone->equalTo('shortlink_idfs', $lnk->shortlink_idfs);
-                    $oWhDone->greaterThanOrEqualTo('date_started', strtotime('-24 hours'));
+                    $oWhDone->greaterThanOrEqualTo('date_started', strtotime('-23 hours'));
                     $oWhDone->like('date_claimed', '0000-00-00 00:00:00');
                     $oWhDone->like('date_completed', '0000-00-00 00:00:00');
                     $checkLnk = $this->mShortDoneTbl->select($oWhDone);
@@ -371,31 +371,30 @@ class ShortlinkResource extends AbstractResourceListener
         $totalReward = 0;
         foreach($shortlinksDB as $sh) {
             # get links for provider
-            $links = $this->mShortTbl->select(['shortlink_idfs' => $sh->Shortlink_ID]);
             $shortlinksById[$sh->Shortlink_ID] = ['name' =>  $sh->label,'reward' =>  $sh->reward];
             # Count links for provider
-            $totalLinks+=count($links);
-            $sh->linksTotal = count($links);
+            $totalLinks+=$sh->views_per_day;
+            $sh->linksTotal = $sh->views_per_day;
 
             $sh->last_done = "";
             $sh->unlock_in = 0;
 
             # check for completed links for user
-            $linksDone = [];
+            $linksDone = 0;
             $oWh = new Where();
             $oWh->equalTo('shortlink_idfs', $sh->Shortlink_ID);
             //$oWh->like('link_id', $lnk->link_id);
             $oWh->equalTo('user_idfs', $me->User_ID);
-            $oWh->greaterThanOrEqualTo('date_completed', date('Y-m-d H:i:s', strtotime('-24 hours')));
+            $oWh->greaterThanOrEqualTo('date_completed', date('Y-m-d H:i:s', strtotime('-23 hours')));
             $slCheck = $this->mShortDoneTbl->select($oWh);
             if(count($slCheck) > 0) {
                 foreach($slCheck as $check) {
-                    $linksDone[] = $check;
+                    $linksDone++;
                     $sh->last_done = $check->date_completed;
-                    $sh->unlock_in = strtotime($check->date_completed)+(24*3600)-time();
+                    $sh->unlock_in = strtotime($check->date_completed)+(23*3600)-time();
                 }
             }
-            $sh->linksDone = count($linksDone);
+            $sh->linksDone = $linksDone;
             $totalReward+=($sh->linksTotal-$sh->linksDone)*$sh->reward;
 
             $shortlinks[] = (object)[
@@ -443,7 +442,7 @@ class ShortlinkResource extends AbstractResourceListener
 
         $totalDone24Wh = new Where();
         $totalDone24Wh->equalTo('user_idfs', $me->User_ID);
-        $totalDone24Wh->greaterThanOrEqualTo('date_completed', date('Y-m-d H:i:s', strtotime('-24 hours')));
+        $totalDone24Wh->greaterThanOrEqualTo('date_completed', date('Y-m-d H:i:s', strtotime('-23 hours')));
         $totalLinksDone24h = $this->mShortDoneTbl->select($totalDone24Wh)->count();
 
         $totalDoneWh = new Where();

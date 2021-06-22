@@ -539,6 +539,28 @@ class GuildResource extends AbstractResourceListener
             }
         }
 
+        /**
+         * Check if user is part of guild
+         */
+        $checkWh = new Where();
+        $checkWh->equalTo('user_idfs', $me->User_ID);
+        $checkWh->equalTo('guild_idfs', $guild->Guild_ID);
+        $checkWh->notLike('date_joined', '0000-00-00 00:00:00');
+        $userJoinedGuild = $this->mGuildUserTbl->select($checkWh);
+
+        $myRank = (object)[];
+        if(count($userJoinedGuild) > 0) {
+            $guildRank = $userJoinedGuild->current();
+            $rankDB = $this->mGuildRankTbl->select([
+                'guild_idfs' => $guild->Guild_ID,
+                'level' => $guildRank->rank,
+            ]);
+            if(count($rankDB) > 0) {
+                $rank = $rankDB->current()->label;
+                $myRank = (object)['id' => (int)$guildRank->rank, 'name' => $rank];
+            }
+        }
+
         return (object)[
             'guild' => (object)[
                 'id' => $guild->Guild_ID,
@@ -554,6 +576,7 @@ class GuildResource extends AbstractResourceListener
                 'welcome_message' => $guild->welcome_message,
                 'tasks' => $weeklyTasks,
                 'ranks' => $ranks,
+                'my_rank' => $myRank,
                 'achievements' => $achievements,
                 'total_members' => $totalMembers,
                 'total_requests' => $totalRequests,
@@ -848,6 +871,72 @@ class GuildResource extends AbstractResourceListener
                         return new ApiProblem(400, 'Guild Balance is too low for rename');
                     }
 
+                }
+
+                # check if rank should be updated
+                if(isset($data->rank_name)) {
+                    $secResult = $this->mSecTools->basicInputCheck([$data->rank_name,$data->rank_id]);
+                    if($secResult !== 'ok') {
+                        # ban user and force logout on client
+                        $this->mUserSetTbl->insert([
+                            'user_idfs' => $me->User_ID,
+                            'setting_name' => 'user-tempban',
+                            'setting_value' => 'Potential '.$secResult.' Attack @ '.date('Y-m-d H:i:s').' Guild Rank Rename',
+                        ]);
+                        return new ApiProblem(418, 'Potential '.$secResult.' Attack - Goodbye');
+                    }
+
+                    # get new name
+                    $newName = filter_var($data->rank_name, FILTER_SANITIZE_STRING);
+                    $rankId = filter_var($data->rank_id, FILTER_SANITIZE_NUMBER_INT);
+
+                    # check if there is already a guild with a likely name
+                    $likeWh = new Where();
+                    $likeWh->equalTo('guild_idfs', $userGuildRole->guild_idfs);
+                    $likeWh->notEqualTo('level', $rankId);
+                    $likeWh->like('label', utf8_encode($newName));
+                    $nameUsed = $this->mGuildRankTbl->select($likeWh);
+                    if(count($nameUsed) > 0) {
+                        return new ApiProblem(400, 'There is already a rank with that name. Please choose another one');
+                    }
+                    # check if guild has enough balance for renaming
+                    $renamePrice = 500;
+                    if($this->mTransaction->checkGuildBalance($renamePrice, $userGuildRole->guild_idfs)) {
+
+                        $newBalance = $this->mTransaction->executeGuildTransaction($renamePrice, true,
+                            $userGuildRole->guild_idfs, $userGuildRole->guild_idfs,
+                            'rank-rename', 'Renamed Rank '.$rankId.' to '.$newName, $me->User_ID);
+
+                        # rename
+                        if($newBalance !== false) {
+                            $this->mGuildRankTbl->update([
+                                'label' => utf8_encode($newName),
+                            ],[
+                                'guild_idfs' => $userGuildRole->guild_idfs,
+                                'level' => $rankId
+                            ]);
+
+                            $ranks = [];
+                            $guildRanks = $this->mGuildRankTbl->select(['guild_idfs' => $userGuildRole->guild_idfs]);
+                            if(count($guildRanks) > 0) {
+                                foreach($guildRanks as $rank) {
+                                    $ranks[] = (object)[
+                                        'id' => $rank->level,
+                                        'name' => $rank->label,
+                                    ];
+                                }
+                            }
+
+                            return [
+                                'token_balance' => $newBalance,
+                                'ranks' => $ranks
+                            ];
+                        } else {
+                            return new ApiProblem(500, 'Transaction error. Please contact support.');
+                        }
+                    } else {
+                        return new ApiProblem(400, 'Guild Balance is too low for rank rename');
+                    }
                 }
 
                 # check if description should be updated

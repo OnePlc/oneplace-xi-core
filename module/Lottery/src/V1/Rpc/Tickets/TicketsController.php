@@ -134,7 +134,7 @@ class TicketsController extends AbstractActionController
         if($this->mTransaction->checkUserBalance($tickets*$ticketPrice,$me->User_ID)) {
             # buy the tickets
             $newBalance = $this->mTransaction->executeTransaction($tickets*$ticketPrice,true,$me->User_ID,$roundID,'lottery-ticket','Bought '.$tickets.' lottery tickets');
-            if($newBalance) {
+            if($newBalance !== false) {
                 # Check if User already has tickets
                 $userTickets = $this->mLotteryTkTbl->select([
                     'round_idfs' => $roundID,

@@ -149,6 +149,7 @@ class OfferwallResource extends AbstractResourceListener
             $offerwalls[] = (object)[
                 'id' => $offerwall->Offerwall_ID,
                 'url' => $offerwall->wall_name,
+                'background' => $offerwall->background,
                 'name' => $offerwall->label,
                 'time' => $offerwall->time,
                 'reward' => $offerwall->reward

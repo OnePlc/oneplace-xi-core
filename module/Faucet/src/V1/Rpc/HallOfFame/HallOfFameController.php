@@ -49,6 +49,14 @@ class HallOfFameController extends AbstractActionController
     protected $mUserTbl;
 
     /**
+     * Guild Table
+     *
+     * @var TableGateway $mGuildTbl
+     * @since 1.0.0
+     */
+    protected $mGuildTbl;
+
+    /**
      * Constructor
      *
      * UserResource constructor.
@@ -59,6 +67,7 @@ class HallOfFameController extends AbstractActionController
     {
         $this->mStatsTbl = new TableGateway('faucet_statistic', $mapper);
         $this->mUserTbl = new TableGateway('user', $mapper);
+        $this->mGuildTbl = new TableGateway('faucet_guild', $mapper);
         $this->mSecTools = new SecurityTools($mapper);
     }
 
@@ -127,10 +136,29 @@ class HallOfFameController extends AbstractActionController
             }
         }
 
+        $topGuilds = [];
+        $statSel = new Select($this->mGuildTbl->getTable());
+        $statSel->order('token_balance DESC');
+        $statSel->limit(6);
+        $topPlayerStats = $this->mGuildTbl->selectWith($statSel);
+        if(count($topPlayerStats) > 0) {
+            $rank = 1;
+            foreach($topPlayerStats as $top) {
+                $topGuilds[] = (object)[
+                    'name' => $top->label,
+                    'id' => $top->Guild_ID,
+                    'icon' => $top->icon,
+                    'rank' => $rank,
+                ];
+                $rank++;
+            }
+        }
+
         # Show Stats
         return new ViewModel([
             'date' => date('Y-m-d H:i:s'),
             'employees' => $employees,
+            'top_guilds' => $topGuilds,
             'top_earners' => $topEarners,
             'top_players' => $topPlayers,
             'top_winners' => $topEarners,

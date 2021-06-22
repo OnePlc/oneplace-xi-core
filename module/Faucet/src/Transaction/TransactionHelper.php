@@ -278,6 +278,17 @@ class TransactionHelper {
     }
 
     /**
+     * Get Total Count of Guild Transactions
+     *
+     * @param $guildId
+     * @return int
+     * @since 1.0.0
+     */
+    public function getGuildTransactionCount($guildId) {
+        return TransactionHelper::$mGuildTransTbl->select(['guild_idfs' => $guildId])->count();
+    }
+
+    /**
      * Get paginated Guild Transaction Log
      *
      * @param $guildId

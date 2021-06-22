@@ -140,6 +140,8 @@ class ReferralController extends AbstractActionController
             $bonusDate = $lastStat->date;
         }
 
+        $myRefLink = $this->mSecTools->getCoreSetting('app-url').'/ref/'.$me->User_ID;
+
         # Return referall info
         return new ViewModel([
             '_links' => [
@@ -152,6 +154,7 @@ class ReferralController extends AbstractActionController
             'bonus' => $myRefBonus,
             'bonus_date' => $bonusDate,
             'referrals' => $myRefs,
+            'link' => $myRefLink,
             'page' => $page,
             'page_count' => (round($myRefCount/$pageSize) > 0) ? round($myRefCount/$pageSize) : 1,
             'page_size' => $pageSize,

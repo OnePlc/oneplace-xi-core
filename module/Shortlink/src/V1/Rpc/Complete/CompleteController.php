@@ -133,11 +133,34 @@ class CompleteController extends AbstractActionController
                     return false;
                 }
                 $linkInfo = $linkInfo->current();
-                $bHostFound = stripos($_SERVER['HTTP_REFERER'], $linkInfo->refer_check);
+                $sCheck = $linkInfo->refer_check;
+                $bMultiCheck = stripos($sCheck, '|');
+                $bHostFound = false;
+                if($bMultiCheck === false) {
+                    $bHostFound = stripos($_SERVER['HTTP_REFERER'], $sCheck);
+                } else {
+                    $aChecks = explode('|', $sCheck);
+                    foreach($aChecks as $sCheckM) {
+                        $bHostFound = stripos($_SERVER['HTTP_REFERER'], $sCheckM);
+                        if ($bHostFound === false) {
+
+                        } else {
+                            break;
+                        }
+                    }
+                }
+
                 $bCanSkip = ($_SERVER['HTTP_REFERER'] == NULL && $linkInfo->refer_check == NULL);
                 //$bCanSkip = false;
-                if($bHostFound === false && !$bCanSkip) {
+                $bFixForNow = false;
+                if($_SERVER['HTTP_REFERER'] == NULL || $_SERVER['HTTP_REFERER'] == "") {
+                    $bFixForNow = true;
+                }
+                if($bHostFound === false && !$bCanSkip && !$bFixForNow) {
+                    echo '<div class="container">';
                     echo 'invalid referer '.$_SERVER['HTTP_REFERER'].' != '.$linkInfo->refer_check;
+                    $actual_link = "https://$_SERVER[HTTP_HOST]$_SERVER[REQUEST_URI]";
+                    echo '<br/><b>Please copy this link and send an E-Mail to <a href="mailto:admin@swissfaucet.io?subject=Please verify Shortlink&body='.$actual_link.'">admin@swissfaucet.io</a> - The Shortlink will be credited! You see this because there seems to be an issue with the shortlink verification. <b>Your Coins are not lost</b></b></div>';
                 } else {
                     if($shFound->date_completed == '0000-00-00 00:00:00') {
                         $this->mShortDoneTbl->update([

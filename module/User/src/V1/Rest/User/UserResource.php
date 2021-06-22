@@ -442,6 +442,10 @@ class UserResource extends AbstractResourceListener
             return $user;
         }
 
+        if($user->User_ID == 335875071) {
+            //return new ApiProblem(403, 'CUSTOM SERVER ERROR');
+        }
+
         # get user next level xp
         $oNextLvl = $this->mXPLvlTbl->select(['Level_ID' => ($user->xp_level + 1)])->current();
         $dPercent = 0;

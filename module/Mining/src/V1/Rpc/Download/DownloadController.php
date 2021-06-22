@@ -81,6 +81,14 @@ class DownloadController extends AbstractActionController
 
         $request = $this->getRequest();
 
+        $platform = 'windows';
+        if(isset($_REQUEST['platform'])) {
+            $platformNew = filter_var($_REQUEST['platform'], FILTER_SANITIZE_STRING);
+            if($platformNew == 'linux') {
+                $platform = 'linux';
+            }
+        }
+
         if($request->isGet()) {
             /**
              * Generate Download Link
@@ -114,23 +122,23 @@ class DownloadController extends AbstractActionController
             } else {
                 # For GPU Miner (nanominer)
                 $this->mUserTools->setSetting($me->User_ID, 'gpuminer-download', date('Y-m-d H:i:s', time()));
-                if(file_exists('/var/nanominer/nanominer-'.$me->User_ID.'.zip')) {
-                    $sLink = $this->mApiTools->getSystemURL().'/miner-download/nanominer-'.$me->User_ID.'.zip';
+                if(file_exists('/var/nanominer/nanominer-'.$me->User_ID.'-'.$platform.'.zip')) {
+                    $sLink = $this->mApiTools->getSystemURL().'/miner-download/nanominer-'.$me->User_ID.'-'.$platform.'.zip';
                 } else {
                     $sConfig = file_get_contents('/var/nano-config.ini');
                     $sLink = '';
                     $zip = new \ZipArchive;
-                    copy('/var/nanominer/nanominer-windows-3.3.5.zip','/var/nanominer/nanominer-'.$me->User_ID.'.zip');
-                    if ($zip->open('/var/nanominer/nanominer-'.$me->User_ID.'.zip') === TRUE) {
+                    copy('/var/nanominer/nanominer-'.$platform.'-3.3.5.zip','/var/nanominer/nanominer-'.$me->User_ID.'-'.$platform.'.zip');
+                    if ($zip->open('/var/nanominer/nanominer-'.$me->User_ID.'-'.$platform.'.zip') === TRUE) {
                         //Modify contents:
                         $newContents = str_replace(['swissfaucetio1'],['swissfaucetio'.$me->User_ID],$sConfig);
                         //Delete the old...
-                        $zip->deleteName('nanominer-windows-3.3.5/config.ini');
+                        $zip->deleteName('nanominer-'.$platform.'-3.3.5/config.ini');
                         //Write the new...
-                        $zip->addFromString('nanominer-windows-3.3.5/config.ini', $newContents);
+                        $zip->addFromString('nanominer-'.$platform.'-3.3.5/config.ini', $newContents);
                         //And write back to the filesystem.
                         $zip->close();
-                        $sLink = $this->mApiTools->getSystemURL().'/miner-download/nanominer-'.$me->User_ID.'.zip';
+                        $sLink = $this->mApiTools->getSystemURL().'/miner-download/nanominer-'.$me->User_ID.'-'.$platform.'.zip';
                     }
 
                     if($sLink == '') {

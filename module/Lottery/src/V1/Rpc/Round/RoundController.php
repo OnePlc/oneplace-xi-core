@@ -150,11 +150,18 @@ class RoundController extends AbstractActionController
                 $chanceWin = number_format(100/($totalTickets/$myTickets),8,'.','\'');
             }
 
+            $ticketPrice = 10;
+
             # Attach additional information to round
             $currentRound->winners_last_round = $winnersLastRound;
             $currentRound->my_tickets = $myTickets;
+            $currentRound->id = $currentRound->Round_ID;
             $currentRound->my_chance = $chanceWin;
             $currentRound->tickets = $totalTickets;
+            $currentRound->ticket_price = $ticketPrice;
+            $currentRound->jackpot = ($totalTickets*$ticketPrice)*.9;
+            $currentRound->message = $this->mSecTools->getCoreSetting('lottery-info');
+            $currentRound->message_level = $this->mSecTools->getCoreSetting('lottery-info-level');
 
             # Print Round Info
             return new ViewModel($currentRound);
