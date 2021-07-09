@@ -79,6 +79,14 @@ class TransactionHelper {
     private static $mWalletTbl;
 
     /**
+     * PTC Transaction Table
+     *
+     * @var TableGateway $mPTCTbl
+     * @since 1.0.0
+     */
+    private static $mPTCTbl;
+
+    /**
      * Constructor
      *
      * LoginController constructor.
@@ -88,6 +96,7 @@ class TransactionHelper {
     public function __construct($mapper)
     {
         TransactionHelper::$mTransTbl = new TableGateway('faucet_transaction', $mapper);
+        TransactionHelper::$mPTCTbl = new TableGateway('ptc_transaction', $mapper);
         TransactionHelper::$mUserTbl = new TableGateway('user', $mapper);
         TransactionHelper::$mGuildTbl = new TableGateway('faucet_guild', $mapper);
         TransactionHelper::$mSettingsTbl = new TableGateway('settings', $mapper);
@@ -236,6 +245,74 @@ class TransactionHelper {
     }
 
     /**
+     * Execute Faucet PTC Credit Transaction for User
+     *
+     * @param float $amount - Amount of Token to transfer
+     * @param bool $isInput - Defines if Transaction is Output
+     * @param int $userId - Target User ID
+     * @param int $refId - Reference ID for Transaction
+     * @param string $refType - Reference Type for Transaction
+     * @param string $description - Detailed Description for Transaction
+     * @param int $createdBy (optional) - Source User ID
+     * @since 1.0.0
+     */
+    public function executeCreditTransaction(float $amount, bool $isOutput, int $userId, int $refId,
+                                       string $refType)
+    {
+        # no negative transactions allowed
+        if($amount < 0) {
+            return false;
+        }
+
+        # Do not allow zero for update
+        if($userId == 0) {
+            return false;
+        }
+
+        # Generate Transaction ID
+        try {
+            $sTransactionID = $bytes = random_bytes(5);
+        } catch(\Exception $e) {
+            # Fallback if random bytes fails
+            $sTransactionID = time();
+        }
+        $sTransactionID = hash("sha256",$sTransactionID);
+
+        # Get user from database
+        $userInfo = TransactionHelper::$mUserTbl->select(['User_ID' => $userId]);
+        if(count($userInfo) > 0) {
+            $userInfo = $userInfo->current();
+            # calculate new balance
+            $newBalance = ($isOutput) ? $userInfo->credit_balance-$amount : $userInfo->credit_balance+$amount;
+            # Insert Transaction
+            if(TransactionHelper::$mPTCTbl->insert([
+                'Transaction_ID' => $sTransactionID,
+                'amount' => $amount,
+                'credit_balance' => $userInfo->credit_balance,
+                'credit_balance_new' => $newBalance,
+                'is_output' => ($isOutput) ? 1 : 0,
+                'date' => date('Y-m-d H:i:s', time()),
+                'ref_idfs' => $refId,
+                'ref_type' => $refType,
+                'user_idfs' => $userId,
+            ])) {
+                # update user balance
+                TransactionHelper::$mUserTbl->update([
+                    'credit_balance' => $newBalance,
+                    'last_action' => date('Y-m-d H:i:s', time()),
+                ],[
+                    'User_ID' => $userId
+                ]);
+                return $newBalance;
+            } else {
+                return false;
+            }
+        } else {
+            return false;
+        }
+    }
+
+    /**
      * Check if user has enough funds for transaction
      *
      * @param $amount
@@ -249,6 +326,27 @@ class TransactionHelper {
         if(count($userinfo) > 0) {
             $userinfo = $userinfo->current();
             if($userinfo->token_balance >= $amount) {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    /**
+     * Check if user has enough funds for transaction
+     *
+     * @param $amount
+     * @param $userId
+     * @return bool
+     * @since 1.0.0
+     */
+    public function checkUserCreditBalance($amount,$userId)
+    {
+        $userinfo = TransactionHelper::$mUserTbl->select(['User_ID' => $userId]);
+        if(count($userinfo) > 0) {
+            $userinfo = $userinfo->current();
+            if($userinfo->credit_balance >= $amount) {
                 return true;
             }
         }

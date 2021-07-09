@@ -6,11 +6,13 @@ return [
             'Support\\V1\\Rpc\\Dashboard\\Controller' => \Support\V1\Rpc\Dashboard\DashboardControllerFactory::class,
             'Support\\V1\\Rpc\\Ticket\\Controller' => \Support\V1\Rpc\Ticket\TicketControllerFactory::class,
             'Support\\V1\\Rpc\\Transaction\\Controller' => \Support\V1\Rpc\Transaction\TransactionControllerFactory::class,
+            'Support\\V1\\Rpc\\FAQ\\Controller' => \Support\V1\Rpc\FAQ\FAQControllerFactory::class,
+            'Support\\V1\\Rpc\\Browser\\Controller' => \Support\V1\Rpc\Browser\BrowserControllerFactory::class,
         ],
     ],
     'view_manager' => [
         'template_path_stack' => [
-            'support' => __DIR__ . '/../view',
+            'support' => 'C:\\Users\\Praesidiarius\\PhpstormProjects\\oneplace-xi-core\\module\\Support\\config/../view',
         ],
     ],
     'router' => [
@@ -55,6 +57,26 @@ return [
                     ],
                 ],
             ],
+            'support.rpc.faq' => [
+                'type' => 'Segment',
+                'options' => [
+                    'route' => '/faq',
+                    'defaults' => [
+                        'controller' => 'Support\\V1\\Rpc\\FAQ\\Controller',
+                        'action' => 'fAQ',
+                    ],
+                ],
+            ],
+            'support.rpc.browser' => [
+                'type' => 'Segment',
+                'options' => [
+                    'route' => '/browserdl',
+                    'defaults' => [
+                        'controller' => 'Support\\V1\\Rpc\\Browser\\Controller',
+                        'action' => 'browser',
+                    ],
+                ],
+            ],
         ],
     ],
     'api-tools-versioning' => [
@@ -63,6 +85,8 @@ return [
             1 => 'support.rpc.dashboard',
             2 => 'support.rpc.ticket',
             3 => 'support.rpc.transaction',
+            4 => 'support.rpc.faq',
+            5 => 'support.rpc.browser',
         ],
         'default_version' => 1,
     ],
@@ -97,6 +121,20 @@ return [
             ],
             'route_name' => 'support.rpc.transaction',
         ],
+        'Support\\V1\\Rpc\\FAQ\\Controller' => [
+            'service_name' => 'FAQ',
+            'http_methods' => [
+                0 => 'GET',
+            ],
+            'route_name' => 'support.rpc.faq',
+        ],
+        'Support\\V1\\Rpc\\Browser\\Controller' => [
+            'service_name' => 'Browser',
+            'http_methods' => [
+                0 => 'GET',
+            ],
+            'route_name' => 'support.rpc.browser',
+        ],
     ],
     'api-tools-content-negotiation' => [
         'controllers' => [
@@ -104,6 +142,8 @@ return [
             'Support\\V1\\Rpc\\Dashboard\\Controller' => 'Json',
             'Support\\V1\\Rpc\\Ticket\\Controller' => 'Json',
             'Support\\V1\\Rpc\\Transaction\\Controller' => 'Json',
+            'Support\\V1\\Rpc\\FAQ\\Controller' => 'Json',
+            'Support\\V1\\Rpc\\Browser\\Controller' => 'Json',
         ],
         'accept_whitelist' => [
             'Support\\V1\\Rpc\\Support\\Controller' => [
@@ -126,6 +166,16 @@ return [
                 1 => 'application/json',
                 2 => 'application/*+json',
             ],
+            'Support\\V1\\Rpc\\FAQ\\Controller' => [
+                0 => 'application/vnd.support.v1+json',
+                1 => 'application/json',
+                2 => 'application/*+json',
+            ],
+            'Support\\V1\\Rpc\\Browser\\Controller' => [
+                0 => 'application/vnd.support.v1+json',
+                1 => 'application/json',
+                2 => 'application/*+json',
+            ],
         ],
         'content_type_whitelist' => [
             'Support\\V1\\Rpc\\Support\\Controller' => [
@@ -141,6 +191,14 @@ return [
                 1 => 'application/json',
             ],
             'Support\\V1\\Rpc\\Transaction\\Controller' => [
+                0 => 'application/vnd.support.v1+json',
+                1 => 'application/json',
+            ],
+            'Support\\V1\\Rpc\\FAQ\\Controller' => [
+                0 => 'application/vnd.support.v1+json',
+                1 => 'application/json',
+            ],
+            'Support\\V1\\Rpc\\Browser\\Controller' => [
                 0 => 'application/vnd.support.v1+json',
                 1 => 'application/json',
             ],
@@ -186,6 +244,28 @@ return [
                     'transaction' => [
                         'GET' => false,
                         'POST' => true,
+                        'PUT' => false,
+                        'PATCH' => false,
+                        'DELETE' => false,
+                    ],
+                ],
+            ],
+            'Support\\V1\\Rpc\\FAQ\\Controller' => [
+                'actions' => [
+                    'fAQ' => [
+                        'GET' => true,
+                        'POST' => false,
+                        'PUT' => false,
+                        'PATCH' => false,
+                        'DELETE' => false,
+                    ],
+                ],
+            ],
+            'Support\\V1\\Rpc\\Browser\\Controller' => [
+                'actions' => [
+                    'browser' => [
+                        'GET' => true,
+                        'POST' => false,
                         'PUT' => false,
                         'PATCH' => false,
                         'DELETE' => false,

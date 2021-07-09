@@ -60,6 +60,22 @@ class DashboardController extends AbstractActionController
     protected $mClaimTbl;
 
     /**
+     * PTC Table
+     *
+     * @var TableGateway $mPTCTbl
+     * @since 1.0.0
+     */
+    protected $mPTCTbl;
+
+    /**
+     * PTC User (View) Table
+     *
+     * @var TableGateway $mPTCViewTbl
+     * @since 1.0.0
+     */
+    protected $mPTCViewTbl;
+
+    /**
      * Constructor
      *
      * DashboardController constructor.
@@ -73,6 +89,8 @@ class DashboardController extends AbstractActionController
         $this->mOfferwallUserTbl = new TableGateway('offerwall_user', $mapper);
         $this->mShortTbl = new TableGateway('shortlink', $mapper);
         $this->mClaimTbl = new TableGateway('faucet_claim', $mapper);
+        $this->mPTCTbl = new TableGateway('ptc', $mapper);
+        $this->mPTCViewTbl = new TableGateway('ptc_user', $mapper);
     }
 
     /**
@@ -95,63 +113,134 @@ class DashboardController extends AbstractActionController
         $request = $this->getRequest();
 
         if($request->isGet()) {
-            $chartLabels = [];
-            $tasksDoneData = [];
-            $coinsEarnedData = [];
-            $tasksMax = 0;
-            $coinsMax = 0;
-            for($day = -7;$day <= 0;$day++) {
-                $tasksDone = 0;
-                $rewardsEarned = 0;
-                # add date to labels
-                $dayR = 0-$day;
-                $date = ($dayR > 0) ? date('Y-m-d', strtotime('-'.$dayR.' days')) : date('Y-m-d', time());
-                $chartLabels[] = $date;
-
-                # Get Shortlinks done
-                $shInfo = $this->getShortlinksDone($me->User_ID, $date);
-                $tasksDone+=$shInfo['done'];
-                $rewardsEarned+=$shInfo['reward'];
-
-                # Get faucet claims
-                $clInfo = $this->getClaimsDone($me->User_ID, $date);
-                $tasksDone+=$clInfo['done'];
-                $rewardsEarned+=$clInfo['reward'];
-
-                # Get Offers done
-                $owInfo = $this->getOffersDone($me->User_ID, $date);
-                $tasksDone+=$owInfo['done'];
-                $rewardsEarned+=$owInfo['reward'];
-
-                if($coinsMax < ($rewardsEarned*1.2)) {
-                    $coinsMax = ($rewardsEarned*1.2);
+            $db = 'sf';
+            if(isset($_REQUEST['db'])) {
+                if(filter_var($_REQUEST['db'], FILTER_SANITIZE_STRING) == 'ca') {
+                    $db = 'ca';
                 }
-
-                if($tasksMax < ($tasksDone*1.2)) {
-                    $tasksMax = ($tasksDone*1.2);
-                }
-
-                $tasksDoneData[] = $tasksDone;
-                $coinsEarnedData[] = $rewardsEarned;
             }
+            if($db == 'sf') {
+                $chartLabels = [];
+                $tasksDoneData = [];
+                $coinsEarnedData = [];
+                $tasksMax = 0;
+                $coinsMax = 0;
+                for($day = -7;$day <= 0;$day++) {
+                    $tasksDone = 0;
+                    $rewardsEarned = 0;
+                    # add date to labels
+                    $dayR = 0-$day;
+                    $date = ($dayR > 0) ? date('Y-m-d', strtotime('-'.$dayR.' days')) : date('Y-m-d', time());
+                    $chartLabels[] = $date;
 
-            return new ViewModel([
-                'chart' => [
-                    'task_done_7day' => [
-                        'labels' => $chartLabels,
-                        'data' => $tasksDoneData,
-                        'max' => $tasksMax
-                    ],
-                    'coins_earned_7day' => [
-                        'labels' => $chartLabels,
-                        'data' => $coinsEarnedData,
-                        'max' => $coinsMax,
+                    # Get Shortlinks done
+                    $shInfo = $this->getShortlinksDone($me->User_ID, $date);
+                    $tasksDone+=$shInfo['done'];
+                    $rewardsEarned+=$shInfo['reward'];
+
+                    # Get faucet claims
+                    $clInfo = $this->getClaimsDone($me->User_ID, $date);
+                    $tasksDone+=$clInfo['done'];
+                    $rewardsEarned+=$clInfo['reward'];
+
+                    # Get Offers done
+                    $owInfo = $this->getOffersDone($me->User_ID, $date);
+                    $tasksDone+=$owInfo['done'];
+                    $rewardsEarned+=$owInfo['reward'];
+
+                    if($coinsMax < ($rewardsEarned*1.2)) {
+                        $coinsMax = ($rewardsEarned*1.2);
+                    }
+
+                    if($tasksMax < ($tasksDone*1.2)) {
+                        $tasksMax = ($tasksDone*1.2);
+                    }
+
+                    $tasksDoneData[] = $tasksDone;
+                    $coinsEarnedData[] = $rewardsEarned;
+                }
+
+                return new ViewModel([
+                    'chart' => [
+                        'task_done_7day' => [
+                            'labels' => $chartLabels,
+                            'data' => $tasksDoneData,
+                            'max' => $tasksMax
+                        ],
+                        'coins_earned_7day' => [
+                            'labels' => $chartLabels,
+                            'data' => $coinsEarnedData,
+                            'max' => $coinsMax,
+                        ]
                     ]
-                ]
-            ]);
+                ]);
+            } elseif($db == 'ca') {
+                $chartLabels = [];
+                $coinsEarnedData = [];
+                $coinsMax = 0;
+
+                for($day = -7;$day <= 0;$day++) {
+                    $viewsDelivered = 0;
+                    # add date to labels
+                    $dayR = 0-$day;
+                    $date = ($dayR > 0) ? date('Y-m-d', strtotime('-'.$dayR.' days')) : date('Y-m-d', time());
+                    $chartLabels[] = $date;
+
+                    # Get Shortlinks done
+                    $shInfo = $this->getPTCViewsDelivered($me->User_ID, $date);
+                    $viewsDelivered+=$shInfo['views'];
+
+                    if($coinsMax < ($viewsDelivered*1.2)) {
+                        $coinsMax = ($viewsDelivered*1.2);
+                    }
+
+                    $coinsEarnedData[] = $viewsDelivered;
+                }
+
+                return new ViewModel([
+                    'chart' => [
+                        'views_delivered_7day' => [
+                            'labels' => $chartLabels,
+                            'data' => $coinsEarnedData,
+                            'max' => $coinsMax,
+                        ],
+                        'tasks_delivered_7day' => [
+                            'labels' => [],
+                            'data' => [],
+                            'max' => 0,
+                        ]
+                    ]
+                ]);
+            }
         }
 
         return new ApiProblemResponse(new ApiProblem(405, 'Method not allowed'));
+    }
+
+    /**
+     * Get all Views delivered for a User
+     *
+     * @param $userId
+     * @param $date
+     * @return int[]
+     */
+    private function getPTCViewsDelivered($userId, $date): array
+    {
+        $totalViews = 0;
+        $myPtc = $this->mPTCTbl->select(['created_by' => $userId,'verified' => 1]);
+        if(count($myPtc) > 0) {
+            foreach($myPtc as $ptc) {
+                $viewWh = new Where();
+                $viewWh->like('date_completed', date('Y-m-d', strtotime($date)).'%');
+                $viewWh->equalTo('ptc_idfs', $ptc->PTC_ID);
+                $ptcViews = $this->mPTCViewTbl->select($viewWh)->count();
+                $totalViews+=$ptcViews;
+            }
+        }
+
+        return [
+            'views' => $totalViews
+        ];
     }
 
     private function getShortlinksDone($userId, $date) {

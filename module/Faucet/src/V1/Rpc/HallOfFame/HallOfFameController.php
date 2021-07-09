@@ -168,6 +168,7 @@ class HallOfFameController extends AbstractActionController
                     'name' => $top->label,
                     'id' => $top->Guild_ID,
                     'icon' => $top->icon,
+                    'is_vip' => $top->is_vip,
                     'rank' => $rank,
                 ];
                 $rank++;

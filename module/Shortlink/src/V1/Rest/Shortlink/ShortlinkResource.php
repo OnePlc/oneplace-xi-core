@@ -191,154 +191,110 @@ class ShortlinkResource extends AbstractResourceListener
             return new ApiProblem(404, 'Shortlink provider not found');
         } else {
             $provider = $shortlinksDB->current();
-
-            $links = $this->mShortTbl->select(['shortlink_idfs' => $provider->Shortlink_ID]);
-
-            # get provider links
-            $linkCount = $this->mShortTbl->select(['shortlink_idfs' => $provider->Shortlink_ID])->count();
+            $linkCount = $provider->views_per_day;
             $oWhDone = new Where();
             $oWhDone->equalTo('user_idfs', $me->User_ID);
             $oWhDone->equalTo('shortlink_idfs',  $provider->Shortlink_ID);
             $oWhDone->greaterThanOrEqualTo('date_started', date('Y-m-d H:i:s', strtotime('-23 hours')));
-            $linksDone = $this->mShortDoneTbl->select($oWhDone)->count();
-
-
+            $linksDoneByUser = $this->mShortDoneTbl->select($oWhDone);
+            $linksDone = $linksDoneByUser->count();
             $finLink = "#";
-            if(count($links) > 0) {
-                foreach($links as $lnk) {
-                    if($provider->url_api == "") {
-                        $dev = '1';
-                        # Check if link is already started
-                        $oWhDone = new Where();
-                        $oWhDone->equalTo('user_idfs', $me->User_ID);
-                        $oWhDone->like('link_id', $lnk->link_id);
-                        $oWhDone->equalTo('shortlink_idfs', $lnk->shortlink_idfs);
-                        $oWhDone->greaterThanOrEqualTo('date_started', date('Y-m-d H:i:s', strtotime('-23 hours')));
-                        $checkLnk = $this->mShortDoneTbl->select($oWhDone);
+            $dev = $linksDone.'<'.$linkCount;
 
-                        # if not started, start it now and choose this link
-                        if(count($checkLnk) == 0) {
-                            $newLink = [
-                                'user_idfs' => $me->User_ID,
-                                'link_id' => $lnk->link_id,
-                                'shortlink_idfs' => $lnk->shortlink_idfs,
-                                'date_started' => date('Y-m-d H:i:s', time()),
-                                'date_claimed' => '0000-00-00 00:00:00',
-                                'date_completed' => '0000-00-00 00:00:00'
-                            ];
-                            $this->mShortDoneTbl->insert($newLink);
-                            $provider->link = (object)$newLink;
-                        } else {
-                            # link already started - give same link again
-                            $checkLnk = $checkLnk->current();
-                            if($checkLnk->date_claimed == '0000-00-00 00:00:00') {
-                                $provider->link = $checkLnk;
-                            }
-                        }
-
-                        # get final link info
-                        $finalLink = $this->mShortTbl->select([
-                            'link_id' => $lnk->link_id,
-                            'shortlink_idfs' => $lnk->shortlink_idfs
-                        ]);
-                        if(count($finalLink) == 0) {
-                            return new ApiProblem(404, 'Shortlink final link not found');
-                        }
-
-
-                        # return next usable provider shortlink
-                        $finLink = $finalLink->current()->href;
-                    }
-                }
-
-                if(($linksDone < $linkCount) && $provider->url_api != '') {
+            if($linksDone < $linkCount) {
+                $dev = 2;
+                if($provider->url_api != "") {
                     $time = date('Y-m-d H:i:s', time());
-                    $dev = '2';
                     $destHash = hash('sha256', $provider->url_api.$me->User_ID.$time);
                     $destLink = $this->mSecTools->getCoreSetting('api-url').'/task/complete/'.$destHash;
-                    /**
-                    $result = @json_decode(file_get_contents($provider->url_api."&url=".$destLink),TRUE);
-                    if($result["status"] === 'error') {
-                        //echo $result["message"];
-                        $finLink = "errror";
-                    } else {
-                        $finLink = $result["shortenedUrl"];
+
+                    $status = "error";
+                    $finLink = "sherror";
+
+                    switch($provider->api_type) {
+                        case 'ouo':
+                            $link = file_get_contents($provider->url_api.$destLink);
+                            if(substr($link,0,strlen('https://ouo.io')) == 'https://ouo.io') {
+                                $finLink = $link;
+                            }
+                            break;
+                        case 'bcvc':
+                            $link = file_get_contents($provider->url_api.$destLink);
+                            if(substr($link,0,strlen('http://bc.vc')) == 'http://bc.vc') {
+                                $finLink = $link;
+                            }
+                            break;
+                        case 'adshrink':
+                            $result = @json_decode(file_get_contents($provider->url_api.$destLink),TRUE);
+                            if($result["success"] === 'false') {
+                                $status = "error";
+                            } else {
+                                $status = "success";
+                                $finLink = $result["url"];
+                            }
+                            break;
+                        default:
+                            $response = ClientStatic::get($provider->url_api."&url=".$destLink, []);
+                            $status = $response->getStatusCode();
+                            $googleResponse = $response->getBody();
+                            $googleJson = json_decode($googleResponse);
+                            $status = "error";
+                            if(is_array($googleJson)) {
+                                $status = $googleJson["status"];
+                            } else {
+                                if(is_object($googleJson)) {
+                                    $status = $googleJson->status;
+                                } else {
+                                    $status = 'error';
+                                }
+                            }
+                            if($status === 'error') {
+                                $finLink = "sherror";
+                            } else {
+                                if(is_array($googleJson)) {
+                                    $finLink = $googleJson["shortenedUrl"];
+                                } else {
+                                    $finLink = $googleJson->shortenedUrl;
+                                }
+                            }
+                            break;
+                    }
+
+                    if($finLink != '#') {
                         $newLink = [
                             'user_idfs' => $me->User_ID,
                             'link_id' => $destHash,
                             'link_url' => $finLink,
-                            'shortlink_idfs' => $lnk->shortlink_idfs,
+                            'shortlink_idfs' => $provider->Shortlink_ID,
                             'date_started' => $time,
                             'date_claimed' => '0000-00-00 00:00:00',
                             'date_completed' => '0000-00-00 00:00:00'
                         ];
                         $this->mShortDoneTbl->insert($newLink);
-                    } **/
-                    $response = ClientStatic::get($provider->url_api."&url=".$destLink, []);
-
-                    $status = $response->getStatusCode();
-                    $googleResponse = $response->getBody();
-
-                    $googleJson = json_decode($googleResponse);
-                    $status = "errror";
-                    if(is_array($googleJson)) {
-                        $status = $googleJson["status"];
-                    } else {
-                        $status = $googleJson->status;
-                    }
-                    if($status === 'error') {
-                        $finLink = "sherror";
-                        $dev = '3';
-                    } else {
-                        $dev = '4';
-                        if(is_array($googleJson)) {
-                            $finLink = $googleJson["shortenedUrl"];
-                        } else {
-                            $finLink = $googleJson->shortenedUrl;
-                        }
-                        $newLink = [
-                            'user_idfs' => $me->User_ID,
-                            'link_id' => $destHash,
-                            'link_url' => $finLink,
-                            'shortlink_idfs' => $lnk->shortlink_idfs,
-                            'date_started' => $time,
-                            'date_claimed' => '0000-00-00 00:00:00',
-                            'date_completed' => '0000-00-00 00:00:00'
-                        ];
-                        $this->mShortDoneTbl->insert($newLink);
-                    }
-                } elseif($provider->url_api != '') {
-                    $dev = '5';
-                    $oWhDone = new Where();
-                    $oWhDone->equalTo('user_idfs', $me->User_ID);
-                    $oWhDone->notLike('link_url', null);
-                    $oWhDone->equalTo('shortlink_idfs', $lnk->shortlink_idfs);
-                    $oWhDone->greaterThanOrEqualTo('date_started', strtotime('-23 hours'));
-                    $oWhDone->like('date_claimed', '0000-00-00 00:00:00');
-                    $oWhDone->like('date_completed', '0000-00-00 00:00:00');
-                    $checkLnk = $this->mShortDoneTbl->select($oWhDone);
-                    if(count($checkLnk) > 0) {
-                        $finLink = $checkLnk->current()->link_url;
-                    } else {
-                        $time = date('Y-m-d H:i:s', time());
                     }
                 }
-
-                if($finLink == null) {
-                    $finLink = "#";
-                }
-
-                $link = (object)[
-                    'href' => $finLink,
-                ];
-                return (object)[
-                    'link' =>$link,
-                    'id' => $provider->Shortlink_ID,
-                    'name' => $provider->label
-                ];
             } else {
-                return new ApiProblem(404, 'No links for provider '.$provider->label.' found');
+                $dev = 3;
+                foreach($linksDoneByUser as $lnkDone) {
+                    if($lnkDone->date_completed == '0000-00-00 00:00:00') {
+                        $finLink = $lnkDone->link_url;
+                    }
+                }
             }
+
+            if($finLink == null) {
+                $finLink = "#";
+            }
+
+            $link = (object)[
+                'href' => $finLink,
+            ];
+            return (object)[
+                'link' =>$link,
+                'id' => $provider->Shortlink_ID,
+                'name' => $provider->label,
+                'dev' => $dev,
+            ];
         }
     }
 

@@ -52,6 +52,14 @@ class HistoryController extends AbstractActionController
     protected $mUserTools;
 
     /**
+     * Quote Table
+     *
+     * @var TableGateway $mQuoteTbl
+     * @since 1.0.0
+     */
+    protected $mQuoteTbl;
+
+    /**
      * Constructor
      *
      * HistoryController constructor.
@@ -61,6 +69,7 @@ class HistoryController extends AbstractActionController
     public function __construct($mapper)
     {
         $this->mMinerTbl = new TableGateway('faucet_miner', $mapper);
+        $this->mQuoteTbl = new TableGateway('faucet_didyouknow', $mapper);
         $this->mSecTools = new SecurityTools($mapper);
         $this->mUserTools = new UserTools($mapper);
     }
@@ -146,6 +155,18 @@ class HistoryController extends AbstractActionController
                 }
             }
 
+            $quote = "";
+            if($page == 1) {
+                # get some random satoshi quote
+                $quotes = $this->mQuoteTbl->select(['page' => 'mining']);
+                $quotesOrdered = [];
+                foreach($quotes as $q) {
+                    $quotesOrdered[] = (object)['id' => $q->Tip_ID,'quote' => $q->description,'href' => $q->href];
+                }
+                $quoteRandom = rand(0, count($quotesOrdered)-1);
+                $quote = $quotesOrdered[$quoteRandom];
+            }
+
             return [
                 '_self' => [],
                 '_embedded' => [
@@ -159,6 +180,7 @@ class HistoryController extends AbstractActionController
                     'page_count' => (round($totalHistory / $pageSize) > 0) ? round($totalHistory / $pageSize) : 1,
                     'history' => $miningHistory,
                     'show_info' => false,
+                    'quote' => $quote,
                     'show_info_msg' => ''
                 ]
             ];

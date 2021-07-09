@@ -41,6 +41,14 @@ class SecurityTools extends AbstractResourceListener {
     protected $mUserTbl;
 
     /**
+     * Oauth User Table
+     *
+     * @var TableGateway $mOAuthTbl
+     * @since 1.0.0
+     */
+    protected $mOAuthTbl;
+
+    /**
      * User Settings Table
      *
      * @var TableGateway $mUserSetTbl
@@ -68,6 +76,7 @@ class SecurityTools extends AbstractResourceListener {
         $this->mSession = new Container('webauth');
         $this->mUserSetTbl = new TableGateway('user_setting', $mapper);
         $this->mSettingsTbl = new TableGateway('settings', $mapper);
+        $this->mOAuthTbl = new TableGateway('oauth_users', $mapper);
         $this->mUserTbl = new TableGateway('user', $mapper);
     }
 
@@ -241,5 +250,21 @@ class SecurityTools extends AbstractResourceListener {
         } else {
             return $settingFound->current()->settings_value;
         }
+    }
+
+    public function updatePassword($newPassword, $userId) {
+        # some basic protection
+        if($userId == 0 || $userId == null || !is_numeric($userId)) {
+            return false;
+        }
+        $pwHash = password_hash($newPassword, PASSWORD_DEFAULT);
+        $this->mOAuthTbl->update([
+            'password' => $pwHash
+        ],['username' => $userId]);
+        $this->mUserTbl->update([
+            'password' => $pwHash
+        ],['User_ID' => $userId]);
+
+        return true;
     }
 }

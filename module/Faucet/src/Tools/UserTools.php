@@ -185,7 +185,11 @@ class UserTools extends AbstractResourceListener {
         } else {
             $iCurrentXP = $iCurrentXP + $iXP;
         }
-        $xpPercent = round((100 / ($oNextLvl->xp_total / $iCurrentXP)), 2);
+        if($oNextLvl->xp_total == 0 || $iCurrentXP == 0) {
+            $xpPercent = 0;
+        } else {
+            $xpPercent = round((100 / ($oNextLvl->xp_total / $iCurrentXP)), 2);
+        }
 
         # save to database
         $this->mUserTbl->update([

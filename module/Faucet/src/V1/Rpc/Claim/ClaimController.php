@@ -53,6 +53,14 @@ class ClaimController extends AbstractActionController
     protected $mClaimTbl;
 
     /**
+     * Quote Table
+     *
+     * @var TableGateway $mQuoteTbl
+     * @since 1.0.0
+     */
+    protected $mQuoteTbl;
+
+    /**
      * Database Connection
      *
      * @var $mMapper
@@ -78,6 +86,7 @@ class ClaimController extends AbstractActionController
     public function __construct($mapper)
     {
         $this->mClaimTbl = new TableGateway('faucet_claim', $mapper);
+        $this->mQuoteTbl = new TableGateway('faucet_didyouknow', $mapper);
         $this->mSecTools = new SecurityTools($mapper);
         $this->mUserTools = new UserTools($mapper);
         $this->mMapper = $mapper;
@@ -139,10 +148,20 @@ class ClaimController extends AbstractActionController
         # Only show timer if GET
         $oRequest = $this->getRequest();
         if(!$oRequest->isPost()) {
+            # get some random satoshi quote
+            $quotes = $this->mQuoteTbl->select(['page' => 'claim']);
+            $quotesOrdered = [];
+            foreach($quotes as $q) {
+                $quotesOrdered[] = (object)['id' => $q->Tip_ID,'quote' => $q->description,'href' => $q->href];
+            }
+            $quoteRandom = rand(0, count($quotesOrdered)-1);
+            $quote = $quotesOrdered[$quoteRandom];
+
             return new ViewModel([
                 'status' => 'wait',
                 'numbers' => [15,20,25],
                 'next_claim' => $sTime,
+                'quote' => $quote,
             ]);
         }
 

@@ -9,6 +9,7 @@ return [
             'Faucet\\V1\\Rpc\\Item\\Controller' => \Faucet\V1\Rpc\Item\ItemControllerFactory::class,
             'Faucet\\V1\\Rpc\\Webstats\\Controller' => \Faucet\V1\Rpc\Webstats\WebstatsControllerFactory::class,
             'Faucet\\V1\\Rpc\\Token\\Controller' => \Faucet\V1\Rpc\Token\TokenControllerFactory::class,
+            'Faucet\\V1\\Rpc\\Wallet\\Controller' => \Faucet\V1\Rpc\Wallet\WalletControllerFactory::class,
         ],
     ],
     'router' => [
@@ -101,6 +102,16 @@ return [
                     ],
                 ],
             ],
+            'faucet.rpc.wallet' => [
+                'type' => 'Segment',
+                'options' => [
+                    'route' => '/userwallets',
+                    'defaults' => [
+                        'controller' => 'Faucet\\V1\\Rpc\\Wallet\\Controller',
+                        'action' => 'wallet',
+                    ],
+                ],
+            ],
         ],
     ],
     'api-tools-versioning' => [
@@ -114,6 +125,7 @@ return [
             6 => 'faucet.rpc.item',
             7 => 'faucet.rpc.webstats',
             8 => 'faucet.rpc.token',
+            9 => 'faucet.rpc.wallet',
         ],
     ],
     'api-tools-rpc' => [
@@ -170,6 +182,14 @@ return [
             ],
             'route_name' => 'faucet.rpc.token',
         ],
+        'Faucet\\V1\\Rpc\\Wallet\\Controller' => [
+            'service_name' => 'Wallet',
+            'http_methods' => [
+                0 => 'GET',
+                1 => 'POST',
+            ],
+            'route_name' => 'faucet.rpc.wallet',
+        ],
     ],
     'api-tools-content-negotiation' => [
         'controllers' => [
@@ -182,6 +202,7 @@ return [
             'Faucet\\V1\\Rpc\\Item\\Controller' => 'Json',
             'Faucet\\V1\\Rpc\\Webstats\\Controller' => 'Json',
             'Faucet\\V1\\Rpc\\Token\\Controller' => 'Json',
+            'Faucet\\V1\\Rpc\\Wallet\\Controller' => 'Json',
         ],
         'accept_whitelist' => [
             'Faucet\\V1\\Rpc\\Claim\\Controller' => [
@@ -229,6 +250,11 @@ return [
                 1 => 'application/json',
                 2 => 'application/*+json',
             ],
+            'Faucet\\V1\\Rpc\\Wallet\\Controller' => [
+                0 => 'application/vnd.faucet.v1+json',
+                1 => 'application/json',
+                2 => 'application/*+json',
+            ],
         ],
         'content_type_whitelist' => [
             'Faucet\\V1\\Rpc\\Claim\\Controller' => [
@@ -264,6 +290,10 @@ return [
                 1 => 'application/json',
             ],
             'Faucet\\V1\\Rpc\\Token\\Controller' => [
+                0 => 'application/vnd.faucet.v1+json',
+                1 => 'application/json',
+            ],
+            'Faucet\\V1\\Rpc\\Wallet\\Controller' => [
                 0 => 'application/vnd.faucet.v1+json',
                 1 => 'application/json',
             ],
@@ -364,6 +394,17 @@ return [
                         'GET' => true,
                         'POST' => true,
                         'PUT' => true,
+                        'PATCH' => false,
+                        'DELETE' => false,
+                    ],
+                ],
+            ],
+            'Faucet\\V1\\Rpc\\Wallet\\Controller' => [
+                'actions' => [
+                    'wallet' => [
+                        'GET' => true,
+                        'POST' => true,
+                        'PUT' => false,
                         'PATCH' => false,
                         'DELETE' => false,
                     ],

@@ -365,6 +365,7 @@ class UserResource extends AbstractResourceListener
         # get new user's id
         $userId = $this->mapper->lastInsertValue;
 
+
         # add user session
         $this->mSessionTbl->insert([
             'user_idfs' => $userId,
@@ -380,6 +381,26 @@ class UserResource extends AbstractResourceListener
             'first_name' => $username,
             'last_name' => '',
         ]);
+
+        $userNew = $this->mapper->select(['User_ID' => $userId]);
+        if(count($userNew) > 0) {
+            $userNew = $userNew->current();
+            # send verification email
+            $secToken = $this->mMailTools->generateSecurityToken($userNew);
+            $confirmLink = $this->mMailTools->getApiURL().'/verify-email/'.$secToken;
+            $this->mapper->update([
+                'send_verify' => date('Y-m-d H:i:s', time()),
+                'password_reset_token' => $secToken,
+                'password_reset_date' => date('Y-m-d H:i:s', time()),
+            ],[
+                'User_ID' => $userNew->User_ID
+            ]);
+            $this->mMailTools->sendMail('email_verify', [
+                'sEmailTitle' => 'Verify your E-Mail Address',
+                'footerInfo' => 'Swissfaucet.io - Faucet #1',
+                'link' => $confirmLink
+            ], $this->mMailTools->getAdminEmail(), $userNew->email, 'Verify your E-Mail Address');
+        }
 
         return [
             'state' => 'success',
@@ -532,6 +553,7 @@ class UserResource extends AbstractResourceListener
             'verified' => (int)$user->email_verified,
             'show_verify_mail' => ($user->send_verify == null) ? ($user->email_verified == 1) ? false : true : false,
             'token_balance' => (float)$user->token_balance,
+            'credit_balance' => (float)$user->credit_balance,
             'crypto_balance' => (float)$cryptoBalance,
             'xp_level' => (int)$user->xp_level,
             'xp_percent' => (float)$dPercent,
@@ -610,6 +632,11 @@ class UserResource extends AbstractResourceListener
         if(isset($data[0]->time_zone)) {
             $checkFields[] = $data[0]->time_zone;
         }
+        if(isset($data[0]->passwordCheck)) {
+            $checkFields[] = $data[0]->passwordCheck;
+            $checkFields[] = $data[0]->passwordNew;
+            $checkFields[] = $data[0]->passwordNewVerify;
+        }
         # check for attack vendors
         $secResult = $this->mSecTools->basicInputCheck($checkFields);
         if($secResult !== 'ok') {
@@ -628,6 +655,9 @@ class UserResource extends AbstractResourceListener
         $email = filter_var($data[0]->email, FILTER_SANITIZE_EMAIL);
         $time_zone = filter_var($data[0]->time_zone, FILTER_SANITIZE_STRING);
         $language = filter_var($data[0]->language, FILTER_SANITIZE_STRING);
+        $passwordNew = filter_var($data[0]->passwordNew, FILTER_SANITIZE_STRING);
+        $passwordNewVer = filter_var($data[0]->passwordNewVerify, FILTER_SANITIZE_STRING);
+        $passwordCheck = filter_var($data[0]->passwordCheck, FILTER_SANITIZE_STRING);
 
         $favCoin = filter_var($data[0]->favCoin, FILTER_SANITIZE_STRING);
 
@@ -640,6 +670,27 @@ class UserResource extends AbstractResourceListener
                 return new ApiProblem(409, 'name already taken');
             }
             $update['username'] = $name;
+        }
+
+        # check if password has changed
+        if($passwordNew != '') {
+            # check current
+            if(!password_verify($passwordCheck, $user->password)) {
+                return new ApiProblem(409, 'Your current password is wrong');
+            }
+
+            # verify new
+            if($passwordNew != $passwordNewVer) {
+                return new ApiProblem(409, 'New passwords do not match');
+            }
+
+            # should never happen but rather be safe than sorry
+            if($user->User_ID != 0) {
+                # update password
+                $this->mSecTools->updatePassword($passwordNew, $user->User_ID);
+            } else {
+                return new ApiProblem(404, 'user not found');
+            }
         }
 
         /**
@@ -770,7 +821,7 @@ class UserResource extends AbstractResourceListener
         # only send public fields
         return [(object)[
             'id' => $user->User_ID,
-            'name' => $name,
+            'name' => $user->username,
             'email' => $user->email,
             'token_balance' => $user->token_balance,
             'crypto_balance' => $cryptoBalance,

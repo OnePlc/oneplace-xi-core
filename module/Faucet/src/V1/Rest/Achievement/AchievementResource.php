@@ -558,7 +558,7 @@ class AchievementResource extends AbstractResourceListener
                         }
                         break;
                     case 'earning':
-                        $progressFound = $this->mUserSetTbl->select(['setting_name' => 'totalearned-coins','user_idfs' => $user->User_ID]);
+                        $progressFound = $this->mUserSetTbl->select(['setting_name' => 'totalearned-coins','user_idfs' => $me->User_ID]);
                         if(count($progressFound) > 0) {
                             $progress = (int)$progressFound->current()->setting_value;
                         }

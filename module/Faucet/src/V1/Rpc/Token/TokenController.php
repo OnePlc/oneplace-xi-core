@@ -227,7 +227,7 @@ class TokenController extends AbstractActionController
             }
             $tokenLeft = 100-$tokenBuyedToday;
 
-            $paymentInfo = $this->mTokenPayTbl->select(['week' => 24, 'year' => 2021]);
+            $paymentInfo = $this->mTokenPayTbl->select(['week' => 27, 'year' => 2021]);
             $lastPayment = 0;
             $tokenValue = 0;
             $linkedTokens = 0;

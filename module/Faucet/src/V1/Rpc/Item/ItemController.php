@@ -4,6 +4,7 @@ namespace Faucet\V1\Rpc\Item;
 use Application\Controller\IndexController;
 use Faucet\Tools\SecurityTools;
 use Faucet\Tools\UserTools;
+use Faucet\Transaction\InventoryHelper;
 use Laminas\ApiTools\ApiProblem\ApiProblem;
 use Laminas\ApiTools\ApiProblem\ApiProblemResponse;
 use Laminas\Db\TableGateway\TableGateway;
@@ -52,6 +53,14 @@ class ItemController extends AbstractActionController
     protected $mUserSetTbl;
 
     /**
+     * Inventory Helper
+     *
+     * @var InventoryHelper $mInventory
+     * @since 1.0.0
+     */
+    protected $mInventory;
+
+    /**
      * Constructor
      *
      * UserResource constructor.
@@ -63,8 +72,9 @@ class ItemController extends AbstractActionController
         $this->mItemTbl = new TableGateway('faucet_item', $mapper);
         $this->mItemUserTbl = new TableGateway('faucet_item_user', $mapper);
         $this->mUserBuffTbl = new TableGateway('user_buff', $mapper);
-        $this->mSecTools = new SecurityTools($mapper);
         $this->mUserSetTbl = new TableGateway('user_setting', $mapper);
+        $this->mSecTools = new SecurityTools($mapper);
+        $this->mInventory = new InventoryHelper($mapper);
     }
 
     /**
@@ -119,7 +129,8 @@ class ItemController extends AbstractActionController
 
             # use item
             $this->mItemUserTbl->update([
-                'used' => 1
+                'used' => 1,
+                'date_used' => date('Y-m-d H:i:s', time()),
             ],[
                 'item_idfs' => $itemId,
                 'user_idfs' => $me->User_ID,
@@ -144,6 +155,7 @@ class ItemController extends AbstractActionController
 
                     return [
                         'state' => 'success',
+                        'inventory' => $this->mInventory->getInventory($me->User_ID),
                         'message' => 'Buff '.$item->label.' activated for '.$item->buff_timer.' Days! ',
                     ];
                 default:

@@ -41,6 +41,7 @@ return [
             'http_methods' => [
                 0 => 'GET',
                 1 => 'POST',
+                2 => 'PUT',
             ],
             'route_name' => 'ptc.rpc.deposit',
         ],
@@ -80,7 +81,7 @@ return [
                     'deposit' => [
                         'GET' => true,
                         'POST' => true,
-                        'PUT' => false,
+                        'PUT' => true,
                         'PATCH' => false,
                         'DELETE' => false,
                     ],

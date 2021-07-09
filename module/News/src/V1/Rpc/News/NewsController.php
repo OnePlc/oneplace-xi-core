@@ -51,9 +51,15 @@ class NewsController extends AbstractActionController
     public function newsAction()
     {
         $page = (isset($_REQUEST['page'])) ? filter_var($_REQUEST['page'], FILTER_SANITIZE_NUMBER_INT) : 1;
+        $website = (isset($_REQUEST['website'])) ? filter_var($_REQUEST['website'], FILTER_SANITIZE_STRING) : 'sf';
+        if($website != 'sf' && $website != 'ca') {
+            $website = 'sf';
+        }
+
         $pageSize = 25;
         $news = [];
         $memberSel = new Select($this->mNewsTbl->getTable());
+        $memberSel->where(['website' => $website]);
         $memberSel->order('date DESC');
         # Create a new pagination adapter object
         $oPaginatorAdapter = new DbSelect(
@@ -70,7 +76,7 @@ class NewsController extends AbstractActionController
             $news[] = (object)[
                 'id' => $article->News_ID,
                 'title' => $article->title,
-                'description' => $article->description,
+                'description' => str_replace(['##','- '],['<br/>##','<br/>- '],$article->description),
                 'date' => $article->date,
             ];;
         }
