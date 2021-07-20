@@ -93,6 +93,14 @@ class GuildResource extends AbstractResourceListener
     protected $mGuildUserTbl;
 
     /**
+     * Guild Chat Ban Table
+     *
+     * @var TableGateway $mGuildChatBanTbl
+     * @since 1.0.0
+     */
+    protected $mGuildChatBanTbl;
+
+    /**
      * User Table
      *
      * @var TableGateway $mUserTbl
@@ -148,6 +156,7 @@ class GuildResource extends AbstractResourceListener
         $this->mGuildTaskTbl = new TableGateway('faucet_guild_weekly', $mapper);
         $this->mGuildAchievTbl = new TableGateway('faucet_guild_achievement', $mapper);
         $this->mGuildStatTbl = new TableGateway('faucet_guild_statistic', $mapper);
+        $this->mGuildChatBanTbl = new TableGateway('faucet_guild_chat_ban', $mapper);
         $this->mUserTbl = new TableGateway('user', $mapper);
         $this->mXPLvlTbl = new TableGateway('user_xp_level', $mapper);
         $this->mUserSetTbl = new TableGateway('user_setting', $mapper);
@@ -549,6 +558,14 @@ class GuildResource extends AbstractResourceListener
         $userJoinedGuild = $this->mGuildUserTbl->select($checkWh);
 
         $myRank = (object)[];
+        $myChatBans = [];
+        $myBansFound = $this->mGuildChatBanTbl->select(['user_idfs' => $me->User_ID]);
+        if(count($myBansFound) > 0) {
+            foreach($myBansFound as $ban) {
+                $myChatBans[] = (int)$ban->ban_user_idfs;
+            }
+        }
+
         if(count($userJoinedGuild) > 0) {
             $guildRank = $userJoinedGuild->current();
             $rankDB = $this->mGuildRankTbl->select([
@@ -560,6 +577,7 @@ class GuildResource extends AbstractResourceListener
                 $myRank = (object)['id' => (int)$guildRank->rank, 'name' => $rank];
             }
         }
+
 
         return (object)[
             'guild' => (object)[
@@ -573,6 +591,7 @@ class GuildResource extends AbstractResourceListener
                 'xp_percent' => $guildXPPercent,
                 'focus' => json_decode($guild->focus),
                 'members' => $guildMembers,
+                'chat_banlist' => $myChatBans,
                 'welcome_message' => $guild->welcome_message,
                 'tasks' => $weeklyTasks,
                 'ranks' => $ranks,

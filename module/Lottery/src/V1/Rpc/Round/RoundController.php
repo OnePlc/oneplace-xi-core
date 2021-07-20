@@ -110,12 +110,14 @@ class RoundController extends AbstractActionController
         $request = $this->getRequest();
 
         if($request->isGet()) {
+            $blockWinners = 0;
             # Get Winners of last round
             $winnersLastRound = [];
             $winSel = new Select($this->mLotteryWInTbl->getTable());
             $winSel->order('rank ASC');
             $winSel->where(['round_idfs' => $roundID-1]);
             $lastWinners = $this->mLotteryWInTbl->selectWith($winSel);
+            $lastRound = $this->mLotteryTbl->select(['Round_ID' => ($roundID-1)])->current();
             if(count($lastWinners) > 0) {
                 foreach($lastWinners as $win) {
                     $winnerDB = $this->mUserTbl->select(['User_ID' => $win->user_idfs]);

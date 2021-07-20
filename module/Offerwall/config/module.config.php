@@ -26,12 +26,23 @@ return [
                     ],
                 ],
             ],
+            'offerwall.rpc.mediumpath' => [
+                'type' => 'Segment',
+                'options' => [
+                    'route' => '/mediumpath',
+                    'defaults' => [
+                        'controller' => 'Offerwall\\V1\\Rpc\\Mediumpath\\Controller',
+                        'action' => 'mediumpath',
+                    ],
+                ],
+            ],
         ],
     ],
     'api-tools-versioning' => [
         'uri' => [
             0 => 'offerwall.rest.offerwall',
             1 => 'offerwall.rpc.ayetstudios',
+            2 => 'offerwall.rpc.mediumpath',
         ],
     ],
     'api-tools-rest' => [
@@ -58,6 +69,7 @@ return [
         'controllers' => [
             'Offerwall\\V1\\Rest\\Offerwall\\Controller' => 'HalJson',
             'Offerwall\\V1\\Rpc\\Ayetstudios\\Controller' => 'Json',
+            'Offerwall\\V1\\Rpc\\Mediumpath\\Controller' => 'Json',
         ],
         'accept_whitelist' => [
             'Offerwall\\V1\\Rest\\Offerwall\\Controller' => [
@@ -70,6 +82,11 @@ return [
                 1 => 'application/json',
                 2 => 'application/*+json',
             ],
+            'Offerwall\\V1\\Rpc\\Mediumpath\\Controller' => [
+                0 => 'application/vnd.offerwall.v1+json',
+                1 => 'application/json',
+                2 => 'application/*+json',
+            ],
         ],
         'content_type_whitelist' => [
             'Offerwall\\V1\\Rest\\Offerwall\\Controller' => [
@@ -77,6 +94,10 @@ return [
                 1 => 'application/json',
             ],
             'Offerwall\\V1\\Rpc\\Ayetstudios\\Controller' => [
+                0 => 'application/vnd.offerwall.v1+json',
+                1 => 'application/json',
+            ],
+            'Offerwall\\V1\\Rpc\\Mediumpath\\Controller' => [
                 0 => 'application/vnd.offerwall.v1+json',
                 1 => 'application/json',
             ],
@@ -127,6 +148,17 @@ return [
                     ],
                 ],
             ],
+            'Offerwall\\V1\\Rpc\\Mediumpath\\Controller' => [
+                'actions' => [
+                    'mediumpath' => [
+                        'GET' => false,
+                        'POST' => true,
+                        'PUT' => false,
+                        'PATCH' => false,
+                        'DELETE' => false,
+                    ],
+                ],
+            ],
         ],
     ],
     'api-tools-content-validation' => [
@@ -154,6 +186,7 @@ return [
     'controllers' => [
         'factories' => [
             'Offerwall\\V1\\Rpc\\Ayetstudios\\Controller' => \Offerwall\V1\Rpc\Ayetstudios\AyetstudiosControllerFactory::class,
+            'Offerwall\\V1\\Rpc\\Mediumpath\\Controller' => \Offerwall\V1\Rpc\Mediumpath\MediumpathControllerFactory::class,
         ],
     ],
     'api-tools-rpc' => [
@@ -163,6 +196,14 @@ return [
                 0 => 'GET',
             ],
             'route_name' => 'offerwall.rpc.ayetstudios',
+        ],
+        'Offerwall\\V1\\Rpc\\Mediumpath\\Controller' => [
+            'service_name' => 'Mediumpath',
+            'http_methods' => [
+                0 => 'GET',
+                1 => 'POST',
+            ],
+            'route_name' => 'offerwall.rpc.mediumpath',
         ],
     ],
 ];

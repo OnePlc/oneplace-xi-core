@@ -158,6 +158,7 @@ class PTCResource extends AbstractResourceListener
                 'timer' => $timer,
                 'nsfw_warn' => $nsfw,
                 'occur' => $occurence,
+                'active' => 0,
                 'website_idfs' => 1,
                 'url' => $url,
                 'created_by' => $me->User_ID,
@@ -221,19 +222,57 @@ class PTCResource extends AbstractResourceListener
             return new ApiProblem(404, 'PTC Ad not found');
         }
         $ptcInfo = $ptcFound->current();
-        if($ptcInfo->view_balance <= 0) {
+        if($ptcInfo->view_balance <= 0 && $ptcInfo->created_by != $me->User_ID) {
             return new ApiProblem(400, 'PTC is not available at the moment');
         }
 
-        if($ptcInfo->verified != 1) {
+        if($ptcInfo->verified != 1 && $ptcInfo->created_by != $me->User_ID) {
             return new ApiProblem(400, 'PTC is not available at the moment');
         }
 
         switch($ptcInfo->occur) {
             case 'DAY':
                 $dayWh = new Where();
+                $dayWh->equalTo('ptc_idfs', $ptcInfo->PTC_ID);
                 $dayWh->equalTo('user_idfs', $me->User_ID);
                 $dayWh->greaterThanOrEqualTo('date_started', date('Y-m-d H:i:s', strtotime('-24 hours')));
+                $viewToday = $this->mPTCViewTbl->select($dayWh);
+                if(count($viewToday) == 0) {
+                    $this->mPTCViewTbl->insert([
+                        'ptc_idfs' => $ptcInfo->PTC_ID,
+                        'user_idfs' => $me->User_ID,
+                        'website_idfs' => 1,
+                        'date_started' => date('Y-m-d H:i:s', time()),
+                    ]);
+                } else {
+                    if($viewToday->current()->date_completed != null) {
+                        return new ApiProblem(400, 'You have already view this ad');
+                    }
+                }
+                break;
+            case 'WEK':
+                $dayWh = new Where();
+                $dayWh->equalTo('ptc_idfs', $ptcInfo->PTC_ID);
+                $dayWh->equalTo('user_idfs', $me->User_ID);
+                $dayWh->greaterThanOrEqualTo('date_started', date('Y-m-d H:i:s', strtotime('-7 days')));
+                $viewToday = $this->mPTCViewTbl->select($dayWh);
+                if(count($viewToday) == 0) {
+                    $this->mPTCViewTbl->insert([
+                        'ptc_idfs' => $ptcInfo->PTC_ID,
+                        'user_idfs' => $me->User_ID,
+                        'website_idfs' => 1,
+                        'date_started' => date('Y-m-d H:i:s', time()),
+                    ]);
+                } else {
+                    if($viewToday->current()->date_completed != null) {
+                        return new ApiProblem(400, 'You have already view this ad');
+                    }
+                }
+                break;
+            case 'UNQ':
+                $dayWh = new Where();
+                $dayWh->equalTo('ptc_idfs', $ptcInfo->PTC_ID);
+                $dayWh->equalTo('user_idfs', $me->User_ID);
                 $viewToday = $this->mPTCViewTbl->select($dayWh);
                 if(count($viewToday) == 0) {
                     $this->mPTCViewTbl->insert([
@@ -252,15 +291,52 @@ class PTCResource extends AbstractResourceListener
                 break;
         }
 
+        $ptcData = [
+            'id' => $ptcInfo->PTC_ID,
+            'title' => utf8_decode($ptcInfo->title),
+            'description' => utf8_decode($ptcInfo->description),
+            'url' => $ptcInfo->url,
+            'timer' => $ptcInfo->timer,
+            'occurence' => $ptcInfo->occur,
+            'nsfw' => $ptcInfo->nsfw_warn,
+            'redirect' => $ptcInfo->redirect,
+        ];
+
+        if($ptcInfo->created_by == $me->User_ID) {
+            $chartLabels = [];
+            $coinsEarnedData = [];
+            $coinsMax = 0;
+
+            for($day = -30;$day <= 0;$day++) {
+                $viewsDelivered = 0;
+                # add date to labels
+                $dayR = 0-$day;
+                $date = ($dayR > 0) ? date('Y-m-d', strtotime('-'.$dayR.' days')) : date('Y-m-d', time());
+                $chartLabels[] = $date;
+
+                # Get Shortlinks done
+                $shInfo = $this->getPTCViewsDelivered($ptcInfo->PTC_ID, $date);
+                $viewsDelivered+=$shInfo['views'];
+
+                if($coinsMax < ($viewsDelivered*1.2)) {
+                    $coinsMax = ($viewsDelivered*1.2);
+                }
+
+                $coinsEarnedData[] = $viewsDelivered;
+            }
+
+            // get ptc view stats
+            $ptcData['chart'] = [
+                'views_delivered_30day' => [
+                    'labels' => $chartLabels,
+                    'data' => $coinsEarnedData,
+                    'max' => $coinsMax,
+                ],
+            ];
+        }
+
         return (object)[
-            'ptc' => (object)[
-                'id' => $ptcInfo->PTC_ID,
-                'title' => utf8_decode($ptcInfo->title),
-                'description' => utf8_decode($ptcInfo->description),
-                'url' => $ptcInfo->url,
-                'timer' => $ptcInfo->timer,
-                'redirect' => $ptcInfo->redirect,
-            ]
+            'ptc' => (object)$ptcData
         ];
     }
 
@@ -279,13 +355,6 @@ class PTCResource extends AbstractResourceListener
         $me = $this->mSecTools->getSecuredUserSession($this->getIdentity()->getName());
         if(get_class($me) == 'Laminas\\ApiTools\\ApiProblem\\ApiProblem') {
             return $me;
-        }
-
-        if($me->User_ID != 335874987) {
-            return (object)[
-                'ptc_my' => [],
-                'ptc' => [],
-            ];
         }
 
         $totalViews = 0;
@@ -322,6 +391,7 @@ class PTCResource extends AbstractResourceListener
         $viewPTCAds = [];
         $ptcViewWh = new Where();
         $ptcViewWh->equalTo('verified', 1);
+        $ptcViewWh->equalTo('active', 1);
         $ptcViewWh->greaterThanOrEqualTo('view_balance', 1);
         $ptcFoundView = $this->mPTCTbl->select($ptcViewWh);
 
@@ -334,8 +404,48 @@ class PTCResource extends AbstractResourceListener
                 switch($ptc->occur) {
                     case 'DAY':
                         $dayWh = new Where();
+                        $dayWh->equalTo('ptc_idfs', $ptc->PTC_ID);
                         $dayWh->equalTo('user_idfs', $me->User_ID);
                         $dayWh->greaterThanOrEqualTo('date_completed', date('Y-m-d H:i:s', strtotime('-24 hours')));
+                        $viewToday = $this->mPTCViewTbl->select($dayWh);
+                        if(count($viewToday) == 0) {
+                            $totalReward+=$rewardsByTimer[$ptc->timer];
+                            $viewPTCAds[] = (object)[
+                                'id' => $ptc->PTC_ID,
+                                'title' => utf8_decode($ptc->title),
+                                'description' => utf8_decode( $ptc->description),
+                                'redirect' => $ptc->redirect,
+                                'nsfw' => $ptc->nsfw_warn,
+                                'reward' => $rewardsByTimer[$ptc->timer],
+                                'timer' => $ptc->timer,
+                                'url' => $ptc->url,
+                            ];
+                        }
+                        break;
+                    case 'WEK':
+                        $dayWh = new Where();
+                        $dayWh->equalTo('ptc_idfs', $ptc->PTC_ID);
+                        $dayWh->equalTo('user_idfs', $me->User_ID);
+                        $dayWh->greaterThanOrEqualTo('date_completed', date('Y-m-d H:i:s', strtotime('-7 days')));
+                        $viewToday = $this->mPTCViewTbl->select($dayWh);
+                        if(count($viewToday) == 0) {
+                            $totalReward+=$rewardsByTimer[$ptc->timer];
+                            $viewPTCAds[] = (object)[
+                                'id' => $ptc->PTC_ID,
+                                'title' => utf8_decode($ptc->title),
+                                'description' => utf8_decode( $ptc->description),
+                                'redirect' => $ptc->redirect,
+                                'nsfw' => $ptc->nsfw_warn,
+                                'reward' => $rewardsByTimer[$ptc->timer],
+                                'timer' => $ptc->timer,
+                                'url' => $ptc->url,
+                            ];
+                        }
+                        break;
+                    case 'UNQ':
+                        $dayWh = new Where();
+                        $dayWh->equalTo('ptc_idfs', $ptc->PTC_ID);
+                        $dayWh->equalTo('user_idfs', $me->User_ID);
                         $viewToday = $this->mPTCViewTbl->select($dayWh);
                         if(count($viewToday) == 0) {
                             $totalReward+=$rewardsByTimer[$ptc->timer];
@@ -444,6 +554,27 @@ class PTCResource extends AbstractResourceListener
     }
 
     /**
+     * Get all Views delivered for a User
+     *
+     * @param $userId
+     * @param $date
+     * @return int[]
+     */
+    private function getPTCViewsDelivered($ptcId, $date): array
+    {
+        $totalViews = 0;
+        $viewWh = new Where();
+        $viewWh->like('date_completed', date('Y-m-d', strtotime($date)).'%');
+        $viewWh->equalTo('ptc_idfs', $ptcId);
+        $ptcViews = $this->mPTCViewTbl->select($viewWh)->count();
+        $totalViews+=$ptcViews;
+
+        return [
+            'views' => $totalViews
+        ];
+    }
+
+    /**
      * Update a resource
      *
      * @param  mixed $id
@@ -466,50 +597,129 @@ class PTCResource extends AbstractResourceListener
             return new ApiProblem(404, 'PTC Ad not found');
         }
         $ptcInfo = $ptcFound->current();
-        if($ptcInfo->view_balance <= 0) {
-            return new ApiProblem(400, 'PTC is not available at the moment');
-        }
 
-        if($ptcInfo->verified != 1) {
-            return new ApiProblem(400, 'PTC is not available at the moment');
-        }
+        /**
+         * Update PTC for Owner, add view for other users
+         */
+        if($ptcInfo->created_by == $me->User_ID) {
+            $secResult = $this->mSecTools->basicInputCheck([
+                $data->title,
+                $data->description,
+                $data->redirect,
+                $data->nsfw,
+                $data->timer,
+                $data->occur,
+            ]);
+            if($secResult !== 'ok') {
+                return new ApiProblem(418, 'Potential '.$secResult.' Attack - Goodbye');
+            }
 
-        $dayWh = new Where();
-        $dayWh->equalTo('user_idfs', $me->User_ID);
-        $dayWh->greaterThanOrEqualTo('date_started', date('Y-m-d H:i:s', strtotime('-24 hours')));
-        $dayWh->isNull('date_completed');
-        $openView = $this->mPTCViewTbl->select($dayWh);
+            $title = filter_var($data->title, FILTER_SANITIZE_STRING);
+            $description = filter_var($data->description, FILTER_SANITIZE_STRING);
+            $redirect = filter_var($data->redirect, FILTER_SANITIZE_NUMBER_INT);
+            $nsfw = filter_var($data->nsfw, FILTER_SANITIZE_NUMBER_INT);
+            $timer = filter_var($data->timer, FILTER_SANITIZE_NUMBER_INT);
+            $occurence = filter_var($data->occur, FILTER_SANITIZE_STRING);
+            if($occurence != 'DAY' && $occurence != 'WEK' && $occurence != 'UNQ') {
+                return new ApiProblemResponse(new ApiProblem(400, 'Invalid JSON Body'));
+            }
+            $url = filter_var($data->url, FILTER_SANITIZE_STRING);
 
-        if(count($openView) == 0) {
-            return new ApiProblem(400, 'You have no open view for this ptc');
-        }
-        $openView = $openView->current();
-
-        $this->mPTCViewTbl->update([
-            'date_completed' => date('Y-m-d H:i:s', time()),
-        ],[
-            'ptc_idfs' => $openView->ptc_idfs,
-            'user_idfs' => $openView->user_idfs,
-            'date_completed' => null,
-        ]);
-
-        $this->mPTCTbl->update([
-            'view_balance' => $ptcInfo->view_balance-1
-        ],['PTC_ID' => $ptcInfo->PTC_ID]);
-
-        $rewardsByTimer = [15 => 10,30 => 15,60 => 20,90 => 25];
-
-        $reward = (int)$rewardsByTimer[$ptcInfo->timer];
-
-        if($reward > 0) {
-            $newBalance = $this->mTransaction->executeTransaction($reward, false, $me->User_ID, $ptcInfo->PTC_ID, 'ptc-view', 'Viewed Ad '.$ptcInfo->title.' for '.$ptcInfo->timer.' seconds', 1);
-            if($newBalance !== false) {
-                return [
-                    'token_balance' => $newBalance,
-                    'state' => 'done'
-                ];
+            if($redirect) {
+                $redirect = 1;
             } else {
-                return new ApiProblem(500, 'Transaction error');
+                $redirect = 0;
+            }
+            if($nsfw) {
+                $nsfw = 1;
+            } else {
+                $nsfw = 0;
+            }
+
+            $this->mPTCTbl->update([
+                'title' => utf8_encode($title),
+                'description' => utf8_encode($description),
+                'occur' => $occurence,
+                'redirect' => $redirect,
+                'nsfw_warn' => $nsfw,
+                'url' => $url,
+                'active' => 0,
+                'verified' => 0,
+            ],['PTC_ID' => $ptcInfo->PTC_ID]);
+
+            return [
+                'state' => 'done'
+            ];
+        } else {
+            if($ptcInfo->view_balance <= 0) {
+                return new ApiProblem(400, 'PTC is not available at the moment');
+            }
+
+            if($ptcInfo->verified != 1) {
+                return new ApiProblem(400, 'PTC is not available at the moment');
+            }
+
+            $openView = [];
+            switch($ptcInfo->occur) {
+                case 'DAY':
+                    $dayWh = new Where();
+                    $dayWh->equalTo('ptc_idfs', $ptcInfo->PTC_ID);
+                    $dayWh->equalTo('user_idfs', $me->User_ID);
+                    $dayWh->greaterThanOrEqualTo('date_started', date('Y-m-d H:i:s', strtotime('-24 hours')));
+                    $dayWh->isNull('date_completed');
+                    $openView = $this->mPTCViewTbl->select($dayWh);
+                    break;
+                case 'WEK':
+                    $dayWh = new Where();
+                    $dayWh->equalTo('ptc_idfs', $ptcInfo->PTC_ID);
+                    $dayWh->equalTo('user_idfs', $me->User_ID);
+                    $dayWh->greaterThanOrEqualTo('date_started', date('Y-m-d H:i:s', strtotime('-7 days')));
+                    $dayWh->isNull('date_completed');
+                    $openView = $this->mPTCViewTbl->select($dayWh);
+                    break;
+                case 'UNQ':
+                    $dayWh = new Where();
+                    $dayWh->equalTo('ptc_idfs', $ptcInfo->PTC_ID);
+                    $dayWh->equalTo('user_idfs', $me->User_ID);
+                    $dayWh->isNull('date_completed');
+                    $openView = $this->mPTCViewTbl->select($dayWh);
+                    break;
+                default:
+                    break;
+            }
+
+
+            if(count($openView) == 0) {
+                return new ApiProblem(400, 'You have no open view for this ptc');
+            }
+            $openView = $openView->current();
+
+            $this->mPTCViewTbl->update([
+                'date_completed' => date('Y-m-d H:i:s', time()),
+            ],[
+                'ptc_idfs' => $openView->ptc_idfs,
+                'user_idfs' => $openView->user_idfs,
+                'date_completed' => null,
+            ]);
+
+            $this->mPTCTbl->update([
+                'view_balance' => $ptcInfo->view_balance-1
+            ],['PTC_ID' => $ptcInfo->PTC_ID]);
+
+            $rewardsByTimer = [15 => 10,30 => 15,60 => 20,90 => 25];
+
+            $reward = (int)$rewardsByTimer[$ptcInfo->timer];
+
+            if($reward > 0) {
+                $newBalance = $this->mTransaction->executeTransaction($reward, false, $me->User_ID, $ptcInfo->PTC_ID, 'ptc-view', 'Viewed Ad '.$ptcInfo->title.' for '.$ptcInfo->timer.' seconds', 1);
+                if($newBalance !== false) {
+                    return [
+                        'token_balance' => $newBalance,
+                        'state' => 'done'
+                    ];
+                } else {
+                    return new ApiProblem(500, 'Transaction error');
+                }
             }
         }
 

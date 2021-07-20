@@ -8,7 +8,7 @@ return [
     'view_manager' => [
         'display_exceptions' => false,
         'template_path_stack' => [
-            'user' => __DIR__.'/../view',
+            'user' => 'C:\\Users\\Praesidiarius\\PhpstormProjects\\oneplace-xi-core\\module\\User\\config/../view',
         ],
     ],
     'router' => [
@@ -75,6 +75,26 @@ return [
                     ],
                 ],
             ],
+            'user.rpc.forgot' => [
+                'type' => 'Segment',
+                'options' => [
+                    'route' => '/forgotpw',
+                    'defaults' => [
+                        'controller' => 'User\\V1\\Rpc\\Forgot\\Controller',
+                        'action' => 'forgot',
+                    ],
+                ],
+            ],
+            'user.rpc.friends' => [
+                'type' => 'Segment',
+                'options' => [
+                    'route' => '/friends',
+                    'defaults' => [
+                        'controller' => 'User\\V1\\Rpc\\Friends\\Controller',
+                        'action' => 'friends',
+                    ],
+                ],
+            ],
         ],
     ],
     'api-tools-versioning' => [
@@ -85,6 +105,8 @@ return [
             3 => 'user.rpc.dashboard',
             4 => 'user.rpc.confirm',
             5 => 'user.rpc.verify',
+            6 => 'user.rpc.forgot',
+            7 => 'user.rpc.friends',
         ],
     ],
     'api-tools-rest' => [
@@ -119,6 +141,8 @@ return [
             'User\\V1\\Rpc\\Dashboard\\Controller' => 'Json',
             'User\\V1\\Rpc\\Confirm\\Controller' => 'Json',
             'User\\V1\\Rpc\\Verify\\Controller' => 'Json',
+            'User\\V1\\Rpc\\Forgot\\Controller' => 'Json',
+            'User\\V1\\Rpc\\Friends\\Controller' => 'Json',
         ],
         'accept_whitelist' => [
             'User\\V1\\Rest\\User\\Controller' => [
@@ -151,6 +175,16 @@ return [
                 1 => 'application/json',
                 2 => 'application/*+json',
             ],
+            'User\\V1\\Rpc\\Forgot\\Controller' => [
+                0 => 'application/vnd.user.v1+json',
+                1 => 'application/json',
+                2 => 'application/*+json',
+            ],
+            'User\\V1\\Rpc\\Friends\\Controller' => [
+                0 => 'application/vnd.user.v1+json',
+                1 => 'application/json',
+                2 => 'application/*+json',
+            ],
         ],
         'content_type_whitelist' => [
             'User\\V1\\Rest\\User\\Controller' => [
@@ -174,6 +208,14 @@ return [
                 1 => 'application/json',
             ],
             'User\\V1\\Rpc\\Verify\\Controller' => [
+                0 => 'application/vnd.user.v1+json',
+                1 => 'application/json',
+            ],
+            'User\\V1\\Rpc\\Forgot\\Controller' => [
+                0 => 'application/vnd.user.v1+json',
+                1 => 'application/json',
+            ],
+            'User\\V1\\Rpc\\Friends\\Controller' => [
                 0 => 'application/vnd.user.v1+json',
                 1 => 'application/json',
             ],
@@ -202,6 +244,8 @@ return [
             'User\\V1\\Rpc\\Dashboard\\Controller' => \User\V1\Rpc\Dashboard\DashboardControllerFactory::class,
             'User\\V1\\Rpc\\Confirm\\Controller' => \User\V1\Rpc\Confirm\ConfirmControllerFactory::class,
             'User\\V1\\Rpc\\Verify\\Controller' => \User\V1\Rpc\Verify\VerifyControllerFactory::class,
+            'User\\V1\\Rpc\\Forgot\\Controller' => \User\V1\Rpc\Forgot\ForgotControllerFactory::class,
+            'User\\V1\\Rpc\\Friends\\Controller' => \User\V1\Rpc\Friends\FriendsControllerFactory::class,
         ],
     ],
     'api-tools-rpc' => [
@@ -241,6 +285,24 @@ return [
             ],
             'route_name' => 'user.rpc.verify',
         ],
+        'User\\V1\\Rpc\\Forgot\\Controller' => [
+            'service_name' => 'Forgot',
+            'http_methods' => [
+                0 => 'POST',
+                1 => 'GET',
+                2 => 'PUT',
+            ],
+            'route_name' => 'user.rpc.forgot',
+        ],
+        'User\\V1\\Rpc\\Friends\\Controller' => [
+            'service_name' => 'Friends',
+            'http_methods' => [
+                0 => 'GET',
+                1 => 'POST',
+                2 => 'PUT',
+            ],
+            'route_name' => 'user.rpc.friends',
+        ],
     ],
     'api-tools-content-validation' => [
         'User\\V1\\Rest\\User\\Controller' => [
@@ -251,6 +313,9 @@ return [
         ],
         'User\\V1\\Rpc\\Confirm\\Controller' => [
             'input_filter' => 'User\\V1\\Rpc\\Confirm\\Validator',
+        ],
+        'User\\V1\\Rpc\\Forgot\\Controller' => [
+            'input_filter' => 'User\\V1\\Rpc\\Forgot\\Validator',
         ],
     ],
     'input_filter_specs' => [
@@ -327,6 +392,14 @@ return [
                 'error_message' => 'You must provide a valid token',
             ],
         ],
+        'User\\V1\\Rpc\\Forgot\\Validator' => [
+            0 => [
+                'required' => true,
+                'validators' => [],
+                'filters' => [],
+                'name' => 'email',
+            ],
+        ],
     ],
     'api-tools-mvc-auth' => [
         'authorization' => [
@@ -374,6 +447,28 @@ return [
                         'GET' => false,
                         'POST' => true,
                         'PUT' => false,
+                        'PATCH' => false,
+                        'DELETE' => false,
+                    ],
+                ],
+            ],
+            'User\\V1\\Rpc\\Forgot\\Controller' => [
+                'actions' => [
+                    'forgot' => [
+                        'GET' => false,
+                        'POST' => true,
+                        'PUT' => true,
+                        'PATCH' => false,
+                        'DELETE' => false,
+                    ],
+                ],
+            ],
+            'User\\V1\\Rpc\\Friends\\Controller' => [
+                'actions' => [
+                    'friends' => [
+                        'GET' => true,
+                        'POST' => true,
+                        'PUT' => true,
                         'PATCH' => false,
                         'DELETE' => false,
                     ],

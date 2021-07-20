@@ -337,6 +337,15 @@ class UserResource extends AbstractResourceListener
                 'state' => 'success',
             ];
         }
+
+        # get country by ip for offerwalls
+        $country = 'GGG';
+        try {
+            $country = $this->ip_info(NULL, 'countrycode');
+        } catch (\RuntimeException $e) {
+            # country get error
+        }
+
         # add user
         $passwordHash = password_hash($password, PASSWORD_DEFAULT);
         $this->mapper->insert([
@@ -345,7 +354,7 @@ class UserResource extends AbstractResourceListener
             'ref_user_idfs' => $referal,
             'full_name' => $username,
             'email' => $email,
-            'email_verified' => 0,
+            'email_verified' => 1,
             'password' => $passwordHash,
             'xp_level' => 1,
             'xp_total' => 0,
@@ -356,6 +365,7 @@ class UserResource extends AbstractResourceListener
             'telegram_chatid' => '',
             'lang' => 'en_US',
             'theme' => 'faucet',
+            'country' => substr($country,0,3),
             'created_by' => 1,
             'created_date' => date('Y-m-d H:i:s', time()),
             'modified_by' => 1,
@@ -385,21 +395,40 @@ class UserResource extends AbstractResourceListener
         $userNew = $this->mapper->select(['User_ID' => $userId]);
         if(count($userNew) > 0) {
             $userNew = $userNew->current();
+            # generate friend tag
+            $usrBase = $username;
+            $hasMail = stripos($username,'@');
+            if($hasMail === false) {
+            } else {
+                $usrBase = explode('@', $username)[0];
+            }
+            $tag = str_replace([
+                    ' ','ö','ä','ü','@gmail.com','@yahoo.com','@mail.ru','@outlook.es','@hotmail.com','@ukr.net',
+                    '@outlook.com','Outlook.es','.com','@'
+                ],[
+                    '.','o','a','u','','','','','','','','','',''
+                ], substr($usrBase, 0, 100)).'#'.substr($userId,strlen($userId)-4);
+
             # send verification email
             $secToken = $this->mMailTools->generateSecurityToken($userNew);
             $confirmLink = $this->mMailTools->getApiURL().'/verify-email/'.$secToken;
             $this->mapper->update([
+                'friend_tag' => $tag,
                 'send_verify' => date('Y-m-d H:i:s', time()),
                 'password_reset_token' => $secToken,
                 'password_reset_date' => date('Y-m-d H:i:s', time()),
             ],[
                 'User_ID' => $userNew->User_ID
             ]);
-            $this->mMailTools->sendMail('email_verify', [
-                'sEmailTitle' => 'Verify your E-Mail Address',
-                'footerInfo' => 'Swissfaucet.io - Faucet #1',
-                'link' => $confirmLink
-            ], $this->mMailTools->getAdminEmail(), $userNew->email, 'Verify your E-Mail Address');
+            try {
+                $this->mMailTools->sendMail('email_verify', [
+                    'sEmailTitle' => 'Verify your E-Mail Address',
+                    'footerInfo' => 'Swissfaucet.io - Faucet #1',
+                    'link' => $confirmLink
+                ], $this->mMailTools->getAdminEmail(), $userNew->email, 'Verify your E-Mail Address');
+            } catch (\RuntimeException $e) {
+                // email send error
+            }
         }
 
         return [
@@ -419,6 +448,71 @@ class UserResource extends AbstractResourceListener
     public function delete($id)
     {
         return new ApiProblem(405, 'The DELETE method has not been defined for individual resources');
+    }
+
+    private function ip_info($ip = NULL, $purpose = "location", $deep_detect = TRUE) {
+        $output = NULL;
+        if (filter_var($ip, FILTER_VALIDATE_IP) === FALSE) {
+            $ip = $_SERVER["REMOTE_ADDR"];
+            if ($deep_detect) {
+                if (filter_var(@$_SERVER['HTTP_X_FORWARDED_FOR'], FILTER_VALIDATE_IP))
+                    $ip = $_SERVER['HTTP_X_FORWARDED_FOR'];
+                if (filter_var(@$_SERVER['HTTP_CLIENT_IP'], FILTER_VALIDATE_IP))
+                    $ip = $_SERVER['HTTP_CLIENT_IP'];
+            }
+        }
+        $purpose    = str_replace(array("name", "\n", "\t", " ", "-", "_"), NULL, strtolower(trim($purpose)));
+        $support    = array("country", "countrycode", "state", "region", "city", "location", "address");
+        $continents = array(
+            "AF" => "Africa",
+            "AN" => "Antarctica",
+            "AS" => "Asia",
+            "EU" => "Europe",
+            "OC" => "Australia (Oceania)",
+            "NA" => "North America",
+            "SA" => "South America"
+        );
+        if (filter_var($ip, FILTER_VALIDATE_IP) && in_array($purpose, $support)) {
+            $ipdat = @json_decode(file_get_contents("http://www.geoplugin.net/json.gp?ip=" . $ip));
+            if (@strlen(trim($ipdat->geoplugin_countryCode)) == 2) {
+                switch ($purpose) {
+                    case "location":
+                        $output = array(
+                            "city"           => @$ipdat->geoplugin_city,
+                            "state"          => @$ipdat->geoplugin_regionName,
+                            "country"        => @$ipdat->geoplugin_countryName,
+                            "country_code"   => @$ipdat->geoplugin_countryCode,
+                            "continent"      => @$continents[strtoupper($ipdat->geoplugin_continentCode)],
+                            "continent_code" => @$ipdat->geoplugin_continentCode
+                        );
+                        break;
+                    case "address":
+                        $address = array($ipdat->geoplugin_countryName);
+                        if (@strlen($ipdat->geoplugin_regionName) >= 1)
+                            $address[] = $ipdat->geoplugin_regionName;
+                        if (@strlen($ipdat->geoplugin_city) >= 1)
+                            $address[] = $ipdat->geoplugin_city;
+                        $output = implode(", ", array_reverse($address));
+                        break;
+                    case "city":
+                        $output = @$ipdat->geoplugin_city;
+                        break;
+                    case "state":
+                        $output = @$ipdat->geoplugin_regionName;
+                        break;
+                    case "region":
+                        $output = @$ipdat->geoplugin_regionName;
+                        break;
+                    case "country":
+                        $output = @$ipdat->geoplugin_countryName;
+                        break;
+                    case "countrycode":
+                        $output = @$ipdat->geoplugin_countryCode;
+                        break;
+                }
+            }
+        }
+        return $output;
     }
 
     /**
