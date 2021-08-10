@@ -128,6 +128,7 @@ class HallOfFameController extends AbstractActionController
                         $userInfo = $userInfo->current();
                         $topEarners[] = (object)[
                             'name' => $userInfo->username,
+                            'avatar' => ($userInfo->avatar != '') ? $userInfo->avatar : $userInfo->username,
                             'id' => $userInfo->User_ID,
                             'rank' => $rank,
                             'coins' => $earn->coins,
@@ -148,6 +149,7 @@ class HallOfFameController extends AbstractActionController
             foreach($topPlayerStats as $top) {
                 $topPlayers[] = (object)[
                     'name' => $top->username,
+                    'avatar' => ($top->avatar != '') ? $top->avatar : $top->username,
                     'id' => $top->User_ID,
                     'rank' => $rank,
                     'xp' => (float)$top->xp_total,
@@ -166,6 +168,7 @@ class HallOfFameController extends AbstractActionController
             foreach($topPlayerStats as $top) {
                 $topGuilds[] = (object)[
                     'name' => $top->label,
+                    'avatar' => ($top->avatar != '') ? $top->avatar : $top->username,
                     'id' => $top->Guild_ID,
                     'icon' => $top->icon,
                     'is_vip' => $top->is_vip,
@@ -220,6 +223,7 @@ class HallOfFameController extends AbstractActionController
                         if($rank <= 50) {
                             $topPlayers[] = (object)[
                                 'name' => $top->username,
+                                'avatar' => ($top->avatar != '') ? $top->avatar : $top->username,
                                 'id' => $top->User_ID,
                                 'rank' => $rank,
                                 'xp' => (float)$top->xp_total,
@@ -266,6 +270,7 @@ class HallOfFameController extends AbstractActionController
                             $userInfo = $userInfo->current();
                             $topShorters[] = (object)[
                                 'name' => $userInfo->username,
+                                'avatar' => ($userInfo->avatar != '') ? $userInfo->avatar : $userInfo->username,
                                 'id' => $userInfo->User_ID,
                                 'rank' => $rank,
                                 'links' => (int)$shortsByUser[$claimUser],
@@ -299,6 +304,7 @@ class HallOfFameController extends AbstractActionController
                             $userInfo = $userInfo->current();
                             $topShortersMonth[] = (object)[
                                 'name' => $userInfo->username,
+                                'avatar' => ($userInfo->avatar != '') ? $userInfo->avatar : $userInfo->username,
                                 'id' => $userInfo->User_ID,
                                 'rank' => $rank,
                                 'links' => (int)$shortsByUser[$claimUser],
@@ -345,6 +351,7 @@ class HallOfFameController extends AbstractActionController
                             $userInfo = $userInfo->current();
                             $topShorters[] = (object)[
                                 'name' => $userInfo->username,
+                                'avatar' => ($userInfo->avatar != '') ? $userInfo->avatar : $userInfo->username,
                                 'id' => $userInfo->User_ID,
                                 'rank' => $rank,
                                 'coins' => (int)$shortsByUser[$claimUser],
@@ -378,6 +385,7 @@ class HallOfFameController extends AbstractActionController
                             $userInfo = $userInfo->current();
                             $topShortersMonth[] = (object)[
                                 'name' => $userInfo->username,
+                                'avatar' => ($userInfo->avatar != '') ? $userInfo->avatar : $userInfo->username,
                                 'id' => $userInfo->User_ID,
                                 'rank' => $rank,
                                 'coins' => (int)$shortsByUser[$claimUser],
@@ -434,6 +442,7 @@ class HallOfFameController extends AbstractActionController
                             $userInfo = $userInfo->current();
                             $topShorters[] = (object)[
                                 'name' => $userInfo->username,
+                                'avatar' => ($userInfo->avatar != '') ? $userInfo->avatar : $userInfo->username,
                                 'id' => $userInfo->User_ID,
                                 'rank' => $rank,
                                 'coins' => (int)$shortsByUser[$claimUser],
@@ -473,6 +482,7 @@ class HallOfFameController extends AbstractActionController
                             $userInfo = $userInfo->current();
                             $topShortersMonth[] = (object)[
                                 'name' => $userInfo->username,
+                                'avatar' => ($userInfo->avatar != '') ? $userInfo->avatar : $userInfo->username,
                                 'id' => $userInfo->User_ID,
                                 'rank' => $rank,
                                 'coins' => (int)$shortsByUser[$claimUser],
@@ -519,6 +529,7 @@ class HallOfFameController extends AbstractActionController
                             $userInfo = $userInfo->current();
                             $topShorters[] = (object)[
                                 'name' => $userInfo->username,
+                                'avatar' => ($userInfo->avatar != '') ? $userInfo->avatar : $userInfo->username,
                                 'id' => $userInfo->User_ID,
                                 'rank' => $rank,
                                 'offers' => (int)$shortsByUser[$claimUser],
@@ -552,6 +563,7 @@ class HallOfFameController extends AbstractActionController
                             $userInfo = $userInfo->current();
                             $topShortersMonth[] = (object)[
                                 'name' => $userInfo->username,
+                                'avatar' => ($userInfo->avatar != '') ? $userInfo->avatar : $userInfo->username,
                                 'id' => $userInfo->User_ID,
                                 'rank' => $rank,
                                 'offers' => (int)$shortsByUser[$claimUser],
@@ -604,6 +616,7 @@ class HallOfFameController extends AbstractActionController
                             $userInfo = $userInfo->current();
                             $topShorters[] = (object)[
                                 'name' => $userInfo->username,
+                                'avatar' => ($userInfo->avatar != '') ? $userInfo->avatar : $userInfo->username,
                                 'id' => $userInfo->User_ID,
                                 'rank' => $rank,
                                 'win' => (int)$claimWin,
@@ -650,6 +663,7 @@ class HallOfFameController extends AbstractActionController
                             $userInfo = $userInfo->current();
                             $topClaimers[] = (object)[
                                 'name' => $userInfo->username,
+                                'avatar' => ($userInfo->avatar != '') ? $userInfo->avatar : $userInfo->username,
                                 'id' => $userInfo->User_ID,
                                 'rank' => $rank,
                                 'claims' => (int)$claimsByUser[$claimUser],

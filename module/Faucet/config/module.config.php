@@ -10,6 +10,7 @@ return [
             'Faucet\\V1\\Rpc\\Webstats\\Controller' => \Faucet\V1\Rpc\Webstats\WebstatsControllerFactory::class,
             'Faucet\\V1\\Rpc\\Token\\Controller' => \Faucet\V1\Rpc\Token\TokenControllerFactory::class,
             'Faucet\\V1\\Rpc\\Wallet\\Controller' => \Faucet\V1\Rpc\Wallet\WalletControllerFactory::class,
+            'Faucet\\V1\\Rpc\\Adwatch\\Controller' => \Faucet\V1\Rpc\Adwatch\AdwatchControllerFactory::class,
         ],
     ],
     'router' => [
@@ -112,6 +113,16 @@ return [
                     ],
                 ],
             ],
+            'faucet.rpc.adwatch' => [
+                'type' => 'Segment',
+                'options' => [
+                    'route' => '/adwatch',
+                    'defaults' => [
+                        'controller' => 'Faucet\\V1\\Rpc\\Adwatch\\Controller',
+                        'action' => 'adwatch',
+                    ],
+                ],
+            ],
         ],
     ],
     'api-tools-versioning' => [
@@ -126,6 +137,7 @@ return [
             7 => 'faucet.rpc.webstats',
             8 => 'faucet.rpc.token',
             9 => 'faucet.rpc.wallet',
+            10 => 'faucet.rpc.adwatch',
         ],
     ],
     'api-tools-rpc' => [
@@ -190,6 +202,14 @@ return [
             ],
             'route_name' => 'faucet.rpc.wallet',
         ],
+        'Faucet\\V1\\Rpc\\Adwatch\\Controller' => [
+            'service_name' => 'Adwatch',
+            'http_methods' => [
+                0 => 'GET',
+                1 => 'POST',
+            ],
+            'route_name' => 'faucet.rpc.adwatch',
+        ],
     ],
     'api-tools-content-negotiation' => [
         'controllers' => [
@@ -203,6 +223,7 @@ return [
             'Faucet\\V1\\Rpc\\Webstats\\Controller' => 'Json',
             'Faucet\\V1\\Rpc\\Token\\Controller' => 'Json',
             'Faucet\\V1\\Rpc\\Wallet\\Controller' => 'Json',
+            'Faucet\\V1\\Rpc\\Adwatch\\Controller' => 'Json',
         ],
         'accept_whitelist' => [
             'Faucet\\V1\\Rpc\\Claim\\Controller' => [
@@ -255,6 +276,11 @@ return [
                 1 => 'application/json',
                 2 => 'application/*+json',
             ],
+            'Faucet\\V1\\Rpc\\Adwatch\\Controller' => [
+                0 => 'application/vnd.faucet.v1+json',
+                1 => 'application/json',
+                2 => 'application/*+json',
+            ],
         ],
         'content_type_whitelist' => [
             'Faucet\\V1\\Rpc\\Claim\\Controller' => [
@@ -294,6 +320,10 @@ return [
                 1 => 'application/json',
             ],
             'Faucet\\V1\\Rpc\\Wallet\\Controller' => [
+                0 => 'application/vnd.faucet.v1+json',
+                1 => 'application/json',
+            ],
+            'Faucet\\V1\\Rpc\\Adwatch\\Controller' => [
                 0 => 'application/vnd.faucet.v1+json',
                 1 => 'application/json',
             ],
@@ -402,6 +432,17 @@ return [
             'Faucet\\V1\\Rpc\\Wallet\\Controller' => [
                 'actions' => [
                     'wallet' => [
+                        'GET' => true,
+                        'POST' => true,
+                        'PUT' => false,
+                        'PATCH' => false,
+                        'DELETE' => false,
+                    ],
+                ],
+            ],
+            'Faucet\\V1\\Rpc\\Adwatch\\Controller' => [
+                'actions' => [
+                    'adwatch' => [
                         'GET' => true,
                         'POST' => true,
                         'PUT' => false,

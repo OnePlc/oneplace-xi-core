@@ -64,6 +64,14 @@ class TransactionController extends AbstractActionController
     protected $mTransaction;
 
     /**
+     * Offers done Table
+     *
+     * @var TransactionHelper $mOffersDoneTbl
+     * @since 1.0.0
+     */
+    protected $mOffersDoneTbl;
+
+    /**
      * User Settings Table
      *
      * @var TableGateway $mUserSetTbl
@@ -95,6 +103,7 @@ class TransactionController extends AbstractActionController
         $this->mTransaction = new TransactionHelper($mapper);
         $this->mUserSetTbl = new TableGateway('user_setting', $mapper);
         $this->mTransTbl = new TableGateway('faucet_transaction', $mapper);
+        $this->mOffersDoneTbl = new TableGateway('offerwall_user', $mapper);
     }
 
     /**
@@ -114,37 +123,48 @@ class TransactionController extends AbstractActionController
             return new ApiProblemResponse($me);
         }
 
-        # this is only for emplyoees ...
-        if((int)$me->is_employee !== 1) {
-            return new ApiProblemResponse(new ApiProblem(418, 'Nice try - but no coffee for you.'));
-        }
-
         $request = $this->getRequest();
 
         /**
          * Get User Transaction Log
          */
         if($request->isPost()) {
-            # get data from body
-            $json = IndexController::loadJSONFromRequestBody(['user_id'],$this->getRequest()->getContent());
-            # check for attack vendors
-            $secResult = $this->mSecTools->basicInputCheck([$json->user_id]);
-            if($secResult !== 'ok') {
-                # ban user and force logout on client
-                $this->mUserSetTbl->insert([
-                    'user_idfs' => $me->User_ID,
-                    'setting_name' => 'user-tempban',
-                    'setting_value' => 'Potential '.$secResult.' Attack @ '.date('Y-m-d H:i:s').' on Transaction History',
-                ]);
-                return new ApiProblemResponse(new ApiProblem(418, 'Potential XSS Attack - Goodbye'));
+            # this is only for emplyoees ...
+            if((int)$me->is_employee !== 1) {
+                $userId = $me->User_ID;
+            } else {
+                # get data from body
+                $json = IndexController::loadJSONFromRequestBody(['user_id'],$this->getRequest()->getContent());
+                # check for attack vendors
+                $secResult = $this->mSecTools->basicInputCheck([$json->user_id]);
+                if($secResult !== 'ok') {
+                    # ban user and force logout on client
+                    $this->mUserSetTbl->insert([
+                        'user_idfs' => $me->User_ID,
+                        'setting_name' => 'user-tempban',
+                        'setting_value' => 'Potential '.$secResult.' Attack @ '.date('Y-m-d H:i:s').' on Transaction History',
+                    ]);
+                    return new ApiProblemResponse(new ApiProblem(418, 'Potential XSS Attack - Goodbye'));
+                }
+
+                # check if user exists
+                $userId = filter_var($json->user_id, FILTER_SANITIZE_NUMBER_INT);
+
+                # if userId = 0, then employee wants to see his own history
+                if($userId == 0) {
+                    $userId = $me->User_ID;
+                }
             }
 
-            # check if user exists
-            $userId = filter_var($json->user_id, FILTER_SANITIZE_NUMBER_INT);
+            if($userId == 0) {
+                return new ApiProblemResponse(new ApiProblem(404, 'User not does exist'));
+            }
             $logUser = $this->mUserTbl->select(['User_ID' => $userId]);
             if(count($logUser) == 0) {
                 return new ApiProblemResponse(new ApiProblem(404, 'User not does exist'));
             }
+
+            $filter = '';
 
             /**
              * Get open Support Tickets
@@ -154,6 +174,13 @@ class TransactionController extends AbstractActionController
             $transactionLog = [];
             $transactionSel = new Select($this->mTransTbl->getTable());
             $checkWh = new Where();
+            if($filter == 'shortlink') {
+                $checkWh->nest()
+                    ->equalTo('ref_type', 'shortlink')
+                    ->OR
+                    ->equalTo('ref_type', 'shortlink-complete')
+                    ->unnest();
+            }
             $checkWh->equalTo('user_idfs', $userId);
             $transactionSel->where($checkWh);
             $transactionSel->order('date DESC');

@@ -557,8 +557,8 @@ class UserResource extends AbstractResourceListener
             return $user;
         }
 
-        if($user->User_ID == 335875071) {
-            //return new ApiProblem(403, 'CUSTOM SERVER ERROR');
+        if($user->User_ID == 335892443) {
+            return new ApiProblem(418, 'YOU MUST UPGRADE YOUR APP');
         }
 
         # get user next level xp
@@ -642,6 +642,7 @@ class UserResource extends AbstractResourceListener
             'id' => (int)$user->User_ID,
             'name' => $user->username,
             'email' => $user->email,
+            'avatar' => ($user->avatar != '') ? $user->avatar : $user->username,
             'servertime' => date('Y-m-d H:i:s', time()),
             'emp_mode' => ($user->is_employee == 1) ? 'mod' : '',
             'verified' => (int)$user->email_verified,
@@ -726,6 +727,9 @@ class UserResource extends AbstractResourceListener
         if(isset($data[0]->time_zone)) {
             $checkFields[] = $data[0]->time_zone;
         }
+        if(isset($data[0]->avatar)) {
+            $checkFields[] = $data[0]->avatar;
+        }
         if(isset($data[0]->passwordCheck)) {
             $checkFields[] = $data[0]->passwordCheck;
             $checkFields[] = $data[0]->passwordNew;
@@ -752,6 +756,7 @@ class UserResource extends AbstractResourceListener
         $passwordNew = filter_var($data[0]->passwordNew, FILTER_SANITIZE_STRING);
         $passwordNewVer = filter_var($data[0]->passwordNewVerify, FILTER_SANITIZE_STRING);
         $passwordCheck = filter_var($data[0]->passwordCheck, FILTER_SANITIZE_STRING);
+        $avatar = filter_var($data[0]->avatar, FILTER_SANITIZE_STRING);
 
         $favCoin = filter_var($data[0]->favCoin, FILTER_SANITIZE_STRING);
 
@@ -764,6 +769,15 @@ class UserResource extends AbstractResourceListener
                 return new ApiProblem(409, 'name already taken');
             }
             $update['username'] = $name;
+        }
+
+        if($avatar != '') {
+            if(strlen($avatar) > 100) {
+                return new ApiProblem(409, 'name for avatar is too long');
+            }
+            $update['avatar'] = $avatar;
+        } else {
+            $avatar = $user->username;
         }
 
         # check if password has changed
@@ -917,6 +931,7 @@ class UserResource extends AbstractResourceListener
             'id' => $user->User_ID,
             'name' => $user->username,
             'email' => $user->email,
+            'avatar' => $avatar,
             'token_balance' => $user->token_balance,
             'crypto_balance' => $cryptoBalance,
             'xp_level' => $user->xp_level,

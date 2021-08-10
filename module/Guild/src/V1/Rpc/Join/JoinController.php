@@ -58,6 +58,14 @@ class JoinController extends AbstractActionController
     protected $mGuildUserTbl;
 
     /**
+     * Guild Rank Table
+     *
+     * @var TableGateway $mGuildRankTbl
+     * @since 1.0.0
+     */
+    protected $mGuildRankTbl;
+
+    /**
      * User Table
      *
      * @var TableGateway $mUserTbl
@@ -87,6 +95,7 @@ class JoinController extends AbstractActionController
         $this->mGuildUserTbl = new TableGateway('faucet_guild_user', $mapper);
         $this->mUserTbl = new TableGateway('user', $mapper);
         $this->mUserSetTbl = new TableGateway('user_setting', $mapper);
+        $this->mGuildRankTbl = new TableGateway('faucet_guild_rank', $mapper);
         $this->mSecTools = new SecurityTools($mapper);
     }
 
@@ -270,6 +279,116 @@ class JoinController extends AbstractActionController
                     'items' => $guildMembers,
                     'total_items' => $totalMembers,
                 ],
+            ];
+        }
+
+        if($request->isPut()) {
+            $json = IndexController::loadJSONFromRequestBody(['user_id','new_rank'],$this->getRequest()->getContent());
+            if(!$json) {
+                return new ApiProblemResponse(new ApiProblem(400, 'Invalid JSON Body'));
+            }
+
+            $userId = filter_var($json->user_id, FILTER_SANITIZE_NUMBER_INT);
+            $newRankId = filter_var($json->new_rank, FILTER_SANITIZE_NUMBER_INT);
+
+            $this->mGuildUserTbl->update([
+                'rank' => $newRankId
+            ],[
+                'user_idfs' => $userId,
+                'guild_idfs' => $guild->Guild_ID
+            ]);
+
+            $guildRanks = [];
+            $guildRanksDB = $this->mGuildRankTbl->select(['guild_idfs' => $guild->Guild_ID]);
+            if(count($guildRanksDB) > 0) {
+                foreach($guildRanksDB as $rank) {
+                    $guildRanks[$rank->level] = $rank->label;
+                }
+            }
+
+            /**
+             * Load Guild Members List (paginated)
+             */
+            $pageSize = 25;
+            $page = (isset($_REQUEST['page'])) ? filter_var($_REQUEST['page'], FILTER_SANITIZE_NUMBER_INT) : 1;
+            $guildMembers = [];
+            $memberSel = new Select($this->mGuildUserTbl->getTable());
+            $checkWh = new Where();
+            $checkWh->equalTo('guild_idfs', $guild->Guild_ID);
+            $checkWh->notLike('date_joined', '0000-00-00 00:00:00');
+            $memberSel->where($checkWh);
+            $memberSel->order('rank ASC');
+            # Create a new pagination adapter object
+            $oPaginatorAdapter = new DbSelect(
+            # our configured select object
+                $memberSel,
+                # the adapter to run it against
+                $this->mGuildUserTbl->getAdapter()
+            );
+            # Create Paginator with Adapter
+            $membersPaginated = new Paginator($oPaginatorAdapter);
+            $membersPaginated->setCurrentPageNumber($page);
+            $membersPaginated->setItemCountPerPage($pageSize);
+            foreach($membersPaginated as $guildMember) {
+                $member = $this->mUserTbl->select(['User_ID' => $guildMember->user_idfs]);
+                if(count($member) > 0) {
+                    $member = $member->current();
+                    $guildMembers[] = (object)[
+                        'id' => $member->User_ID,
+                        'name' => $member->username,
+                        'xp_level' => $member->xp_level,
+                        'rank' => (object)[
+                            'id' => $guildMember->rank,
+                            'name'=> $guildRanks[$guildMember->rank]
+                        ]
+                    ];
+                }
+            }
+            $totalMembers = $this->mGuildUserTbl->select($checkWh)->count();
+
+            return [
+                'page' => $page,
+                'page_size' => $pageSize,
+                'page_count' => (round($totalMembers/$pageSize) > 0) ? round($totalMembers/$pageSize) : 1,
+                'items' => $guildMembers,
+                'total_items' => $totalMembers,
+            ];
+        }
+
+        if($request->isDelete()) {
+            $ban = filter_var($_REQUEST['ban'], FILTER_SANITIZE_NUMBER_INT);
+            if($ban != 1 && $ban != 0) {
+                return new ApiProblemResponse(new ApiProblem(400, 'Invalid JSON Body'));
+            }
+
+            $userId = filter_var($_REQUEST['user_id'], FILTER_SANITIZE_NUMBER_INT);
+
+            $gCheck = $this->mGuildUserTbl->select([
+                'user_idfs' => $userId,
+                'guild_idfs' => $guild->Guild_ID
+            ]);
+
+            if(count($gCheck) == 0) {
+                return new ApiProblemResponse(new ApiProblem(400, 'User is not in guild'));
+            }
+
+            if($ban == 1) {
+                $this->mGuildUserTbl->update([
+                    'date_joined' => '0000-00-00 00:00:00',
+                    'date_declined' => date('Y-m-d H:i:s', time()),
+                ],[
+                    'user_idfs' => $userId,
+                    'guild_idfs' => $guild->Guild_ID
+                ]);
+            } else {
+                $this->mGuildUserTbl->delete([
+                    'user_idfs' => $userId,
+                    'guild_idfs' => $guild->Guild_ID
+                ]);
+            }
+
+            return [
+                'state' => 'done'
             ];
         }
 

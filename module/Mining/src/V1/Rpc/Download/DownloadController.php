@@ -128,14 +128,14 @@ class DownloadController extends AbstractActionController
                     $sConfig = file_get_contents('/var/nano-config.ini');
                     $sLink = '';
                     $zip = new \ZipArchive;
-                    copy('/var/nanominer/nanominer-'.$platform.'-3.3.6.zip','/var/nanominer/nanominer-'.$me->User_ID.'-'.$platform.'.zip');
+                    copy('/var/nanominer/nanominer-'.$platform.'-3.3.7.zip','/var/nanominer/nanominer-'.$me->User_ID.'-'.$platform.'.zip');
                     if ($zip->open('/var/nanominer/nanominer-'.$me->User_ID.'-'.$platform.'.zip') === TRUE) {
                         //Modify contents:
                         $newContents = str_replace(['swissfaucetio1'],['swissfaucetio'.$me->User_ID],$sConfig);
                         //Delete the old...
-                        $zip->deleteName('nanominer-'.$platform.'-3.3.6/config.ini');
+                        $zip->deleteName('nanominer-'.$platform.'-3.3.7/config.ini');
                         //Write the new...
-                        $zip->addFromString('nanominer-'.$platform.'-3.3.6/config.ini', $newContents);
+                        $zip->addFromString('nanominer-'.$platform.'-3.3.7/config.ini', $newContents);
                         //And write back to the filesystem.
                         $zip->close();
                         $sLink = $this->mApiTools->getSystemURL().'/miner-download/nanominer-'.$me->User_ID.'-'.$platform.'.zip';

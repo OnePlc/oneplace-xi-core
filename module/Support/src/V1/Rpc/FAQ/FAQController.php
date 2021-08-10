@@ -63,25 +63,52 @@ class FAQController extends AbstractActionController
         if($request->isGet()) {
             $categoryName = filter_var($_REQUEST['category'], FILTER_SANITIZE_STRING);
 
-            $categoryFound = $this->mFAQCatTbl->select(['url' => $categoryName]);
-            if(count($categoryFound) == 0) {
-                return new ApiProblemResponse(new ApiProblem(404, 'Category not found'));
-            }
-            $category = $categoryFound->current();
+            if($categoryName == 'all') {
+                $faqCompiled = [];
+                $faqByCategory = [];
+                $categoriesFound = $this->mFAQCatTbl->select();
+                foreach($categoriesFound as $cat) {
+                    $faqByCategory[$cat->Category_ID] = ['name' => $cat->label, 'url' => $cat->url, 'faq' => []];
+                }
 
-            $faqCompiled = [];
-            $faqSel = new Select($this->mFAQTbl->getTable());
-            $faqSel->where(['category_idfs' => $category->Category_ID]);
-            $faqSel->order('sort_id ASC');
-            $faqFound = $this->mFAQTbl->selectWith($faqSel);
-            if(count($faqFound) > 0) {
-                foreach($faqFound as $faq) {
-                    $faqCompiled[] = (object)[
-                      'id' => $faq->FAQ_ID,
-                      'question' => $faq->question,
-                      'answer' => utf8_decode($faq->answer),
-                      'sort_id' => $faq->sort_id
-                    ];
+                $faqSel = new Select($this->mFAQTbl->getTable());
+                $faqSel->order('sort_id ASC');
+                $faqFound = $this->mFAQTbl->selectWith($faqSel);
+                if(count($faqFound) > 0) {
+                    foreach($faqFound as $faq) {
+                        $faqByCategory[$faq->category_idfs]['faq'][] = (object)[
+                            'id' => $faq->FAQ_ID,
+                            'question' => $faq->question,
+                            'answer' => utf8_decode($faq->answer),
+                            'sort_id' => $faq->sort_id
+                        ];
+                    }
+                }
+
+                foreach($faqByCategory as $cat) {
+                    $faqCompiled[] = $cat;
+                }
+            } else {
+                $categoryFound = $this->mFAQCatTbl->select(['url' => $categoryName]);
+                if(count($categoryFound) == 0) {
+                    return new ApiProblemResponse(new ApiProblem(404, 'Category not found'));
+                }
+                $category = $categoryFound->current();
+
+                $faqCompiled = [];
+                $faqSel = new Select($this->mFAQTbl->getTable());
+                $faqSel->where(['category_idfs' => $category->Category_ID]);
+                $faqSel->order('sort_id ASC');
+                $faqFound = $this->mFAQTbl->selectWith($faqSel);
+                if(count($faqFound) > 0) {
+                    foreach($faqFound as $faq) {
+                        $faqCompiled[] = (object)[
+                            'id' => $faq->FAQ_ID,
+                            'question' => $faq->question,
+                            'answer' => utf8_decode($faq->answer),
+                            'sort_id' => $faq->sort_id
+                        ];
+                    }
                 }
             }
 

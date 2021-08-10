@@ -447,6 +447,7 @@ class GuildResource extends AbstractResourceListener
                 $guildMembers[] = (object)[
                     'id' => $member->User_ID,
                     'name' => $member->username,
+                    'avatar' => ($member->avatar != '') ? $member->avatar : $member->username,
                     'xp_level' => $member->xp_level,
                     'rank' => (object)[
                         'id' => $guildMember->rank,

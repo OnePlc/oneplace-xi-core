@@ -136,6 +136,7 @@ class FriendsController extends AbstractActionController
                     $myFriends[] = (object)[
                         'id' => $friendUser->User_ID,
                         'name' => $friendUser->username,
+                        'avatar' => ($friendUser->avatar != '') ? $friendUser->avatar : $friendUser->username,
                         'activity' => $lastAction,
                         'state' => 'online'
                     ];
@@ -158,6 +159,7 @@ class FriendsController extends AbstractActionController
                     $friendUser = $friendUser->current();
                     $myRequests[] = (object)[
                         'id' => $friendUser->User_ID,
+                        'avatar' => ($friendUser->avatar != '') ? $friendUser->avatar : $friendUser->username,
                         'name' => $friendUser->username,
                     ];
                 }
@@ -176,6 +178,7 @@ class FriendsController extends AbstractActionController
                     $friendUser = $friendUser->current();
                     $openRequests[] = (object)[
                         'id' => $friendUser->User_ID,
+                        'avatar' => ($friendUser->avatar != '') ? $friendUser->avatar : $friendUser->username,
                         'name' => $friendUser->username,
                     ];
                 }

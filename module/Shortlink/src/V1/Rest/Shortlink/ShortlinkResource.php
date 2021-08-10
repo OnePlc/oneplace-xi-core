@@ -325,6 +325,7 @@ class ShortlinkResource extends AbstractResourceListener
         $shortlinksById = [];
         $totalLinks = 0;
         $totalReward = 0;
+        $totalLinksDone24h = 0;
         foreach($shortlinksDB as $sh) {
             # get links for provider
             $shortlinksById[$sh->Shortlink_ID] = ['name' =>  $sh->label,'reward' =>  $sh->reward];
@@ -348,6 +349,7 @@ class ShortlinkResource extends AbstractResourceListener
                     $linksDone++;
                     $sh->last_done = $check->date_completed;
                     $sh->unlock_in = strtotime($check->date_completed)+(23*3600)-time();
+                    $totalLinksDone24h++;
                 }
             }
             $sh->linksDone = $linksDone;
@@ -358,6 +360,8 @@ class ShortlinkResource extends AbstractResourceListener
                 'name' => $sh->label,
                 'reward' => $sh->reward,
                 'url' => $sh->url,
+                'rating' => $sh->rating,
+                'rating_count' => $sh->rating_count,
                 'links_done' => $sh->linksDone,
                 'links_total' => $sh->linksTotal,
                 'difficulty' => $sh->difficulty,
@@ -396,10 +400,12 @@ class ShortlinkResource extends AbstractResourceListener
             ];
         }
 
+        /**
         $totalDone24Wh = new Where();
         $totalDone24Wh->equalTo('user_idfs', $me->User_ID);
         $totalDone24Wh->greaterThanOrEqualTo('date_completed', date('Y-m-d H:i:s', strtotime('-23 hours')));
         $totalLinksDone24h = $this->mShortDoneTbl->select($totalDone24Wh)->count();
+        **/
 
         $totalDoneWh = new Where();
         $totalDoneWh->equalTo('user_idfs', $me->User_ID);
