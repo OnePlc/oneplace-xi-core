@@ -168,6 +168,7 @@ return [
             'http_methods' => [
                 0 => 'GET',
                 1 => 'PUT',
+                2 => 'POST',
             ],
             'route_name' => 'faucet.rpc.withdraw',
         ],

@@ -26,6 +26,8 @@ use Laminas\Db\TableGateway\TableGateway;
 use Laminas\Db\Sql\Where;
 use Laminas\Db\Sql\Select;
 use Laminas\Mvc\Controller\AbstractActionController;
+use Laminas\Paginator\Adapter\DbSelect;
+use Laminas\Paginator\Paginator;
 use Laminas\Session\Container;
 
 class WithdrawController extends AbstractActionController
@@ -185,6 +187,64 @@ class WithdrawController extends AbstractActionController
                 'daily_limit' => $withdrawLimit+$withdrawBonus,
                 'token_val' => $tokenValue,
                 'daily_left' => (($withdrawLimit+$withdrawBonus) - $coinsWithdrawnToday)
+            ];
+        }
+
+        if($request->isPost()) {
+            $myWithdrawals = [];
+            $pageSize = 25;
+            $page = (isset($_REQUEST['page'])) ? filter_var($_REQUEST['page'], FILTER_SANITIZE_NUMBER_INT) : 1;
+
+
+            $stakingHistory = [];
+            $historySel = new Select($this->mWithdrawTbl->getTable());
+            $historySel->where(['user_idfs' => $me->User_ID]);
+            $historySel->order('date_requested DESC');
+            # Create a new pagination adapter object
+            $oPaginatorAdapterStak = new DbSelect(
+            # our configured select object
+                $historySel,
+                # the adapter to run it against
+                $this->mWithdrawTbl->getAdapter()
+            );
+            # Create Paginator with Adapter
+            $stakPaginated = new Paginator($oPaginatorAdapterStak);
+            $stakPaginated->setCurrentPageNumber($page);
+            $stakPaginated->setItemCountPerPage($pageSize);
+            foreach($stakPaginated as $wth) {
+                $myWithdrawals[] = (object)[
+                    'id' => $wth->Withdraw_ID,
+                    'tx_id' => $wth->transaction_id,
+                    'wallet' => $wth->wallet,
+                    'date_requested' => $wth->date_requested,
+                    'date_sent' => $wth->date_sent,
+                    'amount_coin' => $wth->amount,
+                    'amount' => $wth->amount_paid,
+                    'currency' => $wth->currency,
+                    'status' => $wth->state,
+                ];
+            }
+
+            $allWth = $this->mWithdrawTbl->selectWith($historySel);
+            $total = 0;
+            $totalItems = 0;
+            foreach($allWth as $tth) {
+                if($tth->state != 'cancel') {
+                    $total+=$tth->amount;
+                }
+                $totalItems++;
+            }
+            $total = round($total, 2);
+
+            return [
+                'history' => [
+                    'items' => $myWithdrawals,
+                    'total_items' => $totalItems,
+                    'total_withdrawn' => $total,
+                    'page' => $page,
+                    'page_size' => $pageSize,
+                    'page_count' => (round($totalItems/$pageSize) > 0) ? round($totalItems/$pageSize) : 1,
+                ]
             ];
         }
 

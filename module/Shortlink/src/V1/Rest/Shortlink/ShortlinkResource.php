@@ -375,6 +375,7 @@ class ShortlinkResource extends AbstractResourceListener
 
         # Compile history
         $history = [];
+        /**
         $historySel = new Select($this->mShortDoneTbl->getTable());
         $historySel->where(['user_idfs' => $me->User_ID]);
         $historySel->order('date_started DESC');
@@ -405,12 +406,13 @@ class ShortlinkResource extends AbstractResourceListener
         $totalDone24Wh->equalTo('user_idfs', $me->User_ID);
         $totalDone24Wh->greaterThanOrEqualTo('date_completed', date('Y-m-d H:i:s', strtotime('-23 hours')));
         $totalLinksDone24h = $this->mShortDoneTbl->select($totalDone24Wh)->count();
-        **/
+
 
         $totalDoneWh = new Where();
         $totalDoneWh->equalTo('user_idfs', $me->User_ID);
         $totalLinksDone = $this->mShortDoneTbl->select($totalDoneWh)->count();
-
+**/
+        $totalLinksDone = 0;
         $return = (object)[
             'provider' => $shortlinks,
             'total_reward' => $totalReward,

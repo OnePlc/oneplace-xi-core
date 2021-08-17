@@ -9,6 +9,13 @@
           </advancedOptions>
         </fileTransfer>
       </webServer>
+      <webServer id="e633dbac-ef22-4cfc-be09-600a085aaea7" name="Nicu Server">
+        <fileTransfer rootFolder="/var/www/faucetserver" accessType="SFTP" host="65.21.190.164" port="4444" sshConfigId="310294d0-59b6-4c60-82dc-497bd1feba13" sshConfig="root@65.21.190.164:4444 password">
+          <advancedOptions>
+            <advancedOptions dataProtectionLevel="Private" keepAliveTimeout="0" passiveMode="true" shareSSLContext="true" />
+          </advancedOptions>
+        </fileTransfer>
+      </webServer>
     </option>
   </component>
 </project>

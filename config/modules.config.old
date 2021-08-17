@@ -39,4 +39,5 @@ return [
     'News',
     'Support',
     'Mining',
+    'PTC',
 ];

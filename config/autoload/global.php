@@ -24,6 +24,7 @@ return [
                 'Laminas\\ApiTools\\OAuth2' => 'session',
                 'Mining\\V1' => 'oneplace',
                 'PTC\\V1' => 'oneplace',
+                'Mailbox\\V1' => 'oneplace',
             ],
         ],
         'adapters' => [
