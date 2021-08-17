@@ -40,4 +40,5 @@ return [
     'Support',
     'Mining',
     'PTC',
+    'Mailbox',
 ];

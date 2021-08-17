@@ -25,6 +25,7 @@ return [
                 'Mining\\V1' => 'oneplace',
                 'PTC\\V1' => 'oneplace',
                 'Mailbox\\V1' => 'oneplace',
+                'Profession\\V1' => 'oneplace',
             ],
         ],
         'adapters' => [

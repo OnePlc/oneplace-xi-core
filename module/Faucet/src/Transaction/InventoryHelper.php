@@ -78,6 +78,8 @@ class InventoryHelper {
                         'name' => $itemInfo->label,
                         'date_received' => $userItem->date_received,
                         'used' => $userItem->used,
+                        'usable' => ($itemInfo->usable == 1) ? true : false,
+                        'amount' => $userItem->amount,
                         'icon' => $itemInfo->icon,
                         'rarity' => $itemInfo->level,
                         'description' => $itemInfo->description

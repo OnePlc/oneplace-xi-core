@@ -8,6 +8,7 @@ use Faucet\Tools\UserTools;
 use Faucet\Transaction\TransactionHelper;
 use Laminas\ApiTools\ApiProblem\ApiProblem;
 use Laminas\ApiTools\ApiProblem\ApiProblemResponse;
+use Laminas\Db\Sql\Where;
 use Laminas\Db\TableGateway\TableGateway;
 use Laminas\Mvc\Controller\AbstractActionController;
 
@@ -141,7 +142,9 @@ class RatingController extends AbstractActionController
 
                 $openRatings = [];
 
-                $linksToCheck = $this->mShortRateTbl->select(['verified_by' => 0]);
+                $selWh = new Where();
+                $selWh->isNull('verified_by');
+                $linksToCheck = $this->mShortRateTbl->select($selWh);
                 foreach($linksToCheck as $rate) {
                     $rateUser = $this->mUserTbl->select(['User_ID' => $rate->user_idfs]);
                     $linkInfo = $this->mShortProviderTbl->select(['Shortlink_ID' => $rate->shortlink_idfs]);
@@ -152,7 +155,7 @@ class RatingController extends AbstractActionController
                             'id' => $rate->shortlink_idfs,
                             'name' => $linkInfo->label,
                             'rating' => $rate->rating,
-                            'comment' => $rate-comment,
+                            'comment' => $rate->comment,
                             'date' => $rate->date,
                             'user' => [
                                 'id' => $rateUser->User_ID,
