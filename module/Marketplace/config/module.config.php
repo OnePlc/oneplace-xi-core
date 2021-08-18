@@ -112,6 +112,7 @@ return [
             'service_name' => 'Auction',
             'http_methods' => [
                 0 => 'GET',
+                1 => 'POST',
             ],
             'route_name' => 'marketplace.rpc.auction',
         ],
@@ -122,7 +123,7 @@ return [
                 'actions' => [
                     'auction' => [
                         'GET' => true,
-                        'POST' => false,
+                        'POST' => true,
                         'PUT' => false,
                         'PATCH' => false,
                         'DELETE' => false,

@@ -61,6 +61,14 @@ class ItemController extends AbstractActionController
     protected $mInventory;
 
     /**
+     * User Bag Table
+     *
+     * @var TableGateway $mBagTbl
+     * @since 1.0.0
+     */
+    private $mBagTbl;
+
+    /**
      * Constructor
      *
      * UserResource constructor.
@@ -73,6 +81,8 @@ class ItemController extends AbstractActionController
         $this->mItemUserTbl = new TableGateway('faucet_item_user', $mapper);
         $this->mUserBuffTbl = new TableGateway('user_buff', $mapper);
         $this->mUserSetTbl = new TableGateway('user_setting', $mapper);
+        $this->mBagTbl = new TableGateway('user_bag', $mapper);
+
         $this->mSecTools = new SecurityTools($mapper);
         $this->mInventory = new InventoryHelper($mapper);
     }
@@ -127,16 +137,7 @@ class ItemController extends AbstractActionController
             }
             $userItem = $userItem->current();
 
-            # use item
-            $this->mItemUserTbl->update([
-                'used' => 1,
-                'date_used' => date('Y-m-d H:i:s', time()),
-            ],[
-                'item_idfs' => $itemId,
-                'user_idfs' => $me->User_ID,
-                'date_created' => $userItem->date_created,
-                'date_received' => $userItem->date_received
-            ]);
+            $bUse = true;
 
             # enable buff
             switch($item->buff_type) {
@@ -153,11 +154,61 @@ class ItemController extends AbstractActionController
                         ]);
                     }
 
+                    # use item
+                    $this->mItemUserTbl->update([
+                        'used' => 1,
+                        'date_used' => date('Y-m-d H:i:s', time()),
+                    ],[
+                        'item_idfs' => $itemId,
+                        'user_idfs' => $me->User_ID,
+                        'date_created' => $userItem->date_created,
+                        'date_received' => $userItem->date_received
+                    ]);
+
+                    $userInventory =$this->mInventory->getInventory($me->User_ID);
+
                     return [
                         'state' => 'success',
-                        'inventory' => $this->mInventory->getInventory($me->User_ID),
+                        'inventory' => $userInventory,
+                        'inventory_bags' => $this->mInventory->getUserBags($me->User_ID),
+                        'inventory_slots' => $this->mInventory->getInventorySlots($me->User_ID),
+                        'inventory_slots_used' => count($userInventory),
                         'message' => 'Buff '.$item->label.' activated for '.$item->buff_timer.' Days! ',
                     ];
+                case 'inventory':
+                    $userBags = $this->mBagTbl->select(['user_idfs' => $me->User_ID])->count();
+                    if($userBags < 4) {
+                        $this->mBagTbl->insert([
+                            'item_idfs' => $itemId,
+                            'user_idfs' => $me->User_ID,
+                            'slot' => $userBags
+                        ]);
+
+                        # use item
+                        $this->mItemUserTbl->update([
+                            'used' => 1,
+                            'date_used' => date('Y-m-d H:i:s', time()),
+                        ],[
+                            'item_idfs' => $itemId,
+                            'user_idfs' => $me->User_ID,
+                            'date_created' => $userItem->date_created,
+                            'date_received' => $userItem->date_received
+                        ]);
+
+                        $userInventory =$this->mInventory->getInventory($me->User_ID);
+
+                        return [
+                            'state' => 'success',
+                            'inventory' => $userInventory,
+                            'inventory_bags' => $this->mInventory->getUserBags($me->User_ID),
+                            'inventory_slots' => $this->mInventory->getInventorySlots($me->User_ID),
+                            'inventory_slots_used' => count($userInventory),
+                            'message' => 'New Bag successfully equipped.',
+                        ];
+                    } else {
+                        $bUse = false;
+                        return new ApiProblemResponse(new ApiProblem(400, 'You already have 4 Bags equiped. Remove a bag first before equiping this one.'));
+                    }
                 default:
                     break;
             }

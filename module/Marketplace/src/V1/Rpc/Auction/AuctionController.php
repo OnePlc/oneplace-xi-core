@@ -37,6 +37,14 @@ class AuctionController extends AbstractActionController
     protected $mItemTbl;
 
     /**
+     * Item User Table
+     *
+     * @var TableGateway $mItemUserTbl
+     * @since 1.0.0
+     */
+    protected $mItemUserTbl;
+
+    /**
      * Item Category Table
      *
      * @var TableGateway $mItemCatTbl
@@ -71,6 +79,7 @@ class AuctionController extends AbstractActionController
     {
         $this->mUserTbl = new TableGateway('user', $mapper);
         $this->mItemTbl = new TableGateway('faucet_item', $mapper);
+        $this->mItemUserTbl = new TableGateway('faucet_item_user', $mapper);
         $this->mItemCatTbl = new TableGateway('faucet_item_category', $mapper);
         $this->mAuctionTbl = new TableGateway('marketplace_item', $mapper);
 
@@ -125,21 +134,59 @@ class AuctionController extends AbstractActionController
                 }
             }
 
+            $itemAmountInInventory = 0;
+            $userItems = $this->mItemUserTbl->select(['user_idfs' => $me->User_ID, 'item_idfs' => $itemId, 'used' => 0]);
+            if($userItems->count()) {
+                foreach($userItems as $userItem) {
+                    $itemAmountInInventory+=$userItem->amount;
+                }
+            }
+
             $baseFee = $itemInfo->auction_fee;
 
             return [
                 'item' => [
                     'id' => $itemInfo->Item_ID,
                     'name' => $itemInfo->label,
-                    'icon' => $itemInfo->icon
+                    'rarity' => $itemInfo->level,
+                    'icon' => $itemInfo->icon,
+                    'in_inventory' => $itemAmountInInventory
                 ],
                 'auction' => $auctions,
                 'available' => $totalAmount,
                 'deposit_fee' => [
-                    '12hour' => $baseFee,
-                    '24hour' => round($baseFee*1.2,0),
-                    '48hour' => round($baseFee*1.5,0),
+                    'hour12' => $baseFee,
+                    'hour24' => round($baseFee*1.2,0),
+                    'hour48' => round($baseFee*1.5,0),
                 ]
+            ];
+        }
+
+        if($request->isPost()) {
+            $auctions = [];
+
+            $userAuctions = $this->mAuctionTbl->select(['created_by' => $me->User_ID]);
+            if($userAuctions->count() > 0) {
+                foreach($userAuctions as $auction) {
+                    $itemInfo = $this->mItemTbl->select(['Item_ID' => $auction->item_idfs]);
+                    if($itemInfo->count() > 0) {
+                        $itemInfo = $itemInfo->current();
+                        $auctions[] = (object)[
+                            'id' => $auction->Auction_ID,
+                            'amount' => $auction->amount,
+                            'expires' => $auction->expire_date,
+                            'price_per_unit' => $auction->price_per_unit,
+                            'item' => [
+                                'id' => $itemInfo->Item_ID,
+                                'name' => $itemInfo->label
+                            ]
+                        ];
+                    }
+                }
+            }
+
+            return [
+                'auction' => $auctions
             ];
         }
     }

@@ -214,7 +214,55 @@ class MarketplaceResource extends AbstractResourceListener
      */
     public function delete($id)
     {
-        return new ApiProblem(405, 'The DELETE method has not been defined for individual resources');
+        # Prevent 500 error
+        if(!$this->getIdentity()) {
+            return new ApiProblem(401, 'Not logged in');
+        }
+        $user = $this->mSecTools->getSecuredUserSession($this->getIdentity()->getName());
+        if(get_class($user) == 'Laminas\\ApiTools\\ApiProblem\\ApiProblem') {
+            return $user;
+        }
+
+        $auctionId = filter_var($id, FILTER_SANITIZE_NUMBER_INT);
+
+        $auction = $this->mAuctionTbl->select(['Auction_ID' => $auctionId]);
+        if($auction->count() == 0) {
+            return new ApiProblem(404, 'Auction not found');
+        }
+        $auction = $auction->current();
+
+        if($auction->created_by != $user->User_ID) {
+            return new ApiProblem(404, 'Auction not found');
+        }
+
+        $amount = $auction->amount;
+        $itemId = $auction->item_idfs;
+
+        $this->mAuctionTbl->delete(['Auction_ID' => $auctionId]);
+
+        # create message to buyer inbox
+        $this->mInboxTbl->insert([
+            'label' => 'Marketplace Auction cancelled',
+            'message' => 'Attached are is your Marketplace Auction Items',
+            'credits' => 0,
+            'from_idfs' => 1,
+            'to_idfs' => $user->User_ID,
+            'date' => date('Y-m-d H:i:s', time()),
+            'is_read' => 0
+        ]);
+        $messageId = $this->mInboxTbl->lastInsertValue;
+
+        # add purchased items as attachment
+        for($itemSent = 0;$itemSent < $amount;$itemSent++) {
+            $this->mInboxAttachTbl->insert([
+                'mail_idfs' => $messageId,
+                'item_idfs' => $itemId,
+                'slot' => $itemSent,
+                'used' => 0
+            ]);
+        }
+
+        return true;
     }
 
     /**

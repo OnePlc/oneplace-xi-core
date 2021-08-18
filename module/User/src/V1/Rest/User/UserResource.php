@@ -161,6 +161,14 @@ class UserResource extends AbstractResourceListener
     protected $mInventory;
 
     /**
+     * User Inbox Table
+     *
+     * @var TableGateway $mInboxTbl
+     * @since 1.0.0
+     */
+    protected $mInboxTbl;
+
+    /**
      * Constructor
      *
      * UserResource constructor.
@@ -179,12 +187,14 @@ class UserResource extends AbstractResourceListener
         $this->mGuildUserTbl = new TableGateway('faucet_guild_user', $mapper);
         $this->mWithdrawTbl = new TableGateway('faucet_withdraw', $mapper);
         $this->mSessionTbl = new TableGateway('user_session', $mapper);
+        $this->mInboxTbl = new TableGateway('user_inbox', $mapper);
+        $this->mUserSetTbl = new TableGateway('user_setting', $mapper);
+
         $this->mTransaction = new TransactionHelper($mapper);
         $this->mSecTools = new SecurityTools($mapper);
         $this->mUserTools = new UserTools($mapper);
         $this->mInventory = new InventoryHelper($mapper);
         $this->mMailTools = new EmailTools($mapper, $viewRenderer);
-        $this->mUserSetTbl = new TableGateway('user_setting', $mapper);
     }
 
     /**
@@ -638,6 +648,10 @@ class UserResource extends AbstractResourceListener
         /**
          * Public User Object
          */
+        $userInventory = $this->mInventory->getInventory($user->User_ID);
+
+        $inboxMessages = $this->mInboxTbl->select(['to_idfs' => $user->User_ID,'is_read' => 0])->count();
+
         $returnData = [
             'id' => (int)$user->User_ID,
             'name' => $user->username,
@@ -656,7 +670,11 @@ class UserResource extends AbstractResourceListener
             'prefered_coin' => $user->prefered_coin,
             'guild' => $guild,
             'withdrawals' => $withdrawals,
-            'inventory' => $this->mInventory->getInventory($user->User_ID)
+            'inventory' => $userInventory,
+            'inventory_bags' => $this->mInventory->getUserBags($user->User_ID),
+            'inventory_slots' => $this->mInventory->getInventorySlots($user->User_ID),
+            'inventory_slots_used' => count($userInventory),
+            'inbox_count' => $inboxMessages
         ];
 
         $systemAlert = $this->mSettingsTbl->select(['settings_key' => 'system_alert']);

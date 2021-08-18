@@ -2,11 +2,13 @@
 namespace Mailbox\V1\Rest\Inbox;
 
 use Faucet\Tools\SecurityTools;
+use Faucet\Transaction\InventoryHelper;
 use Faucet\Transaction\TransactionHelper;
 use Laminas\ApiTools\ApiProblem\ApiProblem;
 use Laminas\ApiTools\ApiProblem\ApiProblemResponse;
 use Laminas\ApiTools\Rest\AbstractResourceListener;
 use Laminas\Db\Sql\Select;
+use Laminas\Db\Sql\Where;
 use Laminas\Db\TableGateway\TableGateway;
 
 class InboxResource extends AbstractResourceListener
@@ -60,6 +62,14 @@ class InboxResource extends AbstractResourceListener
     protected $mTransaction;
 
     /**
+     * Inventory Helper
+     *
+     * @var InventoryHelper $mInventory
+     * @since 1.0.0
+     */
+    protected $mInventory;
+
+    /**
      * Constructor
      *
      * MailboxController constructor.
@@ -75,6 +85,7 @@ class InboxResource extends AbstractResourceListener
 
         $this->mSecTools = new SecurityTools($mapper);
         $this->mTransaction = new TransactionHelper($mapper);
+        $this->mInventory = new InventoryHelper($mapper);
     }
 
     /**
@@ -174,6 +185,8 @@ class InboxResource extends AbstractResourceListener
                         'id' => $attach->item_idfs,
                         'name' => $attachItem->label.' ( 1 )',
                         'icon' => $attachItem->icon,
+                        'slot' => $attach->slot,
+                        'amount' => $attach->amount,
                         'rarity' => $attachItem->level,
                     ];
                 }
@@ -214,7 +227,7 @@ class InboxResource extends AbstractResourceListener
         $inbox = [];
         $msgSel = new Select($this->mInboxTbl->getTable());
         $msgSel->where(['to_idfs' => $user->User_ID, 'is_read' => 0]);
-        $msgSel->order('date ASC');
+        $msgSel->order('date DESC');
         $unreadMessages = $this->mInboxTbl->selectWith($msgSel);
         foreach($unreadMessages as $msg) {
             $from = (object)['id' => 0, 'name' => 'Store'];
@@ -323,18 +336,48 @@ class InboxResource extends AbstractResourceListener
             if ($attachItem->count() > 0) {
                 $attachItem = $attachItem->current();
 
-                $this->mItemUsrTbl->insert([
-                    'user_idfs' => $user->User_ID,
-                    'item_idfs' => $attachment->item_idfs,
-                    'date_created' => date('Y-m-d H:i:s', time()),
-                    'date_received' => date('Y-m-d H:i:s', time()),
-                    'comment' => $message->message,
-                    'hash' => password_hash($attachItem->Item_ID . $user->User_ID . time(), PASSWORD_DEFAULT),
-                    'created_by' => $user->User_ID,
-                    'received_from' => $message->from_idfs,
-                    'amount' => 1,
-                    'used' => 0
-                ]);
+                # check if there is already a free slot for this item in user inventory
+                $slotCheck = new Where();
+                $slotCheck->equalTo('item_idfs', $attachment->item_idfs);
+                $slotCheck->equalTo('user_idfs', $user->User_ID);
+                $slotCheck->equalTo('used', 0);
+                $slotCheck->lessThanOrEqualTo('amount', $attachItem->stack_size-$attachment->amount);
+                $slotCheck->greaterThan('amount', 0);
+
+                $hasSlot = $this->mItemUsrTbl->select($slotCheck);
+
+                $slotInfo = $hasSlot->current();
+
+                if($hasSlot->count() == 0) {
+                    $userInventory = $this->mInventory->getInventory($user->User_ID);
+                    $slotsUsed = count($userInventory);
+                    $slotsTotal = $this->mInventory->getInventorySlots($user->User_ID);
+                    if($slotsUsed < $slotsTotal) {
+                        $this->mItemUsrTbl->insert([
+                            'user_idfs' => $user->User_ID,
+                            'item_idfs' => $attachment->item_idfs,
+                            'date_created' => date('Y-m-d H:i:s', time()),
+                            'date_received' => date('Y-m-d H:i:s', time()),
+                            'comment' => $message->message,
+                            'hash' => password_hash($attachItem->Item_ID . $user->User_ID . time(), PASSWORD_DEFAULT),
+                            'created_by' => $user->User_ID,
+                            'received_from' => $message->from_idfs,
+                            'amount' => 1,
+                            'used' => 0
+                        ]);
+                    } else {
+                        return new ApiProblem(404, 'Your inventory is full.');
+                    }
+                } else {
+                    $slotInfo = $hasSlot->current();
+                    $this->mItemUsrTbl->update([
+                        'amount' => $slotInfo->amount + $attachment->amount
+                    ], [
+                        'user_idfs' => $slotInfo->user_idfs,
+                        'item_idfs' => $slotInfo->item_idfs,
+                        'hash' => $slotInfo->hash,
+                    ]);
+                }
 
                 $this->mInboxAttachTbl->update([
                     'used' => 1

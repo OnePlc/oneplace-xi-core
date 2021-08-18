@@ -44,6 +44,14 @@ class InventoryHelper {
     private $mItemGuildTbl;
 
     /**
+     * User Bag Table
+     *
+     * @var TableGateway $mBagTbl
+     * @since 1.0.0
+     */
+    private $mBagTbl;
+
+    /**
      * Constructor
      *
      * LoginController constructor.
@@ -55,6 +63,48 @@ class InventoryHelper {
         $this->mItemTbl = new TableGateway('faucet_item', $mapper);
         $this->mItemUserTbl = new TableGateway('faucet_item_user', $mapper);
         $this->mItemGuildTbl = new TableGateway('faucet_item_guild', $mapper);
+        $this->mBagTbl = new TableGateway('user_bag', $mapper);
+    }
+
+    /**
+     * Get User Inventory Slots
+     */
+    public function getInventorySlots($userId) {
+        $baseSlots = 6;
+
+        $userBags = $this->mBagTbl->select(['user_idfs' => $userId]);
+        if($userBags->count() > 0) {
+            foreach($userBags as $bag) {
+                $bagInfo = $this->mItemTbl->select(['Item_ID' => $bag->item_idfs]);
+                if($bagInfo->count() > 0) {
+                    $bagInfo = $bagInfo->current();
+                    $baseSlots+=$bagInfo->buff;
+                }
+            }
+        }
+
+        return $baseSlots;
+    }
+
+    public function getUserBags($userId) {
+        $bags = [];
+        $userBags = $this->mBagTbl->select(['user_idfs' => $userId]);
+        if($userBags->count() > 0) {
+            foreach($userBags as $bag) {
+                $bagInfo = $this->mItemTbl->select(['Item_ID' => $bag->item_idfs]);
+                if($bagInfo->count() > 0) {
+                    $bagInfo = $bagInfo->current();
+                    $bags[] = (object)[
+                        'id' => $bagInfo->Item_ID,
+                        'name' => $bagInfo->label,
+                        'icon' => $bagInfo->icon,
+                        'rarity' => $bagInfo->level
+                    ];
+                }
+            }
+        }
+
+        return $bags;
     }
 
     /**
@@ -83,6 +133,7 @@ class InventoryHelper {
                         'usable' => ($itemInfo->usable == 1) ? true : false,
                         'amount' => $userItem->amount,
                         'icon' => $itemInfo->icon,
+                        'buff_type' => $itemInfo->buff_type,
                         'rarity' => $itemInfo->level,
                         'description' => $itemInfo->description
                     ];
