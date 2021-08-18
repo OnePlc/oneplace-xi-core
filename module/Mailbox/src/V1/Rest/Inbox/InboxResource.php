@@ -2,6 +2,7 @@
 namespace Mailbox\V1\Rest\Inbox;
 
 use Faucet\Tools\SecurityTools;
+use Faucet\Transaction\TransactionHelper;
 use Laminas\ApiTools\ApiProblem\ApiProblem;
 use Laminas\ApiTools\ApiProblem\ApiProblemResponse;
 use Laminas\ApiTools\Rest\AbstractResourceListener;
@@ -51,12 +52,12 @@ class InboxResource extends AbstractResourceListener
     protected $mInboxAttachTbl;
 
     /**
-     * Store Item Table
+     * Transaction Helper
      *
-     * @var TableGateway $mStoreItemTbl
+     * @var TransactionHelper $mTransaction
      * @since 1.0.0
      */
-    protected $mStoreItemTbl;
+    protected $mTransaction;
 
     /**
      * Constructor
@@ -71,7 +72,9 @@ class InboxResource extends AbstractResourceListener
         $this->mItemUsrTbl = new TableGateway('faucet_item_user', $mapper);
         $this->mInboxTbl = new TableGateway('user_inbox', $mapper);
         $this->mInboxAttachTbl = new TableGateway('user_inbox_item', $mapper);
+
         $this->mSecTools = new SecurityTools($mapper);
+        $this->mTransaction = new TransactionHelper($mapper);
     }
 
     /**
@@ -186,7 +189,8 @@ class InboxResource extends AbstractResourceListener
                 'date' => $message->date,
                 'from' => $from,
             ],
-            'attachments' => $attachments
+            'attachments' => $attachments,
+            'token_balance' => $user->token_balance
         ];
     }
 
@@ -302,34 +306,48 @@ class InboxResource extends AbstractResourceListener
         }
 
         $attachmentId = filter_var($data->attachment_id, FILTER_SANITIZE_NUMBER_INT);
+        $credits = filter_var($data->credits, FILTER_SANITIZE_NUMBER_INT);
 
-        $attachment = $this->mInboxAttachTbl->select(['mail_idfs' => $message->Mail_ID, 'used' => 0, 'slot' => $attachmentId]);
-        if ($attachment->count() == 0) {
-            return new ApiProblem(404, 'Attachment not found or already used');
-        }
-        $attachment = $attachment->current();
-        $attachItem = $this->mItemTbl->select(['Item_ID' => $attachment->item_idfs]);
-        if (count($attachItem) > 0) {
-            $attachItem = $attachItem->current();
-
-            $this->mItemUsrTbl->insert([
-                'user_idfs' => $user->User_ID,
-                'date_created' => date('Y-m-d H:i:s', time()),
-                'date_received' => date('Y-m-d H:i:s', time()),
-                'comment' => $message->message,
-                'hash' => password_hash($attachItem->Item_ID . $user->User_ID . time(), PASSWORD_DEFAULT),
-                'created_by' => $user->User_ID,
-                'received_from' => $message->from_idfs,
-                'used' => 0
-            ]);
-
-            $this->mInboxAttachTbl->update(['used' => 1], [
-                'mail_idfs' => $message->Mail_ID, 'slot' => $attachmentId
-            ]);
+        if($attachmentId == 0 && $credits == 1) {
+            $this->mTransaction->executeTransaction($message->credits, 0, $user->User_ID, $messageId, 'msg-credit', 'Received Coins from Message '.$message->label);
+            $this->mInboxTbl->update(['credits' => 0],['Mail_ID' => $messageId]);
 
             return true;
         } else {
-            return new ApiProblem(404, 'Attached Item not found');
+            $attachment = $this->mInboxAttachTbl->select(['mail_idfs' => $message->Mail_ID, 'used' => 0, 'slot' => $attachmentId]);
+            if ($attachment->count() == 0) {
+                return new ApiProblem(404, 'Attachment not found or already used');
+            }
+            $attachment = $attachment->current();
+            $attachItem = $this->mItemTbl->select(['Item_ID' => $attachment->item_idfs]);
+            if ($attachItem->count() > 0) {
+                $attachItem = $attachItem->current();
+
+                $this->mItemUsrTbl->insert([
+                    'user_idfs' => $user->User_ID,
+                    'item_idfs' => $attachment->item_idfs,
+                    'date_created' => date('Y-m-d H:i:s', time()),
+                    'date_received' => date('Y-m-d H:i:s', time()),
+                    'comment' => $message->message,
+                    'hash' => password_hash($attachItem->Item_ID . $user->User_ID . time(), PASSWORD_DEFAULT),
+                    'created_by' => $user->User_ID,
+                    'received_from' => $message->from_idfs,
+                    'amount' => 1,
+                    'used' => 0
+                ]);
+
+                $this->mInboxAttachTbl->update([
+                    'used' => 1
+                ], [
+                    'mail_idfs' => (int)$attachment->mail_idfs,
+                    'item_idfs' => (int)$attachment->item_idfs,
+                    'slot' => (int)$attachmentId
+                ]);
+
+                return true;
+            } else {
+                return new ApiProblem(404, 'Attached Item not found');
+            }
         }
     }
 }

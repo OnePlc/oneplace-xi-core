@@ -14,6 +14,7 @@
  */
 namespace Faucet\Transaction;
 
+use Laminas\Db\Sql\Where;
 use Laminas\Db\TableGateway\TableGateway;
 
 class InventoryHelper {
@@ -64,10 +65,11 @@ class InventoryHelper {
      */
     public function getInventory($userId) {
         $inventory = [];
-        $userItems = $this->mItemUserTbl->select([
-            'user_idfs' => $userId,
-            'used' => 0,
-        ]);
+        $invWh = new Where();
+        $invWh->equalTo('user_idfs', $userId);
+        $invWh->equalTo('used', 0);
+        $invWh->greaterThanOrEqualTo('amount', 1);
+        $userItems = $this->mItemUserTbl->select($invWh);
         if (count($userItems) > 0) {
             foreach ($userItems as $userItem) {
                 $itemInfo = $this->mItemTbl->select(['Item_ID' => $userItem->item_idfs]);
