@@ -14,6 +14,7 @@
  */
 namespace Faucet\Tools;
 
+use Faucet\Transaction\InventoryHelper;
 use Faucet\Transaction\TransactionHelper;
 use Laminas\ApiTools\Rest\AbstractResourceListener;
 use Laminas\Db\TableGateway\TableGateway;
@@ -102,6 +103,14 @@ class UserTools extends AbstractResourceListener {
      */
     protected $mUserBuffTbl;
 
+    /**
+     * Inventory Helper
+     *
+     * @var InventoryHelper $mInventory
+     * @since 1.0.0
+     */
+    protected $mInventory;
+
 
     /**
      * Constructor
@@ -120,8 +129,10 @@ class UserTools extends AbstractResourceListener {
         $this->mAchievTbl = new TableGateway('faucet_achievement', $mapper);
         $this->mAchievUserTbl = new TableGateway('faucet_achievement_user', $mapper);
         $this->mUserTbl = new TableGateway('user', $mapper);
-        $this->mTransaction = new TransactionHelper($mapper);
         $this->mUserBuffTbl = new TableGateway('user_buff', $mapper);
+
+        $this->mTransaction = new TransactionHelper($mapper);
+        $this->mInventory = new InventoryHelper($mapper);
 
         /**
          * Load Achievements to Cache
@@ -284,5 +295,20 @@ class UserTools extends AbstractResourceListener {
             ]);
         }
         return true;
+    }
+
+    public function getItemDropChance($action, $userId) {
+        if($userId == 335874987 || $userId == 335875071) {
+            switch($action) {
+                case 'faucet-claim':
+                    $this->mInventory->addItemToUserInventory(31, 20, $userId, 'Random drop', 1);
+                    break;
+                case 'shortlink-claim':
+                    $this->mInventory->addItemToUserInventory(39, 480, $userId, 'Random drop', 1);
+                    break;
+                default:
+                    break;
+            }
+        }
     }
 }

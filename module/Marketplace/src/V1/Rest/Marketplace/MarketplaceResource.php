@@ -381,7 +381,7 @@ class MarketplaceResource extends AbstractResourceListener
 
         $categories = [];
         $categoriesById = [];
-        $categoriesFromDB = $this->mItemCatTbl->select();
+        $categoriesFromDB = $this->mItemCatTbl->select(['in_store' => 1]);
         foreach($categoriesFromDB as $cat) {
             if($cat->parent_idfs == 0) {
                 $categoriesById[$cat->Category_ID] = ['category' => (object)[

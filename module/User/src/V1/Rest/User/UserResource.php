@@ -621,7 +621,7 @@ class UserResource extends AbstractResourceListener
          * Load User Withdrawals
          */
         $withdrawals = ['done' => [],'cancel' => [],'new' => [], 'total_items' => 0];
-        $userWithdrawals = $this->mWithdrawTbl->select(['user_idfs' => $user->User_ID]);
+        $userWithdrawals = $this->mWithdrawTbl->select(['user_idfs' => $user->User_ID,'state' => 'new']);
         if(count($userWithdrawals) > 0) {
             foreach($userWithdrawals as $wth) {
                 $withdrawals[$wth->state][] = $wth;

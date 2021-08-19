@@ -97,7 +97,9 @@ class InventoryHelper {
                     $bags[] = (object)[
                         'id' => $bagInfo->Item_ID,
                         'name' => $bagInfo->label,
+                        'slot' => $bag->slot,
                         'icon' => $bagInfo->icon,
+                        'image' => $bagInfo->image,
                         'rarity' => $bagInfo->level
                     ];
                 }
@@ -133,6 +135,8 @@ class InventoryHelper {
                         'usable' => ($itemInfo->usable == 1) ? true : false,
                         'amount' => $userItem->amount,
                         'icon' => $itemInfo->icon,
+                        'hash' => $userItem->hash,
+                        'image' => $itemInfo->image,
                         'buff_type' => $itemInfo->buff_type,
                         'rarity' => $itemInfo->level,
                         'description' => $itemInfo->description
@@ -225,6 +229,107 @@ class InventoryHelper {
                 'date_deposited' => date('Y-m-d H:i:s', time()),
                 'comment' => $itemFound->comment,
             ]);
+
+            return true;
+        } else {
+            return false;
+        }
+    }
+
+    public function addItemToUserInventory($itemId, $amount, $userId, $comment, $fromId) {
+        $itemInfo = $this->mItemTbl->select(['Item_ID' => $itemId]);
+        if($itemInfo->count() > 0) {
+            $itemInfo = $itemInfo->current();
+
+            $slotsUsed = count($this->getInventory($userId));
+            $slotsAvailable = $this->getInventorySlots($userId);
+
+            if($amount > $itemInfo->stack_size) {
+                $amountLeft = $amount;
+                $amoutPerRun = $itemInfo->stack_size;
+
+                while($amountLeft > 0) {
+                    if(($slotsUsed+1) > $slotsAvailable) {
+                        break;
+                    }
+                    if($amountLeft < $itemInfo->stack_size) {
+                        $amoutPerRun = $amountLeft;
+                    }
+                    # check if there is already a free slot for this item in user inventory
+                    $slotCheck = new Where();
+                    $slotCheck->equalTo('item_idfs', $itemId);
+                    $slotCheck->equalTo('user_idfs', $userId);
+                    $slotCheck->equalTo('used', 0);
+                    $slotCheck->lessThan('amount', $amoutPerRun);
+                    $slotCheck->greaterThan('amount', 0);
+
+                    $hasFreeSlot = $this->mItemUserTbl->select($slotCheck);
+
+                    if($hasFreeSlot->count() == 0) {
+                        $slotsUsed++;
+                        $rand = rand(0,1000);
+                        $this->mItemUserTbl->insert([
+                            'user_idfs' => $userId,
+                            'item_idfs' => $itemId,
+                            'date_created' => date('Y-m-d H:i:s', time()),
+                            'date_received' => date('Y-m-d H:i:s', time()),
+                            'comment' => $comment,
+                            'hash' => password_hash($itemId . $userId . time().$rand, PASSWORD_DEFAULT),
+                            'created_by' => $userId,
+                            'received_from' => $fromId,
+                            'amount' => $amoutPerRun,
+                            'used' => 0
+                        ]);
+
+                        $amountLeft = $amountLeft - $amoutPerRun;
+                    } else {
+                        $slotInfo = $hasFreeSlot->current();
+                        $this->mItemUserTbl->update([
+                            'amount' => $amoutPerRun
+                        ], [
+                            'user_idfs' => $slotInfo->user_idfs,
+                            'item_idfs' => $slotInfo->item_idfs,
+                            'hash' => $slotInfo->hash,
+                        ]);
+                    }
+                }
+            } else {
+                # check if there is already a free slot for this item in user inventory
+                $slotCheck = new Where();
+                $slotCheck->equalTo('item_idfs', $itemId);
+                $slotCheck->equalTo('user_idfs', $userId);
+                $slotCheck->equalTo('used', 0);
+                $slotCheck->lessThanOrEqualTo('amount', $itemInfo->stack_size-$amount);
+                $slotCheck->greaterThan('amount', 0);
+
+                $hasFreeSlot = $this->mItemUserTbl->select($slotCheck);
+
+                if($hasFreeSlot->count() == 0) {
+                    if(($slotsUsed+1) <= $slotsAvailable) {
+                        $this->mItemUserTbl->insert([
+                            'user_idfs' => $userId,
+                            'item_idfs' => $itemId,
+                            'date_created' => date('Y-m-d H:i:s', time()),
+                            'date_received' => date('Y-m-d H:i:s', time()),
+                            'comment' => $comment,
+                            'hash' => password_hash($itemId . $userId . time(), PASSWORD_DEFAULT),
+                            'created_by' => $userId,
+                            'received_from' => $fromId,
+                            'amount' => $amount,
+                            'used' => 0
+                        ]);
+                    }
+                } else {
+                    $slotInfo = $hasFreeSlot->current();
+                    $this->mItemUserTbl->update([
+                        'amount' => $slotInfo->amount + $amount
+                    ], [
+                        'user_idfs' => $slotInfo->user_idfs,
+                        'item_idfs' => $slotInfo->item_idfs,
+                        'hash' => $slotInfo->hash,
+                    ]);
+                }
+            }
 
             return true;
         } else {

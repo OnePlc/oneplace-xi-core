@@ -176,6 +176,8 @@ return [
             'service_name' => 'Item',
             'http_methods' => [
                 0 => 'POST',
+                1 => 'DELETE',
+                2 => 'PUT',
             ],
             'route_name' => 'faucet.rpc.item',
         ],
@@ -413,9 +415,9 @@ return [
                     'item' => [
                         'GET' => false,
                         'POST' => true,
-                        'PUT' => false,
+                        'PUT' => true,
                         'PATCH' => false,
-                        'DELETE' => false,
+                        'DELETE' => true,
                     ],
                 ],
             ],

@@ -242,6 +242,8 @@ class ClaimController extends AbstractActionController
                     }
                 }
 
+                $this->mUserTools->getItemDropChance('faucet-claim', $me->User_ID);
+
                 # check for achievement completetion
                 $currentClaimsDone = $this->mClaimTbl->select(['user_idfs' => $me->User_ID,'source' => $platform])->count();
 

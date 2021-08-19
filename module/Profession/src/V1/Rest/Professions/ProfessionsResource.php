@@ -2,6 +2,8 @@
 namespace Profession\V1\Rest\Professions;
 
 use Faucet\Tools\SecurityTools;
+use Faucet\Tools\UserTools;
+use Faucet\Transaction\InventoryHelper;
 use Faucet\Transaction\TransactionHelper;
 use Laminas\ApiTools\ApiProblem\ApiProblem;
 use Laminas\ApiTools\Rest\AbstractResourceListener;
@@ -92,6 +94,22 @@ class ProfessionsResource extends AbstractResourceListener
     protected $mTransaction;
 
     /**
+     * User Tools Helper
+     *
+     * @var UserTools $mUserTools
+     * @since 1.0.0
+     */
+    protected $mUserTools;
+
+    /**
+     * Inventory Helper
+     *
+     * @var InventoryHelper $mInventory
+     * @since 1.0.0
+     */
+    protected $mInventory;
+
+    /**
      * Constructor
      *
      * MailboxController constructor.
@@ -111,6 +129,8 @@ class ProfessionsResource extends AbstractResourceListener
 
         $this->mSecTools = new SecurityTools($mapper);
         $this->mTransaction = new TransactionHelper($mapper);
+        $this->mUserTools = new UserTools($mapper);
+        $this->mInventory = new InventoryHelper($mapper);
     }
 
     /**
@@ -238,18 +258,35 @@ class ProfessionsResource extends AbstractResourceListener
             }
         }
 
+        $mySkill = null;
+        $levelSel = 1;
+        $userProf = $this->mProfUsrTbl->select(['profession_idfs' => $profInfo->Profession_ID, 'user_idfs' => $user->User_ID]);
+        if($userProf->count() != 0) {
+            $userProf = $userProf->current();
+            $levelSel = $userProf->level;
+            $mySkill = (object)[
+                'level' => $userProf->level,
+                'skill' => $userProf->skill,
+                'date_learned' => $userProf->date_learned,
+            ];
+        }
+
         foreach($profSkills as $sk) {
             if($mode == 'learn') {
                 # only show skills not learned yet
                 if(!array_key_exists($sk->Skill_ID, $myProfSkillsById)) {
-                    $skills[] = (object)[
-                        'id' => $sk->Skill_ID,
-                        'name' => $sk->label,
-                        'description' => $sk->description,
-                        'skill' => $sk->skill,
-                        'price' => $sk->price,
-                        'icon' => $sk->icon
-                    ];
+                    $skillItem = $this->mItemTbl->select(['Item_ID' => $sk->item_idfs]);
+                    if($skillItem->count() > 0) {
+                        $skillItem = $skillItem->current();
+                        $skills[] = (object)[
+                            'id' => $sk->Skill_ID,
+                            'name' => $sk->label,
+                            'description' => $sk->description,
+                            'skill' => $sk->skill,
+                            'price' => $sk->price,
+                            'image' => $skillItem->image
+                        ];
+                    }
                 }
             } else {
                 # only show skills not learned yet
@@ -276,12 +313,44 @@ class ProfessionsResource extends AbstractResourceListener
                             $skillItems[] = (object)[
                                 'id' => $mat->Item_ID,
                                 'name' => $mat->label,
-                                'icon' => $mat->icon,
+                                'image' => $mat->image,
                                 'amount' => $mat->amount,
+                                'rarity' => $mat->level,
                                 'inventory' => $inInventory,
                             ];
                         }
                     }
+
+                    $skillItem = $this->mItemTbl->select(['Item_ID' => $sk->item_idfs]);
+                    $item = (object)[
+                        'id' => 0,
+                        'name' => '-',
+                        'image' => '',
+                        'rarity' => 'common',
+                    ];
+                    if($skillItem->count() > 0) {
+                        $skillItem = $skillItem->current();
+                        $item = (object)[
+                            'id' => $skillItem->Item_ID,
+                            'name' => $skillItem->label,
+                            'image' => $skillItem->image,
+                            'rarity' => $skillItem->level,
+                        ];
+                    }
+
+                    $skillIncrease = 0;
+                    if($mySkill) {
+                        if($mySkill->skill >= $sk->skill && $mySkill->skill < $sk->skill_max) {
+                            $skillIncrease = 5;
+                        }
+                        if($mySkill->skill >= $sk->skill_max && $mySkill->skill < $sk->skill_mid) {
+                            $skillIncrease = 2;
+                        }
+                        if($mySkill->skill >= $sk->skill_mid && $mySkill->skill < $sk->skill_min) {
+                            $skillIncrease = 1;
+                        }
+                    }
+
 
                     $skills[] = (object)[
                         'id' => $sk->Skill_ID,
@@ -289,24 +358,13 @@ class ProfessionsResource extends AbstractResourceListener
                         'description' => $sk->description,
                         'skill' => $sk->skill,
                         'price' => $sk->price,
-                        'icon' => $sk->icon,
-                        'materials' => $skillItems
+                        'image' => $item->image,
+                        'increase' => $skillIncrease,
+                        'materials' => $skillItems,
+                        'item' => $item
                     ];
                 }
             }
-        }
-
-        $mySkill = null;
-        $levelSel = 1;
-        $userProf = $this->mProfUsrTbl->select(['profession_idfs' => $profInfo->Profession_ID, 'user_idfs' => $user->User_ID]);
-        if($userProf->count() != 0) {
-            $userProf = $userProf->current();
-            $levelSel = $userProf->level;
-            $mySkill = (object)[
-                'level' => $userProf->level,
-                'skill' => $userProf->skill,
-                'date_learned' => $userProf->date_learned,
-            ];
         }
 
         $maxSkill = 0;
@@ -316,6 +374,10 @@ class ProfessionsResource extends AbstractResourceListener
             $maxSkill = $profLlvl->skill_end;
         }
 
+        $myCurrentSkill = 0;
+        if(isset($mySkill->skill)) {
+            $myCurrentSkill = $mySkill->skill;
+        }
         return [
             'profession' => (object)[
                 'id' => $profInfo->Profession_ID,
@@ -323,6 +385,7 @@ class ProfessionsResource extends AbstractResourceListener
                 'url' => $profInfo->url,
                 'price_unlock' => $profInfo->price_unlock,
                 'description' => $profInfo->description,
+                'skill' => $myCurrentSkill,
                 'max_skill' => $maxSkill,
                 'level' => $levelSel,
             ],
@@ -355,14 +418,19 @@ class ProfessionsResource extends AbstractResourceListener
                 $profInfo = $this->mProfTbl->select(['Profession_ID' => $prof->profession_idfs]);
                 if($profInfo->count() > 0) {
                     $profInfo = $profInfo->current();
-                    $myProfessions[] = (object)[
-                        'id' => $profInfo->Profession_ID,
-                        'name' => $profInfo->label,
-                        'description' => $profInfo->description,
-                        'url' => $profInfo->url,
-                        'level' => $prof->level,
-                        'skill' => $prof->skill
-                    ];
+                    $lvlInfo = $this->mProfLvlTbl->select(['profession_idfs' => $prof->profession_idfs, 'level' => $prof->level]);
+                    if($lvlInfo->count() > 0) {
+                        $lvlInfo = $lvlInfo->current();
+                        $myProfessions[] = (object)[
+                            'id' => $profInfo->Profession_ID,
+                            'name' => $profInfo->label,
+                            'description' => $profInfo->description,
+                            'url' => $profInfo->url,
+                            'level' => $prof->level,
+                            'skill' => $prof->skill,
+                            'max_skill' => $lvlInfo->skill_end
+                        ];
+                    }
                 }
             }
         }
@@ -436,12 +504,26 @@ class ProfessionsResource extends AbstractResourceListener
             return new ApiProblem(404, 'You have not learned this skill yet test');
         }
 
+        $skillLevel = $this->mProfLvlTbl->select(['profession_idfs' => $profSkill->profession_idfs, 'level' => $userProf->level]);
+        if($skillLevel->count() == 0) {
+            return new ApiProblem(400, 'Your Skill level is not valid');
+        }
+        $skillLevel = $skillLevel->current();
+
         # get profession item info
         $profItem = $this->mItemTbl->select(['Item_ID' => $profSkill->item_idfs]);
         if($profItem->count() == 0) {
             return new ApiProblem(404, 'Profession Item not found');
         }
         $profItem = $profItem->current();
+
+        # check if there is enough inventory space
+        $userInventory = count($this->mInventory->getInventory($user->User_ID));
+        $maxSlots = $this->mInventory->getInventorySlots($user->User_ID);
+
+        if(($userInventory + $amount) > $maxSlots) {
+            return new ApiProblem(400, 'You do not have enough inventory space to create '.$amount. ' '.$profItem->label);
+        }
 
         # get skill items
         $matSel = new Select($this->mProfSkillItemTbl->getTable());
@@ -474,9 +556,6 @@ class ProfessionsResource extends AbstractResourceListener
             }
         }
 
-        # use items
-        var_dump($skillItems);
-
         foreach($skillItems as $useItem) {
             $invWh = new Where();
             $invWh->greaterThan('amount', 0);
@@ -492,7 +571,6 @@ class ProfessionsResource extends AbstractResourceListener
                 } else {
                     $itemsToUse = 0;
                 }
-                echo 'update amount to '.$amountLeft;
                 $this->mItemUserTbl->update([
                     'amount' => $amountLeft,
                 ],[
@@ -500,6 +578,7 @@ class ProfessionsResource extends AbstractResourceListener
                     'user_idfs' => $user->User_ID,
                     'amount' => $inv->amount,
                     'used' => 0,
+                    'hash' => $inv->hash,
                     'date_created' => $inv->date_created,
                     'created_by' => $inv->created_by
                 ]);
@@ -509,6 +588,40 @@ class ProfessionsResource extends AbstractResourceListener
             }
         }
 
+        # increase skill
+        $skillIncrease = 0;
+        $myCurrentSkill = $userProf->skill;
+        for($i = 0;$i < $amount;$i++) {
+            if($myCurrentSkill >= $profSkill->skill && $myCurrentSkill < $profSkill->skill_max) {
+                $skillIncrease = 5;
+                $this->mUserTools->addXP('profession-skill-max', $user->User_ID);
+            }
+            if($myCurrentSkill >= $profSkill->skill_max && $myCurrentSkill < $profSkill->skill_mid) {
+                $skillIncrease = 2;
+                $this->mUserTools->addXP('profession-skill-mid', $user->User_ID);
+            }
+            if($myCurrentSkill >= $profSkill->skill_mid && $myCurrentSkill < $profSkill->skill_min) {
+                $skillIncrease = 1;
+                $this->mUserTools->addXP('profession-skill-min', $user->User_ID);
+            }
+            $myCurrentSkill+=$skillIncrease;
+        }
+
+        $myLevel = $skillLevel->level;
+        if($myCurrentSkill >= $skillLevel->skill_end) {
+            if($myLevel < 3) {
+                $myLevel++;
+            }
+        }
+
+        $this->mProfUsrTbl->update([
+            'skill' => $myCurrentSkill,
+            'level' => $myLevel,
+        ],[
+            'profession_idfs' => $profSkill->profession_idfs,
+            'user_idfs' => $user->User_ID
+        ]);
+
         # check if there is already a slot in inventory for this item
         $invSlotWh = new Where();
         $invSlotWh->equalTo('item_idfs', $profSkill->item_idfs);
@@ -516,19 +629,36 @@ class ProfessionsResource extends AbstractResourceListener
         $invSlotWh->equalTo('created_by', $user->User_ID);
         $invSlotWh->lessThanOrEqualTo('amount', $profItem->stack_size - $amount);
         $invSlotItem = $this->mItemUserTbl->select($invSlotWh);
-        if($invSlotItem->count() == 0) {
-            $this->mItemUserTbl->insert([
-                'item_idfs' => $profSkill->item_idfs,
-                'user_idfs' => $user->User_ID,
-                'date_created' => date('Y-m-d H:i:s', time()),
-                'date_received' => date('Y-m-d H:i:s', time()),
-                'comment' => 'Created by '.$user->username,
-                'hash' => password_hash($profSkill->item_idfs.$user->User_ID.time(), PASSWORD_DEFAULT),
-                'created_by' => $user->User_ID,
-                'received_from' =>  $user->User_ID,
-                'used' => 0,
-                'amount' => (float)$amount,
-            ]);
+        if($invSlotItem->count() == 0 || $profItem->stack_size == 1) {
+            if($profItem->stack_size == 1 && $amount > 1) {
+                for($run = 0;$run < $amount;$run++) {
+                    $this->mItemUserTbl->insert([
+                        'item_idfs' => $profSkill->item_idfs,
+                        'user_idfs' => $user->User_ID,
+                        'date_created' => date('Y-m-d H:i:s', time()),
+                        'date_received' => date('Y-m-d H:i:s', time()),
+                        'comment' => 'Created by '.$user->username,
+                        'hash' => password_hash($profSkill->item_idfs.$user->User_ID.time(), PASSWORD_DEFAULT),
+                        'created_by' => $user->User_ID,
+                        'received_from' =>  $user->User_ID,
+                        'used' => 0,
+                        'amount' => 1,
+                    ]);
+                }
+            } else {
+                $this->mItemUserTbl->insert([
+                    'item_idfs' => $profSkill->item_idfs,
+                    'user_idfs' => $user->User_ID,
+                    'date_created' => date('Y-m-d H:i:s', time()),
+                    'date_received' => date('Y-m-d H:i:s', time()),
+                    'comment' => 'Created by '.$user->username,
+                    'hash' => password_hash($profSkill->item_idfs.$user->User_ID.time(), PASSWORD_DEFAULT),
+                    'created_by' => $user->User_ID,
+                    'received_from' =>  $user->User_ID,
+                    'used' => 0,
+                    'amount' => (float)$amount,
+                ]);
+            }
         } else {
             $invSlotItem = $invSlotItem->current();
             $this->mItemUserTbl->update([

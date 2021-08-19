@@ -214,6 +214,76 @@ class ItemController extends AbstractActionController
             }
         }
 
+        /**
+         * Replace Bag
+         */
+        if($request->isPut()) {
+            $json = IndexController::loadJSONFromRequestBody(['item_id'],$this->getRequest()->getContent());
+            if(!$json) {
+                return new ApiProblemResponse(new ApiProblem(400, 'Invalid JSON Body'));
+            }
+
+            $invHash = filter_var($json->id, FILTER_SANITIZE_STRING);
+            $bagSlotId = filter_var($json->slot, FILTER_SANITIZE_NUMBER_INT);
+            $itemId = filter_var($json->item_id, FILTER_SANITIZE_NUMBER_INT);
+
+            # get item from inventory
+            $bagFound = $this->mItemUserTbl->select(['item_idfs' => $itemId, 'hash' => $invHash,'user_idfs' => $me->User_ID,'used' => 0]);
+            if($bagFound->count() == 0) {
+                return new ApiProblemResponse(new ApiProblem(404, 'bag not found in your inventory'));
+            }
+            $bagFound = $bagFound->current();
+
+            # get bag slot
+            $bagSlot = $this->mBagTbl->select(['user_idfs' => $me->User_ID, 'slot' => $bagSlotId]);
+            if($bagSlot->count() == 0) {
+                return new ApiProblemResponse(new ApiProblem(404, 'equiped bag slot not found'));
+            }
+            $bagSlot = $bagSlot->current();
+
+            # use new bag
+            $this->mItemUserTbl->update([
+                'used' => 1,
+            ],[
+                'user_idfs' => $bagFound->user_idfs,
+                'item_idfs' => $bagFound->item_idfs,
+                'hash' => $bagFound->hash
+            ]);
+
+            # put old bag in inventory
+            $oldBag = $this->mItemUserTbl->select(['item_idfs' => $bagSlot->item_idfs, 'user_idfs' => $me->User_ID,'used' => 1]);
+            if($oldBag->count() > 0) {
+                $oldBag = $oldBag->current();
+                $this->mItemUserTbl->update([
+                    'used' => 0,
+                ],[
+                    'user_idfs' => $oldBag->user_idfs,
+                    'item_idfs' => $oldBag->item_idfs,
+                    'hash' => $oldBag->hash
+                ]);
+            }
+
+            # equip new bag
+            $this->mBagTbl->update(['item_idfs' => $itemId],['user_idfs' => $me->User_ID, 'slot' => $bagSlot->slot]);
+            return true;
+        }
+
+        /**
+         * Remove Item from Inventory
+         **/
+        if($request->isDelete()) {
+            $itemHash = filter_var($_REQUEST['hash'], FILTER_SANITIZE_STRING);
+
+            $slotFound = $this->mItemUserTbl->select(['user_idfs' => $me->User_ID, 'hash' => $itemHash]);
+            if($slotFound->count() == 0) {
+                return new ApiProblemResponse(new ApiProblem(404, 'Item not found in your inventory'));
+            }
+            $slotFound = $slotFound->current();
+            $this->mItemUserTbl->delete(['user_idfs' => $me->User_ID, 'hash' => $slotFound->hash]);
+
+            return true;
+        }
+
         return new ApiProblemResponse(new ApiProblem(405, 'Method not allowed'));
 
     }
