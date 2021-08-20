@@ -301,10 +301,10 @@ class UserTools extends AbstractResourceListener {
         if($userId == 335874987 || $userId == 335875071) {
             switch($action) {
                 case 'faucet-claim':
-                    $this->mInventory->addItemToUserInventory(31, 20, $userId, 'Random drop', 1);
+                    $this->mInventory->addItemToUserInventory(39, 240, $userId, 'Random drop', 1);
                     break;
                 case 'shortlink-claim':
-                    $this->mInventory->addItemToUserInventory(39, 480, $userId, 'Random drop', 1);
+                    $this->mInventory->addItemToUserInventory(39, 240, $userId, 'Random drop', 1);
                     break;
                 default:
                     break;

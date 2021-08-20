@@ -122,7 +122,11 @@ class MarketplaceResource extends AbstractResourceListener
         }
         $itemInfo = $item->current();
 
-        $itemUser = $this->mItemUserTbl->select(['item_idfs' => $itemId,'user_idfs' => $user->User_ID]);
+        $itemWh = new Where();
+        $itemWh->equalTo('item_idfs', $itemId);
+        $itemWh->equalTo('user_idfs', $user->User_ID);
+        $itemWh->greaterThanOrEqualTo('amount', 1);
+        $itemUser = $this->mItemUserTbl->select($itemWh);
         if($itemUser->count() == 0) {
             return new ApiProblem(404, 'Item not found in your inventory');
         }
@@ -165,6 +169,8 @@ class MarketplaceResource extends AbstractResourceListener
                 $amountLeft = $item->amount - $amountToUse;
                 if($amountLeft < 0) {
                     $amountLeft = 0;
+                    $amountToUse = $amountToUse - $item->amount;
+                } elseif ($amountLeft == 0) {
                     $amountToUse = $amountToUse - $item->amount;
                 }
                 $this->mItemUserTbl->update([
@@ -386,7 +392,8 @@ class MarketplaceResource extends AbstractResourceListener
             if($cat->parent_idfs == 0) {
                 $categoriesById[$cat->Category_ID] = ['category' => (object)[
                     'id' => $cat->Category_ID,
-                    'name' => $cat->label
+                    'name' => $cat->label,
+                    'icon' => $cat->icon
                 ], 'children' => []];
             } else {
                 if(array_key_exists($cat->parent_idfs,$categoriesById)) {

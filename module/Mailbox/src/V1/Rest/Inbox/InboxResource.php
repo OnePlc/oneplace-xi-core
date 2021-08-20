@@ -184,7 +184,7 @@ class InboxResource extends AbstractResourceListener
                     $attachments[] = [
                         'id' => $attach->item_idfs,
                         'name' => $attachItem->label.' ( 1 )',
-                        'icon' => $attachItem->icon,
+                        'image' => $attachItem->image,
                         'slot' => $attach->slot,
                         'amount' => $attach->amount,
                         'rarity' => $attachItem->level,

@@ -149,7 +149,8 @@ class AuctionController extends AbstractActionController
                     'id' => $itemInfo->Item_ID,
                     'name' => $itemInfo->label,
                     'rarity' => $itemInfo->level,
-                    'icon' => $itemInfo->icon,
+                    'image' => $itemInfo->image,
+                    'description' => $itemInfo->description,
                     'in_inventory' => $itemAmountInInventory
                 ],
                 'auction' => $auctions,
