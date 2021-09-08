@@ -42,4 +42,5 @@ return [
     'PTC',
     'Mailbox',
     'Profession',
+    'Marketplace',
 ];

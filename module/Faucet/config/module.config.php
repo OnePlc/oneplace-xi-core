@@ -178,6 +178,7 @@ return [
                 0 => 'POST',
                 1 => 'DELETE',
                 2 => 'PUT',
+                3 => 'GET',
             ],
             'route_name' => 'faucet.rpc.item',
         ],
@@ -413,7 +414,7 @@ return [
             'Faucet\\V1\\Rpc\\Item\\Controller' => [
                 'actions' => [
                     'item' => [
-                        'GET' => false,
+                        'GET' => true,
                         'POST' => true,
                         'PUT' => true,
                         'PATCH' => false,

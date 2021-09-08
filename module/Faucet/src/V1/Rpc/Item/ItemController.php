@@ -105,6 +105,16 @@ class ItemController extends AbstractActionController
 
         $request = $this->getRequest();
 
+        if($request->isGet()) {
+            $userInventory = $this->mInventory->getInventory($me->User_ID);
+            return [
+                'inventory' => $userInventory,
+                'inventory_bags' => $this->mInventory->getUserBags($me->User_ID),
+                'inventory_slots' => $this->mInventory->getInventorySlots($me->User_ID),
+                'inventory_slots_used' => count($userInventory),
+            ];
+        }
+
         if($request->isPost()) {
             $json = IndexController::loadJSONFromRequestBody(['item_id'],$this->getRequest()->getContent());
             if(!$json) {
@@ -131,7 +141,7 @@ class ItemController extends AbstractActionController
             $item = $item->current();
 
             # check if user really has this item
-            $userItem = $this->mItemUserTbl->select(['item_idfs' => $itemId,'user_idfs' => $me->User_ID,'used' => 0]);
+            $userItem = $this->mItemUserTbl->select(['item_idfs' => $itemId,'user_idfs' => $me->User_ID,'used' => 0,'amount' => 1]);
             if(count($userItem) == 0) {
                 return new ApiProblemResponse(new ApiProblem(404, 'you do not own this item'));
             }
@@ -186,13 +196,13 @@ class ItemController extends AbstractActionController
 
                         # use item
                         $this->mItemUserTbl->update([
+                            'amount' => 0,
                             'used' => 1,
                             'date_used' => date('Y-m-d H:i:s', time()),
                         ],[
                             'item_idfs' => $itemId,
                             'user_idfs' => $me->User_ID,
-                            'date_created' => $userItem->date_created,
-                            'date_received' => $userItem->date_received
+                            'hash' => $userItem->hash,
                         ]);
 
                         $userInventory =$this->mInventory->getInventory($me->User_ID);
@@ -250,7 +260,9 @@ class ItemController extends AbstractActionController
                 'hash' => $bagFound->hash
             ]);
 
+            # we currently destroy bags
             # put old bag in inventory
+            /**
             $oldBag = $this->mItemUserTbl->select(['item_idfs' => $bagSlot->item_idfs, 'user_idfs' => $me->User_ID,'used' => 1]);
             if($oldBag->count() > 0) {
                 $oldBag = $oldBag->current();
@@ -261,11 +273,17 @@ class ItemController extends AbstractActionController
                     'item_idfs' => $oldBag->item_idfs,
                     'hash' => $oldBag->hash
                 ]);
-            }
+            } **/
 
             # equip new bag
             $this->mBagTbl->update(['item_idfs' => $itemId],['user_idfs' => $me->User_ID, 'slot' => $bagSlot->slot]);
-            return true;
+            $userInventory = $this->mInventory->getInventory($me->User_ID);
+            return [
+                'inventory' => $userInventory,
+                'inventory_bags' => $this->mInventory->getUserBags($me->User_ID),
+                'inventory_slots' => $this->mInventory->getInventorySlots($me->User_ID),
+                'inventory_slots_used' => count($userInventory),
+            ];
         }
 
         /**
@@ -281,7 +299,13 @@ class ItemController extends AbstractActionController
             $slotFound = $slotFound->current();
             $this->mItemUserTbl->delete(['user_idfs' => $me->User_ID, 'hash' => $slotFound->hash]);
 
-            return true;
+            $userInventory = $this->mInventory->getInventory($me->User_ID);
+            return [
+                'inventory' => $userInventory,
+                'inventory_bags' => $this->mInventory->getUserBags($me->User_ID),
+                'inventory_slots' => $this->mInventory->getInventorySlots($me->User_ID),
+                'inventory_slots_used' => count($userInventory),
+            ];
         }
 
         return new ApiProblemResponse(new ApiProblem(405, 'Method not allowed'));

@@ -127,6 +127,10 @@ class InboxResource extends AbstractResourceListener
             return new ApiProblem(404, 'Message not found');
         }
 
+        if($message->credits > 0) {
+            return new ApiProblem(400, 'You have Coins to collect in this message');
+        }
+
         $this->mInboxTbl->update([
             'is_read' => 1
         ],['Mail_ID' => $messageId]);
@@ -200,6 +204,7 @@ class InboxResource extends AbstractResourceListener
                 'message' => $message->message,
                 'credits' => $message->credits,
                 'date' => $message->date,
+                'is_read' => $message->is_read,
                 'from' => $from,
             ],
             'attachments' => $attachments,
@@ -359,10 +364,10 @@ class InboxResource extends AbstractResourceListener
                             'date_created' => date('Y-m-d H:i:s', time()),
                             'date_received' => date('Y-m-d H:i:s', time()),
                             'comment' => $message->message,
-                            'hash' => password_hash($attachItem->Item_ID . $user->User_ID . time(), PASSWORD_DEFAULT),
+                            'hash' => password_hash($attachItem->Item_ID . $user->User_ID . uniqid(), PASSWORD_DEFAULT),
                             'created_by' => $user->User_ID,
                             'received_from' => $message->from_idfs,
-                            'amount' => 1,
+                            'amount' => $attachment->amount,
                             'used' => 0
                         ]);
                     } else {

@@ -298,17 +298,50 @@ class UserTools extends AbstractResourceListener {
     }
 
     public function getItemDropChance($action, $userId) {
-        if($userId == 335874987 || $userId == 335875071) {
-            switch($action) {
-                case 'faucet-claim':
-                    $this->mInventory->addItemToUserInventory(39, 240, $userId, 'Random drop', 1);
-                    break;
-                case 'shortlink-claim':
-                    $this->mInventory->addItemToUserInventory(39, 240, $userId, 'Random drop', 1);
-                    break;
-                default:
-                    break;
-            }
+        $lootId = rand(1, 100);
+        $lootTable = [
+            1 => ['id' => 31, 'amount' => 5],
+            2 => ['id' => 31, 'amount' => 3],
+            3 => ['id' => 31, 'amount' => 5],
+            4 => ['id' => 31, 'amount' => 3],
+            5 => ['id' => 31, 'amount' => 5],
+            6 => ['id' => 31, 'amount' => 3],
+            7 => ['id' => 31, 'amount' => 5],
+            8 => ['id' => 31, 'amount' => 3],
+            9 => ['id' => 31, 'amount' => 5],
+            10 => ['id' => 31, 'amount' => 3],
+            11 => ['id' => 38, 'amount' => 3],
+            12 => ['id' => 38, 'amount' => 2],
+            13 => ['id' => 38, 'amount' => 3],
+            14 => ['id' => 38, 'amount' => 2],
+            15 => ['id' => 38, 'amount' => 2],
+            16 => ['id' => 38, 'amount' => 3],
+            17 => ['id' => 38, 'amount' => 2],
+            18 => ['id' => 39, 'amount' => 1],
+            19 => ['id' => 39, 'amount' => 1],
+            20 => ['id' => 39, 'amount' => 2],
+            21 => ['id' => 39, 'amount' => 1],
+            22 => ['id' => 39, 'amount' => 1],
+        ];
+
+        switch($action) {
+            case 'faucet-claim':
+                if(array_key_exists($lootId, $lootTable)) {
+                    $this->mInventory->addItemToUserInventory($lootTable[$lootId]['id'], $lootTable[$lootId]['amount'], $userId, 'Random drop from Faucet', 1);
+                }
+                break;
+            case 'dailytask':
+                if(array_key_exists($lootId, $lootTable)) {
+                    $this->mInventory->addItemToUserInventory($lootTable[$lootId]['id'], $lootTable[$lootId]['amount'], $userId, 'Random drop from Daily Task', 1);
+                }
+                break;
+            case 'shortlink-claim':
+                if(array_key_exists($lootId, $lootTable)) {
+                    $this->mInventory->addItemToUserInventory($lootTable[$lootId]['id'], $lootTable[$lootId]['amount'], $userId, 'Random drop from Shortlink', 1);
+                }
+                break;
+            default:
+                break;
         }
     }
 }

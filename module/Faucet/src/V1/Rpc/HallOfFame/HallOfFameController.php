@@ -17,6 +17,7 @@ namespace Faucet\V1\Rpc\HallOfFame;
 use Faucet\Tools\SecurityTools;
 use Laminas\ApiTools\ApiProblem\ApiProblem;
 use Laminas\ApiTools\ApiProblem\ApiProblemResponse;
+use Laminas\Db\Sql\Where;
 use Laminas\Db\TableGateway\TableGateway;
 use Laminas\Db\Sql\Select;
 use Laminas\Mvc\Controller\AbstractActionController;
@@ -185,6 +186,8 @@ class HallOfFameController extends AbstractActionController
                 case 'experience':
                 case 'shortlinks':
                 case 'mining':
+                case 'referral':
+                case 'contest':
                 case 'cpumining':
                 case 'offerwalls':
                 case 'lottery':
@@ -243,6 +246,169 @@ class HallOfFameController extends AbstractActionController
                     ],
                     'me_month' => ['xp_level' => (int)$me->xp_level,'rank' => $rankMe],
                     'me_all' => ['xp_level' => (int)$me->xp_level,'rank' => $rankMe]
+                ]);
+            }
+
+            if($detail == 'referral') {
+                $statSel = new Select($this->mStatsTbl->getTable());
+                $statSel->order('date DESC');
+                $statSel->where(['stat-key' => 'referral-toplist']);
+                $statSel->limit(1);
+                $statFound = $this->mStatsTbl->selectWith($statSel);
+
+                $allTime = [];
+                $month = [];
+
+                $myRank = '> 50';
+
+                if($statFound->count() > 0) {
+                    $data = (array)$statFound->current();
+                    $allTimeData = json_decode($data['stat-data']);
+                    if(count($allTimeData) > 0) {
+                        foreach($allTimeData as $dat) {
+                            $userInfo = $this->mUserTbl->select(['User_ID' => $dat->id]);
+                            if($userInfo->count() > 0) {
+                                $userInfo = $userInfo->current();
+                                $dat->avatar = ($userInfo->avatar != '') ? $userInfo->avatar : $userInfo->username;
+                                $allTime[] = $dat;
+                            }
+                        }
+                    }
+                }
+
+                $myRefs = $this->mUserTbl->select(['ref_user_idfs' => $me->User_ID])->count();
+
+                # Show Stats
+                return new ViewModel([
+                    'date' => date('Y-m-d H:i:s'),
+                    'player_list' => [
+                        'month' => $month,
+                        'all' => $allTime,
+                    ],
+                    'me_month' => ['count' => $myRefs, 'rank' => $myRank],
+                    'me_all' => ['count' => $myRefs, 'rank' => $myRank]
+                ]);
+            }
+
+            if($detail == 'contest') {
+                $top3Level = [];
+                $lvlSel = new Select($this->mUserTbl->getTable());
+                $lvlSel->order('xp_total DESC');
+                $lvlSel->limit(3);
+                $top3User = $this->mUserTbl->selectWith($lvlSel);
+                foreach($top3User as $toplvl) {
+                    $top3Level[] = (object)[
+                        'id' => $toplvl->User_ID,
+                        'name' => $toplvl->username,
+                        'xp_level' => $toplvl->xp_level,
+                        'xp_total' => $toplvl->xp_total,
+                    ];
+                }
+
+                $top3Sh = [];
+                $statSel = new Select($this->mStatsTbl->getTable());
+                $statSel->order('date DESC');
+                $statSel->where(['stat-key' => 'shmonth-top-09']);
+                $statSel->limit(1);
+                $statFound = $this->mStatsTbl->selectWith($statSel);
+                if($statFound->count() > 0) {
+                    $statFound = (array)$statFound->current();
+                    $topList = json_decode($statFound['stat-data']);
+                    $iCount = 0;
+                    foreach($topList as $top) {
+                        if($iCount == 3) {
+                            break;
+                        }
+                        $top3Sh[] = $top;
+                        $iCount++;
+                    }
+                }
+
+                $top3SOf = [];
+                $statSel = new Select($this->mStatsTbl->getTable());
+                $statSel->order('date DESC');
+                $statSel->where(['stat-key' => 'ofmonth-top-09']);
+                $statSel->limit(1);
+                $statFound = $this->mStatsTbl->selectWith($statSel);
+                if($statFound->count() > 0) {
+                    $statFound = (array)$statFound->current();
+                    $topList = json_decode($statFound['stat-data']);
+                    $iCount = 0;
+                    foreach($topList as $top) {
+                        if($iCount == 3) {
+                            break;
+                        }
+                        $top3SOf[] = $top;
+                        $iCount++;
+                    }
+                }
+
+                $top3Xmr = [];
+                $statSel = new Select($this->mStatsTbl->getTable());
+                $statSel->order('date DESC');
+                $statSel->where(['stat-key' => 'xmrshm-top-09']);
+                $statSel->limit(1);
+                $statFound = $this->mStatsTbl->selectWith($statSel);
+                if($statFound->count() > 0) {
+                    $statFound = (array)$statFound->current();
+                    $topList = json_decode($statFound['stat-data']);
+                    $iCount = 0;
+                    foreach($topList as $top) {
+                        if($iCount == 3) {
+                            break;
+                        }
+                        $top3Xmr[] = $top;
+                        $iCount++;
+                    }
+                }
+
+                $top3Gpu = [];
+                $statSel = new Select($this->mStatsTbl->getTable());
+                $statSel->order('date DESC');
+                $statSel->where(['stat-key' => 'gpushm-top-09']);
+                $statSel->limit(1);
+                $statFound = $this->mStatsTbl->selectWith($statSel);
+                if($statFound->count() > 0) {
+                    $statFound = (array)$statFound->current();
+                    $topList = json_decode($statFound['stat-data']);
+                    $iCount = 0;
+                    foreach($topList as $top) {
+                        if($iCount == 3) {
+                            break;
+                        }
+                        $top3Gpu[] = $top;
+                        $iCount++;
+                    }
+                }
+
+                $top3Guild = [];
+                $statSel = new Select($this->mStatsTbl->getTable());
+                $statSel->order('date DESC');
+                $statSel->where(['stat-key' => 'guild-top-09']);
+                $statSel->limit(1);
+                $statFound = $this->mStatsTbl->selectWith($statSel);
+                if($statFound->count() > 0) {
+                    $statFound = (array)$statFound->current();
+                    $topList = json_decode($statFound['stat-data']);
+                    $iCount = 0;
+                    foreach($topList as $top) {
+                        if($iCount == 3) {
+                            break;
+                        }
+                        $top3Guild[] = $top;
+                        $iCount++;
+                    }
+                }
+
+                # Show Stats
+                return new ViewModel([
+                    'date' => date('Y-m-d H:i:s'),
+                    'player_level' => $top3Level,
+                    'player_shortlink' => $top3Sh,
+                    'player_offerwall' => $top3SOf,
+                    'player_cpushares' => $top3Xmr,
+                    'player_gpushares' => $top3Gpu,
+                    'guild_toplist' => $top3Guild
                 ]);
             }
 

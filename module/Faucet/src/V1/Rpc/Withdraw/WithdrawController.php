@@ -272,6 +272,83 @@ class WithdrawController extends AbstractActionController
                 return new ApiProblemResponse(new ApiProblem(400, 'Account is not verified. Please verify E-Mail before submitting Withdrawal Request.'));
             }
 
+            /**
+             * Get Coin Info
+             */
+            $coin = filter_var($json->coin, FILTER_SANITIZE_STRING);
+            $coinInfo = $this->mWalletTbl->select(['coin_sign' => $coin]);
+            if(count($coinInfo) == 0) {
+                return new ApiProblemResponse(new ApiProblem(404, 'Currency not found'));
+            }
+            $coinInfo = $coinInfo->current();
+
+            /**
+             * Check if Wallet is a valid address
+             */
+            $wallet = filter_var($json->wallet, FILTER_SANITIZE_STRING);
+            switch($coinInfo->coin_sign) {
+                case 'BCH':
+                    $addrCheck = str_replace(['bitcoincash:'],[''],$wallet);
+                    if(strlen($addrCheck) < 42) {
+                        if(substr($addrCheck,0,1) == 1) {
+                            if(strlen($addrCheck) < 34) {
+                                return new ApiProblemResponse(new ApiProblem(400, 'Invalid Bitcoin Cash Address. Make sure you have no typing errors and choose the correct currency'));
+                            }
+                        } else {
+                            if(substr($addrCheck,0,1) == 3) {
+                                return new ApiProblemResponse(new ApiProblem(400, 'We do not support Segwit Addresses anymore. Please convert it on cashaddr.org'));
+                            } else {
+                                return new ApiProblemResponse(new ApiProblem(400, 'Invalid Bitcoin Cash Address. Make sure you have no typing errors and choose the correct currency'));
+                            }
+                        }
+                    }
+                    $firstLetter = strtolower(substr($addrCheck,0,1));
+                    if($firstLetter != 'p' && $firstLetter != 'q') {
+                        return new ApiProblemResponse(new ApiProblem(400, 'Invalid Bitcoin Cash Address. Make sure you have no typing errors and choose the correct currency'));
+                    }
+                    break;
+                case 'LTC':
+                    $addrCheck = str_replace(['litecoin:'],[''],$wallet);
+                    if(strlen($addrCheck) < 34) {
+                        return new ApiProblemResponse(new ApiProblem(400, 'Invalid Litecoin Address. Make sure you have no typing errors and choose the correct currency'));
+                    }
+                    $firstLetter = strtolower(substr($addrCheck,0,1));
+                    if($firstLetter != 'm' && $firstLetter != 'l') {
+                        return new ApiProblemResponse(new ApiProblem(400, 'Invalid Litecoin Address. Make sure you have no typing errors and choose the correct currency'));
+                    }
+                    break;
+                case 'BNB':
+                    # Get Data from Request Body
+                    $json = IndexController::loadJSONFromRequestBody(['amount','coin','wallet','memo','chain'],$this->getRequest()->getContent());
+                    if(!$json) {
+                        return new ApiProblemResponse(new ApiProblem(400, 'Invalid Response Body (missing required fields)'));
+                    }
+                    $memo = filter_var($json->memo, FILTER_SANITIZE_STRING);
+                    $chain = filter_var($json->chain, FILTER_SANITIZE_STRING);
+                    $addrCheck = str_replace([''],[''],$wallet);
+
+                    if(strlen($addrCheck) < 34) {
+                        return new ApiProblemResponse(new ApiProblem(400, 'Invalid BNB Address. Make sure you have no typing errors and choose the correct currency'));
+                    }
+
+                    if(strtolower($chain) == 'bsc') {
+                       if(substr($addrCheck,0,1) != '0') {
+                           return new ApiProblemResponse(new ApiProblem(400, 'Invalid BSC Address. Make sure you select the correct Network.'));
+                       }
+                    } else {
+                        if(strtolower(substr($addrCheck,0,1)) != 'b') {
+                            return new ApiProblemResponse(new ApiProblem(400, 'Invalid BNB Address. Make sure you select the correct Network.'));
+                        }
+                    }
+
+                    if($memo != '') {
+                        $wallet = $wallet.'-'.$memo;
+                    }
+                    break;
+                default:
+                    break;
+            }
+
             $tokenValue = $this->mTransaction->getTokenValue();
 
             /**
@@ -304,16 +381,6 @@ class WithdrawController extends AbstractActionController
             }
 
             /**
-             * Get Coin Info
-             */
-            $coin = filter_var($json->coin, FILTER_SANITIZE_STRING);
-            $coinInfo = $this->mWalletTbl->select(['coin_sign' => $coin]);
-            if(count($coinInfo) == 0) {
-                return new ApiProblemResponse(new ApiProblem(404, 'Currency not found'));
-            }
-            $coinInfo = $coinInfo->current();
-
-            /**
              * Check if amount is below minimum withdrawal for coin
              */
             if($amount < $coinInfo->withdraw_min) {
@@ -330,7 +397,6 @@ class WithdrawController extends AbstractActionController
             /**
              * Calculate Crypto Amount to Send
              */
-            $wallet = filter_var($json->wallet, FILTER_SANITIZE_STRING);
             $amountCrypto = $amount*$tokenValue;
             $amountFee = $coinInfo->fee*$tokenValue;
             if($coinInfo->dollar_val > 0) {

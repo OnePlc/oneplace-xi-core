@@ -152,6 +152,8 @@ class OfferwallResource extends AbstractResourceListener
                 'background' => $offerwall->background,
                 'name' => $offerwall->label,
                 'time' => $offerwall->time,
+                'rating' => $offerwall->rating,
+                'rating_count' => $offerwall->rating_count,
                 'reward' => $offerwall->reward
             ];
             $offerwallsById[$offerwall->Offerwall_ID] = $offerwall->label;

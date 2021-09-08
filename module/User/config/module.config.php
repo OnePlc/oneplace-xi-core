@@ -8,7 +8,7 @@ return [
     'view_manager' => [
         'display_exceptions' => false,
         'template_path_stack' => [
-            'user' => 'C:\\Users\\Praesidiarius\\PhpstormProjects\\oneplace-xi-core\\module\\User\\config/../view',
+            'user' =>  __DIR__ . '/../view',
         ],
     ],
     'router' => [

@@ -15,6 +15,7 @@
 namespace Faucet\V1\Rest\Dailytask;
 
 use Faucet\Tools\SecurityTools;
+use Faucet\Tools\UserTools;
 use Faucet\Transaction\TransactionHelper;
 use Laminas\ApiTools\ApiProblem\ApiProblem;
 use Laminas\ApiTools\Rest\AbstractResourceListener;
@@ -88,6 +89,14 @@ class DailytaskResource extends AbstractResourceListener
      */
     protected $mUserSetTbl;
 
+    /**
+     * User Basic Tools
+     *
+     * @var UserTools $mUserTools
+     * @since 1.0.0
+     */
+    protected $mUserTools;
+
 
     /**
      * Constructor
@@ -104,6 +113,8 @@ class DailytaskResource extends AbstractResourceListener
         $this->mShortDoneTbl = new TableGateway('shortlink_link_user', $mapper);
         $this->mUserSetTbl = new TableGateway('user_setting', $mapper);
         $this->mClaimTbl = new TableGateway('faucet_claim', $mapper);
+
+        $this->mUserTools = new UserTools($mapper);
         $this->mSecTools = new SecurityTools($mapper);
         $this->mTransaction = new TransactionHelper($mapper);
     }
@@ -390,6 +401,7 @@ class DailytaskResource extends AbstractResourceListener
                 }
 
                 # Transaction
+                $this->mUserTools->getItemDropChance('dailytask', $me->User_ID);
                 $newBalance = $this->mTransaction->executeTransaction($dailyTask->reward, false, $me->User_ID, $iTaskID, 'dailytask-claim', 'Daily Task '.$dailyTask->label.' completed');
                 if($newBalance !== false) {
                     # Add Done

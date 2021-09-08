@@ -484,6 +484,13 @@ class ProfessionsResource extends AbstractResourceListener
         $skillId = filter_var($skillInfo[0], FILTER_SANITIZE_NUMBER_INT);
         $amount = filter_var($amountInfo[0], FILTER_SANITIZE_NUMBER_INT);
 
+        if($amount < 1) {
+            return new ApiProblem(400, 'Amount must be at least 1');
+        }
+        if($skillId == 0) {
+            return new ApiProblem(400, 'Invalid skill');
+        }
+
         # get skill
         $profSkill = $this->mProfSkillTbl->select(['Skill_ID' => $skillId]);
         if($profSkill->count() == 0) {

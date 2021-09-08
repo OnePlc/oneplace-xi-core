@@ -201,7 +201,7 @@ class RatingController extends AbstractActionController
                 # double check that user is allowed to rate the link
                 $linksDone = $this->mOfferDoneTbl->select(['user_idfs' => $me->User_ID, 'offerwall_idfs' => $linkId])->count();
 
-                if($linksDone > 10) {
+                if($linksDone > 5) {
                     $this->mOfferRateTbl->insert([
                         'user_idfs' => $me->User_ID,
                         'offerwall_idfs' => $linkId,
@@ -210,7 +210,7 @@ class RatingController extends AbstractActionController
                         'date' => date('Y-m-d H:i:s', time()),
                     ]);
 
-                    $fNewBalance = $this->mTransaction->executeTransaction(5, false, $me->User_ID, $linkId, 'sh-rating', 'Rating for Shortlink '.$linkInfo->label, $me->User_ID);
+                    $fNewBalance = $this->mTransaction->executeTransaction(10, false, $me->User_ID, $linkId, 'of-rating', 'Rating for Offerwall '.$linkInfo->label, $me->User_ID);
                     if($fNewBalance !== false) {
                         return [
                             'token_balance' => $fNewBalance
@@ -219,10 +219,10 @@ class RatingController extends AbstractActionController
                         return new ApiProblemResponse(new ApiProblem(400, 'Error during reward transaction'));
                     }
                 } else {
-                    return new ApiProblemResponse(new ApiProblem(400, 'You are not allowed to rate this shortlink'));
+                    return new ApiProblemResponse(new ApiProblem(400, 'You are not allowed to rate this offerwall'));
                 }
             } else {
-                return new ApiProblemResponse(new ApiProblem(400, 'You have already rated this shortlink'));
+                return new ApiProblemResponse(new ApiProblem(400, 'You have already rated this offerwall'));
             }
         }
 

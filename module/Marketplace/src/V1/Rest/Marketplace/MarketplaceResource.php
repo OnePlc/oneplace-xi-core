@@ -122,10 +122,15 @@ class MarketplaceResource extends AbstractResourceListener
         }
         $itemInfo = $item->current();
 
+        if($itemInfo->category_idfs == 11) {
+            return new ApiProblem(404, 'You cannot sell items from tailor store.');
+        }
+
         $itemWh = new Where();
         $itemWh->equalTo('item_idfs', $itemId);
         $itemWh->equalTo('user_idfs', $user->User_ID);
         $itemWh->greaterThanOrEqualTo('amount', 1);
+        $itemWh->equalTo('used', 0);
         $itemUser = $this->mItemUserTbl->select($itemWh);
         if($itemUser->count() == 0) {
             return new ApiProblem(404, 'Item not found in your inventory');
@@ -154,6 +159,8 @@ class MarketplaceResource extends AbstractResourceListener
             $baseFee = round($baseFee*1.5,0);
         }
 
+        $baseFee = $baseFee * $amount;
+
         $now = date('Y-m-d H:i:s', time());
         $expire = date('Y-m-d H:i:s', time()+(3600*$duration));
 
@@ -162,31 +169,50 @@ class MarketplaceResource extends AbstractResourceListener
             return new ApiProblem(400, 'Price must be greater than 0');
         }
 
-        if($this->mTransaction->checkUserBalance($baseFee, $user->User_ID)) {
-            # remove items from inventory
-            $amountToUse = $amount;
-            foreach($myItems as $item) {
-                $amountLeft = $item->amount - $amountToUse;
-                if($amountLeft < 0) {
-                    $amountLeft = 0;
-                    $amountToUse = $amountToUse - $item->amount;
-                } elseif ($amountLeft == 0) {
-                    $amountToUse = $amountToUse - $item->amount;
-                }
-                $this->mItemUserTbl->update([
-                    'amount' => $amountLeft,
-                ], [
-                    'user_idfs' => $item->user_idfs,
-                    'item_idfs' => $item->item_idfs,
-                    'created_by' => $item->created_by,
-                    'amount' => $item->amount,
-                    'hash' => $item->hash
-                ]);
+        $totalFee = $baseFee * $amount;
 
-                if($amountToUse == 0) {
-                    break;
+        if($this->mTransaction->checkUserBalance($totalFee, $user->User_ID)) {
+            if($itemInfo->stack_size > 1) {
+                # remove items from inventory
+                $amountToUse = $amount;
+                foreach($myItems as $item) {
+                    $amountLeft = $item->amount - $amountToUse;
+                    if($amountLeft < 0) {
+                        $amountLeft = 0;
+                        $amountToUse = $amountToUse - $item->amount;
+                    } elseif ($amountLeft == 0) {
+                        $amountToUse = $amountToUse - $item->amount;
+                    }
+                    $this->mItemUserTbl->update([
+                        'amount' => $amountLeft,
+                    ], [
+                        'user_idfs' => $item->user_idfs,
+                        'item_idfs' => $item->item_idfs,
+                        'hash' => $item->hash
+                    ]);
+
+                    if($amountToUse == 0) {
+                        break;
+                    }
+                }
+            } else {
+                $itemUsed = 0;
+                foreach($myItems as $item) {
+                    $this->mItemUserTbl->update([
+                        'amount' => 0,
+                        'used' => 1,
+                    ], [
+                        'user_idfs' => $item->user_idfs,
+                        'item_idfs' => $item->item_idfs,
+                        'hash' => $item->hash
+                    ]);
+                    $itemUsed++;
+                    if($itemUsed == $amount) {
+                        break;
+                    }
                 }
             }
+
 
             # create auction
             $this->mAuctionTbl->insert([
@@ -201,7 +227,7 @@ class MarketplaceResource extends AbstractResourceListener
 
             $auctionId = $this->mAuctionTbl->lastInsertValue;
 
-            $fNewBalance = $this->mTransaction->executeTransaction($baseFee, 0, $user->User_ID, $auctionId, 'create-auction', 'Auction created '.$amount.' x '.$itemInfo->label.' for '.$duration.' hours');
+            $fNewBalance = $this->mTransaction->executeTransaction($baseFee, 1, $user->User_ID, $auctionId, 'create-auction', 'Auction created '.$amount.' x '.$itemInfo->label.' for '.$duration.' hours');
             if($fNewBalance !== false) {
                 return true;
             } else {
@@ -244,6 +270,12 @@ class MarketplaceResource extends AbstractResourceListener
         $amount = $auction->amount;
         $itemId = $auction->item_idfs;
 
+        $itemInfo = $this->mItemTbl->select(['Item_ID' => $itemId]);
+        if($itemInfo->count() == 0) {
+            return new ApiProblem(404, 'Item not found');
+        }
+        $itemInfo = $itemInfo->current();
+
         $this->mAuctionTbl->delete(['Auction_ID' => $auctionId]);
 
         # create message to buyer inbox
@@ -258,6 +290,7 @@ class MarketplaceResource extends AbstractResourceListener
         ]);
         $messageId = $this->mInboxTbl->lastInsertValue;
 
+        /**
         # add purchased items as attachment
         for($itemSent = 0;$itemSent < $amount;$itemSent++) {
             $this->mInboxAttachTbl->insert([
@@ -266,6 +299,61 @@ class MarketplaceResource extends AbstractResourceListener
                 'slot' => $itemSent,
                 'used' => 0
             ]);
+        } **/
+
+
+        if($itemInfo->stack_size > 1) {
+            $attachmentCount = round($amount/$itemInfo->stack_size);
+            if($attachmentCount < 1) {
+                $this->mInboxAttachTbl->insert([
+                    'mail_idfs' => $messageId,
+                    'item_idfs' => $itemId,
+                    'slot' => 0,
+                    'amount' => $amount,
+                    'used' => 0
+                ]);
+            } else {
+                if($itemInfo->stack_size - $amount > 0) {
+                    $this->mInboxAttachTbl->insert([
+                        'mail_idfs' => $messageId,
+                        'item_idfs' => $itemId,
+                        'slot' => 0,
+                        'amount' => $amount,
+                        'used' => 0
+                    ]);
+                } else {
+                    for($itemSent = 0;$itemSent < $attachmentCount;$itemSent++) {
+                        $this->mInboxAttachTbl->insert([
+                            'mail_idfs' => $messageId,
+                            'item_idfs' => $itemId,
+                            'slot' => $itemSent,
+                            'amount' => $itemInfo->stack_size,
+                            'used' => 0
+                        ]);
+                    }
+                    $amountLeft = $amount - ($attachmentCount*$itemInfo->stack_size);
+                    if($amountLeft > 0) {
+                        $this->mInboxAttachTbl->insert([
+                            'mail_idfs' => $messageId,
+                            'item_idfs' => $itemId,
+                            'slot' => $itemSent,
+                            'amount' => $amountLeft,
+                            'used' => 0
+                        ]);
+                    }
+                }
+
+            }
+        } else {
+            # add purchased items as attachment
+            for($itemSent = 0;$itemSent < $amount;$itemSent++) {
+                $this->mInboxAttachTbl->insert([
+                    'mail_idfs' => $messageId,
+                    'item_idfs' => $itemId,
+                    'slot' => $itemSent,
+                    'used' => 0
+                ]);
+            }
         }
 
         return true;
@@ -308,15 +396,22 @@ class MarketplaceResource extends AbstractResourceListener
         $category = $category->current();
 
         $page = (isset($_REQUEST['page'])) ? filter_var($_REQUEST['page'], FILTER_SANITIZE_NUMBER_INT) : 1;
-        $pageSize = 10;
+        $pageSize = 10000;
 
-        $itemsInCategory = $this->mItemTbl->select(['category_idfs' => $categoryId]);
+        $itemWh = new Where();
+        $itemWh->equalTo('category_idfs', $categoryId);
+        //$itemWh->notEqualTo('created_by', $user->User_ID);
+        $itemsInCategory = $this->mItemTbl->select($itemWh);
 
         $items = [];
         $itemsById = [];
+        $itemsByAmount = [];
         foreach($itemsInCategory as $item) {
             $itemSel = new Select($this->mAuctionTbl->getTable());
-            $itemSel->where(['item_idfs' => $item->Item_ID]);
+            $itemSWh = new Where();
+            $itemSWh->equalTo('item_idfs', $item->Item_ID);
+            $itemSWh->notEqualTo('created_by', $user->User_ID);
+            $itemSel->where($itemSWh);
             $itemSel->group(['price_per_unit']);
             $itemSel->order('created_date ASC');
             # Create a new pagination adapter object
@@ -343,10 +438,19 @@ class MarketplaceResource extends AbstractResourceListener
                         $cheapest = $auction->price_per_unit;
                     }
                 }
+                if(!array_key_exists($auction->price_per_unit,$auctions)) {
+                    $auctions[$auction->price_per_unit] = [
+                        'price' => $auction->price_per_unit,
+                        'amount' => $auction->amount,
+                    ];
+                } else {
+                    $auctions[$auction->price_per_unit]['amount']+=$auction->amount;
+                }
+                /**
                 $auctions[] = [
                     'price' => $auction->price_per_unit,
                     'amount' => $auction->amount,
-                ];
+                ]; **/
             }
             if($totalAmount > 0) {
                 $items[] = (object)[
@@ -468,10 +572,23 @@ class MarketplaceResource extends AbstractResourceListener
         $amount = filter_var($data->amount, FILTER_SANITIZE_NUMBER_INT);
         $price = filter_var($data->price, FILTER_SANITIZE_NUMBER_INT);
 
+        if($amount < 1) {
+            return new ApiProblem(400, 'Amount must be at least 1');
+        }
+
+        if($price == 0) {
+            return new ApiProblem(400, 'Price cannot be zero');
+        }
+
+        if($itemId == 0) {
+            return new ApiProblem(400, 'Invalid item');
+        }
+
         $itemInfo = $this->mItemTbl->select(['Item_ID' => $itemId]);
         if($itemInfo->count() == 0) {
             return new ApiProblem(404, 'Item not found');
         }
+        $itemInfo = $itemInfo->current();
 
         $auctionWh = new Where();
         $auctionWh->equalTo('item_idfs', $itemId);
@@ -483,83 +600,175 @@ class MarketplaceResource extends AbstractResourceListener
 
         $auctions = $this->mAuctionTbl->selectWith($auctionSel);
         if($auctions->count() == 0) {
-            echo 'no matching auctions founds';
+            return new ApiProblem(404, 'No auction found for this item');
         }
         $amountToBuy = $amount;
-        # consume auctions
+
+        $auctionsMatching = [];
+        $totalAmount = 0;
         foreach($auctions as $auction) {
-            $amountLeft = $auction->amount - $amountToBuy;
-            if($amountLeft < 0) {
-                // remove auction
-                $this->mAuctionTbl->delete(['Auction_ID' => $auction->Auction_ID]);
-                $amountToBuy = $amountToBuy - $auction->amount;
+            $auctionsMatching[] = $auction;
+            $totalAmount+=$auction->amount;
+        }
 
-                // payout to seller
-                # create message to buyer inbox
-                $this->mInboxTbl->insert([
-                    'label' => 'Your Auction was sold',
-                    'message' => 'Attached are the coins for your sold item',
-                    'credits' => $auction->amount * $auction->price_per_unit,
-                    'from_idfs' => 1,
-                    'to_idfs' => $auction->created_by,
-                    'date' => date('Y-m-d H:i:s', time()),
-                    'is_read' => 0
-                ]);
-            } else {
-                if($amountLeft == 0) {
+        if($amount > $totalAmount) {
+            return new ApiProblem(400, 'There is not that much '.$itemInfo->label.' in the marketplace for this price');
+        }
+
+        $totalPrice = $amount * $price;
+        if($this->mTransaction->checkUserBalance($totalPrice, $user->User_ID)) {
+            # consume auctions
+            foreach($auctionsMatching as $auction) {
+                $amountLeft = $auction->amount - $amountToBuy;
+                if($amountLeft < 0) {
+                    // remove auction
                     $this->mAuctionTbl->delete(['Auction_ID' => $auction->Auction_ID]);
+                    $amountToBuy = $amountToBuy - $auction->amount;
 
+                    $userAmount = $auction->amount * $auction->price_per_unit;
+                    $fee = $userAmount*.1;
+                    $finalAmount = $userAmount*.9;
+
+                    $userMsg = 'Attached are the coins for your sold item. <br/><br/> ';
+                    $userMsg .= $auction->amount.'x '.$itemInfo->label.'<br/>- ';
+                    $userMsg .= $auction->amount.'x '.$auction->price_per_unit.' = '.number_format($userAmount,2,'.','\'');
+                    $userMsg .= '<br/>- Marketplace Fee : '.number_format($fee, 2,'.','\'');
+                    $userMsg .= '<br/>= '.number_format($finalAmount, 2,'.','\'');
+
+                    // payout to seller
                     # create message to buyer inbox
                     $this->mInboxTbl->insert([
                         'label' => 'Your Auction was sold',
-                        'message' => 'Attached are the coins for your sold item',
-                        'credits' => $auction->amount * $auction->price_per_unit,
+                        'message' => $userMsg,
+                        'credits' => $finalAmount,
                         'from_idfs' => 1,
                         'to_idfs' => $auction->created_by,
                         'date' => date('Y-m-d H:i:s', time()),
                         'is_read' => 0
                     ]);
-                    break;
                 } else {
-                    # create message to buyer inbox
-                    $this->mInboxTbl->insert([
-                        'label' => 'Your Auction was sold',
-                        'message' => 'Attached are the coins for your sold item',
-                        'credits' => ($auction->amount - $amountLeft) * $auction->price_per_unit,
-                        'from_idfs' => 1,
-                        'to_idfs' => $auction->created_by,
-                        'date' => date('Y-m-d H:i:s', time()),
-                        'is_read' => 0
-                    ]);
-                    $this->mAuctionTbl->update([
-                        'amount' => $amountLeft,
-                    ],['Auction_ID' => $auction->Auction_ID]);
+                    if($amountLeft == 0) {
+                        $this->mAuctionTbl->delete(['Auction_ID' => $auction->Auction_ID]);
+
+                        $userAmount = $auction->amount * $auction->price_per_unit;
+                        $fee = $userAmount*.1;
+                        $finalAmount = $userAmount*.9;
+
+                        $userMsg = 'Attached are the coins for your sold item. <br/><br/> ';
+                        $userMsg .= $auction->amount.'x '.$itemInfo->label.'<br/>- ';
+                        $userMsg .= $auction->amount.'x '.$auction->price_per_unit.' = '.number_format($userAmount,2,'.','\'');
+                        $userMsg .= '<br/>- Marketplace Fee : '.number_format($fee, 2,'.','\'');
+                        $userMsg .= '<br/>= '.number_format($finalAmount, 2,'.','\'');
+
+                        # create message to buyer inbox
+                        $this->mInboxTbl->insert([
+                            'label' => 'Your Auction was sold',
+                            'message' => $userMsg,
+                            'credits' => $finalAmount,
+                            'from_idfs' => 1,
+                            'to_idfs' => $auction->created_by,
+                            'date' => date('Y-m-d H:i:s', time()),
+                            'is_read' => 0
+                        ]);
+                        break;
+                    } else {
+                        $userAmount = ($auction->amount - $amountLeft) * $auction->price_per_unit;
+                        $fee = $userAmount*.1;
+                        $finalAmount = $userAmount*.9;
+
+                        $userMsg = 'Attached are the coins for your sold item. <br/><br/> ';
+                        $userMsg .= ($auction->amount - $amountLeft).'x '.$itemInfo->label.'<br/>- ';
+                        $userMsg .= ($auction->amount - $amountLeft).'x '.$auction->price_per_unit.' = '.number_format($userAmount,2,'.','\'');
+                        $userMsg .= '<br/>- Marketplace Fee : '.number_format($fee, 2,'.','\'');
+                        $userMsg .= '<br/>= '.number_format($finalAmount, 2,'.','\'');
+
+                        # create message to buyer inbox
+                        $this->mInboxTbl->insert([
+                            'label' => 'Your Auction was sold',
+                            'message' => $userMsg,
+                            'credits' => $finalAmount,
+                            'from_idfs' => 1,
+                            'to_idfs' => $auction->created_by,
+                            'date' => date('Y-m-d H:i:s', time()),
+                            'is_read' => 0
+                        ]);
+                        $this->mAuctionTbl->update([
+                            'amount' => $amountLeft,
+                        ],['Auction_ID' => $auction->Auction_ID]);
+                    }
                 }
             }
-        }
 
-        # create message to buyer inbox
-        $this->mInboxTbl->insert([
-            'label' => 'Your Marketplace Purchase',
-            'message' => 'Attached are is your Marketplace Purchase',
-            'credits' => 0,
-            'from_idfs' => 1,
-            'to_idfs' => $user->User_ID,
-            'date' => date('Y-m-d H:i:s', time()),
-            'is_read' => 0
-        ]);
-        $messageId = $this->mInboxTbl->lastInsertValue;
+            $fNewBalance = $this->mTransaction->executeTransaction($totalPrice, 1, $user->User_ID, $itemId, 'mp-buy', 'Bought '.$amount.' of '.$itemInfo->label);
 
-        # add purchased items as attachment
-        for($itemSent = 0;$itemSent < $amount;$itemSent++) {
-            $this->mInboxAttachTbl->insert([
-                'mail_idfs' => $messageId,
-                'item_idfs' => $itemId,
-                'slot' => $itemSent,
-                'used' => 0
+            # create message to buyer inbox
+            $this->mInboxTbl->insert([
+                'label' => 'Your Marketplace Purchase',
+                'message' => 'Attached are is your Marketplace Purchase',
+                'credits' => 0,
+                'from_idfs' => 1,
+                'to_idfs' => $user->User_ID,
+                'date' => date('Y-m-d H:i:s', time()),
+                'is_read' => 0
             ]);
-        }
+            $messageId = $this->mInboxTbl->lastInsertValue;
 
+            if($itemInfo->stack_size > 1) {
+                $attachmentCount = round($amount/$itemInfo->stack_size);
+                if($attachmentCount < 1) {
+                    $this->mInboxAttachTbl->insert([
+                        'mail_idfs' => $messageId,
+                        'item_idfs' => $itemId,
+                        'slot' => 0,
+                        'amount' => $amount,
+                        'used' => 0
+                    ]);
+                } else {
+                    if($itemInfo->stack_size - $amount > 0) {
+                        $this->mInboxAttachTbl->insert([
+                            'mail_idfs' => $messageId,
+                            'item_idfs' => $itemId,
+                            'slot' => 0,
+                            'amount' => $amount,
+                            'used' => 0
+                        ]);
+                    } else {
+                        for($itemSent = 0;$itemSent < $attachmentCount;$itemSent++) {
+                            $this->mInboxAttachTbl->insert([
+                                'mail_idfs' => $messageId,
+                                'item_idfs' => $itemId,
+                                'slot' => $itemSent,
+                                'amount' => $itemInfo->stack_size,
+                                'used' => 0
+                            ]);
+                        }
+                        $amountLeft = $amount - ($attachmentCount*$itemInfo->stack_size);
+                        if($amountLeft > 0) {
+                            $this->mInboxAttachTbl->insert([
+                                'mail_idfs' => $messageId,
+                                'item_idfs' => $itemId,
+                                'slot' => $itemSent,
+                                'amount' => $amountLeft,
+                                'used' => 0
+                            ]);
+                        }
+                    }
+
+                }
+            } else {
+                # add purchased items as attachment
+                for($itemSent = 0;$itemSent < $amount;$itemSent++) {
+                    $this->mInboxAttachTbl->insert([
+                        'mail_idfs' => $messageId,
+                        'item_idfs' => $itemId,
+                        'slot' => $itemSent,
+                        'used' => 0
+                    ]);
+                }
+            }
+        } else {
+            return new ApiProblem(400, 'Your balance is too low to buy '.$amount.' '.$itemInfo->label);
+        }
         return true;
     }
 }
