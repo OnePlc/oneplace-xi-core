@@ -82,6 +82,14 @@ class JoinController extends AbstractActionController
     protected $mUserSetTbl;
 
     /**
+     * Guild Rank Permission Table
+     *
+     * @var TableGateway $mRankPermTbl
+     * @since 1.0.0
+     */
+    protected $mRankPermTbl;
+
+    /**
      * Constructor
      *
      * BankController constructor.
@@ -96,6 +104,8 @@ class JoinController extends AbstractActionController
         $this->mUserTbl = new TableGateway('user', $mapper);
         $this->mUserSetTbl = new TableGateway('user_setting', $mapper);
         $this->mGuildRankTbl = new TableGateway('faucet_guild_rank', $mapper);
+        $this->mRankPermTbl = new TableGateway('faucet_guild_rank_permission', $mapper);
+
         $this->mSecTools = new SecurityTools($mapper);
     }
 
@@ -120,7 +130,10 @@ class JoinController extends AbstractActionController
         }
         $userHasGuild = $userHasGuild->current();
         if($userHasGuild->rank != 0) {
-            return new ApiProblemResponse(new ApiProblem(409, 'You must be guildmaster to manage join requests'));
+            $invitePerm = $this->mRankPermTbl->select(['rank_idfs' => $userHasGuild->rank,'guild_idfs' => $userHasGuild->guild_idfs,'permission' => 'invite']);
+            if($invitePerm->count() == 0) {
+                return new ApiProblemResponse(new ApiProblem(409, 'You must be guildmaster or have the invite permission to manage invites'));
+            }
         }
 
         # Load Guild Data

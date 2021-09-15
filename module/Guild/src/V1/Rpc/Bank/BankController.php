@@ -195,12 +195,14 @@ class BankController extends AbstractActionController
         }
 
         $rank = '-';
+        $rankInfo = null;
         $rankDB = $this->mGuildRankTbl->select([
             'guild_idfs' => $guild->Guild_ID,
             'level' => $userHasGuild->rank,
         ]);
         if(count($rankDB) > 0) {
-            $rank = $rankDB->current()->label;
+            $rankInfo = $rankDB->current();
+            $rank = $rankInfo->label;
         }
 
         $guildXPPercent = 0;
@@ -233,10 +235,16 @@ class BankController extends AbstractActionController
                 $totalItems = $this->mTransaction->getGuildTransactionCount($guild->Guild_ID);
                 $pages = (round($totalItems/10) > 0) ? round($totalItems/10) : 1;
 
+                $dailyLimit = 0;
+                if($rankInfo->daily_withdraw > 0) {
+                    $dailyLimit = $rankInfo->daily_withdraw;
+                }
+
                 return [
                     'guild_token_balance' => $guild->token_balance,
                     'page_size' => 10,
                     'page' => $page,
+                    'withdraw_limit' => $dailyLimit,
                     'page_count' => $pages,
                     'total_items' => $totalItems,
                     'transactions' => $this->mTransaction->getGuildTransactions($guild->Guild_ID, $page, 10),
@@ -251,19 +259,22 @@ class BankController extends AbstractActionController
                 if($userHasGuild->rank == 0) {
                     $withdrawAllowed = true;
                 } else {
-                    $rankHasPerm = $this->mGuildRankPermTbl->select([
-                        'guild_idfs' => $guild->Guild_ID,
-                        'rank_idfs' => $userHasGuild->rank,
-                        'permission' => 'withdraw',
-                    ]);
-                    if(count($rankHasPerm) > 0) {
-                        $withdrawAllowed = true;
+                    if($rankInfo) {
+                        if($rankInfo->daily_withdraw > 0) {
+                            $lastWth = $this->mTransaction->findGuildTransaction($userHasGuild->guild_idfs,date('Y-m-d H:i:s', time()-(3600*24)),'member-wth', $me->User_ID);
+
+                            if($lastWth !== false) {
+                                return new ApiProblemResponse(new ApiProblem(409, 'You have already withdrawn from guildbank today'));
+                            } else {
+                                $withdrawAllowed = true;
+                            }
+                        }
                     }
                 }
                 if($withdrawAllowed) {
                     # check guild balance
                     if($this->mTransaction->checkGuildBalance($amount, $guild->Guild_ID)) {
-                        $newGuildBalance = $this->mTransaction->executeGuildTransaction($amount, true, $guild->Guild_ID, 0, '','Deposit from User '.$me->username, $me->User_ID);
+                        $newGuildBalance = $this->mTransaction->executeGuildTransaction($amount, true, $guild->Guild_ID, 0, 'member-wth','Withdraw from User '.$me->username, $me->User_ID);
                         if($newGuildBalance !== false) {
                             # move coins from guild to user
                             $newBalance = $this->mTransaction->executeTransaction($amount, false, $me->User_ID, $guild->Guild_ID, 'guild-deposit', '');

@@ -443,13 +443,17 @@ class TransactionHelper {
         return $cryptoBalance;
     }
 
-    public function findGuildTransaction($guildId, $date, $refType) {
+    public function findGuildTransaction($guildId, $date, $refType, $userId = 0)
+    {
         $transWh = new Where();
         $transWh->equalTo('guild_idfs', $guildId);
         $transWh->greaterThanOrEqualTo('date', date('Y-m-d H:i:s', strtotime($date)));
         $transWh->like('ref_type', $refType);
+        if($userId != 0) {
+            $transWh->equalTo('created_by', $userId);
+        }
         $transaction = TransactionHelper::$mGuildTransTbl->select($transWh);
-        if(count($transaction) > 0) {
+        if($transaction->count() > 0) {
             return true;
         } else {
             return false;

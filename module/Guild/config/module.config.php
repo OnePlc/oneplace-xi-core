@@ -3,6 +3,7 @@ return [
     'service_manager' => [
         'factories' => [
             \Guild\V1\Rest\Guild\GuildResource::class => \Guild\V1\Rest\Guild\GuildResourceFactory::class,
+            \Guild\V1\Rest\Rank\RankResource::class => \Guild\V1\Rest\Rank\RankResourceFactory::class,
         ],
     ],
     'router' => [
@@ -46,6 +47,15 @@ return [
                     ],
                 ],
             ],
+            'guild.rest.rank' => [
+                'type' => 'Segment',
+                'options' => [
+                    'route' => '/guildrank[/:rank_id]',
+                    'defaults' => [
+                        'controller' => 'Guild\\V1\\Rest\\Rank\\Controller',
+                    ],
+                ],
+            ],
         ],
     ],
     'api-tools-versioning' => [
@@ -54,6 +64,7 @@ return [
             1 => 'guild.rpc.bank',
             2 => 'guild.rpc.join',
             3 => 'guild.rpc.chat',
+            4 => 'guild.rest.rank',
         ],
     ],
     'api-tools-rest' => [
@@ -79,6 +90,28 @@ return [
             'collection_class' => \Guild\V1\Rest\Guild\GuildCollection::class,
             'service_name' => 'Guild',
         ],
+        'Guild\\V1\\Rest\\Rank\\Controller' => [
+            'listener' => \Guild\V1\Rest\Rank\RankResource::class,
+            'route_name' => 'guild.rest.rank',
+            'route_identifier_name' => 'rank_id',
+            'collection_name' => 'rank',
+            'entity_http_methods' => [
+                0 => 'GET',
+                1 => 'PATCH',
+                2 => 'PUT',
+                3 => 'DELETE',
+            ],
+            'collection_http_methods' => [
+                0 => 'GET',
+                1 => 'POST',
+            ],
+            'collection_query_whitelist' => [],
+            'page_size' => 25,
+            'page_size_param' => null,
+            'entity_class' => \Guild\V1\Rest\Rank\RankEntity::class,
+            'collection_class' => \Guild\V1\Rest\Rank\RankCollection::class,
+            'service_name' => 'Rank',
+        ],
     ],
     'api-tools-content-negotiation' => [
         'controllers' => [
@@ -86,6 +119,7 @@ return [
             'Guild\\V1\\Rpc\\Bank\\Controller' => 'Json',
             'Guild\\V1\\Rpc\\Join\\Controller' => 'Json',
             'Guild\\V1\\Rpc\\Chat\\Controller' => 'Json',
+            'Guild\\V1\\Rest\\Rank\\Controller' => 'HalJson',
         ],
         'accept_whitelist' => [
             'Guild\\V1\\Rest\\Guild\\Controller' => [
@@ -108,6 +142,11 @@ return [
                 1 => 'application/json',
                 2 => 'application/*+json',
             ],
+            'Guild\\V1\\Rest\\Rank\\Controller' => [
+                0 => 'application/vnd.guild.v1+json',
+                1 => 'application/hal+json',
+                2 => 'application/json',
+            ],
         ],
         'content_type_whitelist' => [
             'Guild\\V1\\Rest\\Guild\\Controller' => [
@@ -126,6 +165,10 @@ return [
                 0 => 'application/vnd.guild.v1+json',
                 1 => 'application/json',
             ],
+            'Guild\\V1\\Rest\\Rank\\Controller' => [
+                0 => 'application/vnd.guild.v1+json',
+                1 => 'application/json',
+            ],
         ],
     ],
     'api-tools-hal' => [
@@ -140,6 +183,18 @@ return [
                 'entity_identifier_name' => 'id',
                 'route_name' => 'guild.rest.guild',
                 'route_identifier_name' => 'guild_id',
+                'is_collection' => true,
+            ],
+            \Guild\V1\Rest\Rank\RankEntity::class => [
+                'entity_identifier_name' => 'id',
+                'route_name' => 'guild.rest.rank',
+                'route_identifier_name' => 'rank_id',
+                'hydrator' => \Laminas\Hydrator\ObjectPropertyHydrator::class,
+            ],
+            \Guild\V1\Rest\Rank\RankCollection::class => [
+                'entity_identifier_name' => 'id',
+                'route_name' => 'guild.rest.rank',
+                'route_identifier_name' => 'rank_id',
                 'is_collection' => true,
             ],
         ],
@@ -290,6 +345,22 @@ return [
                         'PATCH' => false,
                         'DELETE' => false,
                     ],
+                ],
+            ],
+            'Guild\\V1\\Rest\\Rank\\Controller' => [
+                'collection' => [
+                    'GET' => true,
+                    'POST' => true,
+                    'PUT' => false,
+                    'PATCH' => false,
+                    'DELETE' => false,
+                ],
+                'entity' => [
+                    'GET' => true,
+                    'POST' => false,
+                    'PUT' => true,
+                    'PATCH' => true,
+                    'DELETE' => true,
                 ],
             ],
         ],

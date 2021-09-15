@@ -7,6 +7,7 @@ use Faucet\Transaction\TransactionHelper;
 use Laminas\ApiTools\ApiProblem\ApiProblem;
 use Laminas\ApiTools\ApiProblem\ApiProblemResponse;
 use Laminas\Db\Sql\Select;
+use Laminas\Db\Sql\Where;
 use Laminas\Db\TableGateway\TableGateway;
 use Laminas\Mvc\Controller\AbstractActionController;
 
@@ -109,10 +110,22 @@ class AuctionController extends AbstractActionController
             }
             $itemInfo = $item->current();
 
+            $mode = 'buy';
+            if(isset($_REQUEST['mode'])) {
+                $modeTest = filter_var($_REQUEST['mode'], FILTER_SANITIZE_STRING);
+                if($modeTest == 'sell') {
+                    $mode = 'sell';
+                }
+            }
             $auctions = [];
             $totalAmount = 0;
             $aucSel = new Select($this->mAuctionTbl->getTable());
-            $aucSel->where(['item_idfs' => $itemId]);
+            $itemSWh = new Where();
+            $itemSWh->equalTo('item_idfs', $itemId);
+            if($mode == 'buy') {
+                $itemSWh->notEqualTo('created_by', $me->User_ID);
+            }
+            $aucSel->where($itemSWh);
             $aucSel->order('price_per_unit ASC');
             $itemAuctions = $this->mAuctionTbl->selectWith($aucSel);
             if($itemAuctions->count() > 0) {
@@ -121,15 +134,19 @@ class AuctionController extends AbstractActionController
                     if($seller->count() > 0) {
                         $seller = $seller->current();
                         $totalAmount+=$auction->amount;
-                        $auctions[] = (object)[
-                            'id' => $auction->Auction_ID,
-                            'amount' => $auction->amount,
-                            'price_per_unit' => $auction->price_per_unit,
-                            'seller' => [
-                                'id' => $seller->User_ID,
-                                'name' => $seller->username
-                            ]
-                        ];
+                        if(!array_key_exists($auction->price_per_unit,$auctions)) {
+                            $auctions[$auction->price_per_unit] = (object)[
+                                'id' => $auction->Auction_ID,
+                                'amount' => $auction->amount,
+                                'price_per_unit' => $auction->price_per_unit,
+                                'seller' => [
+                                    'id' => $seller->User_ID,
+                                    'name' => $seller->username
+                                ]
+                            ];
+                        } else {
+                            $auctions[$auction->price_per_unit]->amount+=$auction->amount;
+                        }
                     }
                 }
             }

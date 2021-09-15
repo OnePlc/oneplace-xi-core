@@ -141,6 +141,14 @@ class GuildResource extends AbstractResourceListener
     protected $mXPLvlTbl;
 
     /**
+     * Guild Rank Permission Table
+     *
+     * @var TableGateway $mRankPermTbl
+     * @since 1.0.0
+     */
+    protected $mRankPermTbl;
+
+    /**
      * Constructor
      *
      * AchievementResource constructor.
@@ -160,6 +168,8 @@ class GuildResource extends AbstractResourceListener
         $this->mUserTbl = new TableGateway('user', $mapper);
         $this->mXPLvlTbl = new TableGateway('user_xp_level', $mapper);
         $this->mUserSetTbl = new TableGateway('user_setting', $mapper);
+        $this->mRankPermTbl = new TableGateway('faucet_guild_rank_permission', $mapper);
+
         $this->mSession = new Container('webauth');
         $this->mTransaction = new TransactionHelper($mapper);
         $this->mSecTools = new SecurityTools($mapper);
@@ -191,7 +201,7 @@ class GuildResource extends AbstractResourceListener
 
         if(count($userHasGuild) == 0) {
             # check if user has enough funds to create a guild
-            $guildPrice = 1000;
+            $guildPrice = 1500;
             if($this->mTransaction->checkUserBalance($guildPrice,$me->User_ID)) {
                 # create guild
                 $guildName = $data->name;
@@ -218,6 +228,7 @@ class GuildResource extends AbstractResourceListener
                     'xp_level' => 1,
                     'xp_current' => 0,
                     'xp_total' => 0,
+                    'members' => 1,
                     'icon' => $guildIcon,
                     'is_vip' => 0,
                     'token_balance' => 0,
@@ -251,8 +262,23 @@ class GuildResource extends AbstractResourceListener
                     if($newBalance) {
                         $guildInfo = (object)$guildData;
                         unset($guildInfo->owner_idfs);
-                        $guildInfo->owner = (object)['id' => $me->User_ID, 'name' => $me->username,'token_balance' => $newBalance];
-                        return $guildInfo;
+                        $guild = (object)[
+                            'id' => $newGuildId,
+                            'name' => $guildName,
+                            'icon' => $guildIcon,
+                            'xp_level' => 1,
+                            'xp_total' => 0,
+                            'xp_current' => 0,
+                            'xp_percent' => 0,
+                            'token_balance' => 0,
+                            'rank' => (object)['id' => 0, 'name' => 'Guildmaster'],
+                        ];
+
+                        return [
+                            'guild' => $guild,
+                        ];
+                        //$guildInfo->owner = (object)['id' => $me->User_ID, 'name' => $me->username,'token_balance' => $newBalance];
+                        //return $guildInfo;
                     } else {
                         return new ApiProblem(409, 'There was an error in your coin transaction. Please contact admin');
                     }
@@ -424,11 +450,12 @@ class GuildResource extends AbstractResourceListener
         $page = (isset($_REQUEST['page'])) ? filter_var($_REQUEST['page'], FILTER_SANITIZE_NUMBER_INT) : 1;
         $guildMembers = [];
         $memberSel = new Select($this->mGuildUserTbl->getTable());
+        $memberSel->join(['user' => 'user'], 'user.User_ID = faucet_guild_user.user_idfs');
         $checkWh = new Where();
         $checkWh->equalTo('guild_idfs', $id);
         $checkWh->notLike('date_joined', '0000-00-00 00:00:00');
         $memberSel->where($checkWh);
-        $memberSel->order('rank ASC');
+        $memberSel->order(['rank ASC','user.username ASC']);
         # Create a new pagination adapter object
         $oPaginatorAdapter = new DbSelect(
         # our configured select object
@@ -441,20 +468,16 @@ class GuildResource extends AbstractResourceListener
         $membersPaginated->setCurrentPageNumber($page);
         $membersPaginated->setItemCountPerPage(25);
         foreach($membersPaginated as $guildMember) {
-            $member = $this->mUserTbl->select(['User_ID' => $guildMember->user_idfs]);
-            if(count($member) > 0) {
-                $member = $member->current();
-                $guildMembers[] = (object)[
-                    'id' => $member->User_ID,
-                    'name' => $member->username,
-                    'avatar' => ($member->avatar != '') ? $member->avatar : $member->username,
-                    'xp_level' => $member->xp_level,
-                    'rank' => (object)[
-                        'id' => $guildMember->rank,
-                        'name'=> $guildRanks[$guildMember->rank]
-                    ]
-                ];
-            }
+            $guildMembers[] = (object)[
+                'id' => $guildMember->User_ID,
+                'name' => $guildMember->username,
+                'avatar' => ($guildMember->avatar != '') ? $guildMember->avatar : $guildMember->username,
+                'xp_level' => $guildMember->xp_level,
+                'rank' => (object)[
+                    'id' => $guildMember->rank,
+                    'name'=> $guildRanks[$guildMember->rank]
+                ]
+            ];
         }
         $totalMembers = $this->mGuildUserTbl->select($checkWh)->count();
 
@@ -567,6 +590,7 @@ class GuildResource extends AbstractResourceListener
             }
         }
 
+        $requestOpen = false;
         if(count($userJoinedGuild) > 0) {
             $guildRank = $userJoinedGuild->current();
             $rankDB = $this->mGuildRankTbl->select([
@@ -575,9 +599,28 @@ class GuildResource extends AbstractResourceListener
             ]);
             if(count($rankDB) > 0) {
                 $rank = $rankDB->current()->label;
-                $myRank = (object)['id' => (int)$guildRank->rank, 'name' => $rank];
+                $canInvite = false;
+                $invitePerm = $this->mRankPermTbl->select(['rank_idfs' => $guildRank->rank,'guild_idfs' => $guild->Guild_ID,'permission' => 'invite']);
+                if($invitePerm->count() > 0) {
+                    $canInvite = true;
+                }
+
+                $myRank = (object)['id' => (int)$guildRank->rank, 'name' => $rank,'can_invite' => $canInvite];
+            }
+        } else {
+            /**
+             * Check if user is part of guild
+             */
+            $checkWh = new Where();
+            $checkWh->equalTo('user_idfs', $me->User_ID);
+            $checkWh->equalTo('guild_idfs', $guild->Guild_ID);
+            $checkWh->like('date_joined', '0000-00-00 00:00:00');
+            $userRequestedJoin = $this->mGuildUserTbl->select($checkWh);
+            if($userRequestedJoin->count() > 0) {
+                $requestOpen = true;
             }
         }
+
 
 
         return (object)[
@@ -597,6 +640,7 @@ class GuildResource extends AbstractResourceListener
                 'tasks' => $weeklyTasks,
                 'ranks' => $ranks,
                 'my_rank' => $myRank,
+                'request_open' => $requestOpen,
                 'achievements' => $achievements,
                 'total_members' => $totalMembers,
                 'total_requests' => $totalRequests,
@@ -626,12 +670,25 @@ class GuildResource extends AbstractResourceListener
         if(get_class($me) == 'Laminas\\ApiTools\\ApiProblem\\ApiProblem') {
             return $me;
         }
+        /**
+        $guildsPatch = $this->mGuildTbl->select();
+        foreach($guildsPatch as $gp) {
+            $checkWh = new Where();
+            $checkWh->equalTo('guild_idfs', $gp->Guild_ID);
+            $checkWh->notLike('date_joined', '0000-00-00 00:00:00');
+            $members = $this->mGuildUserTbl->select($checkWh)->count();
+            $this->mGuildTbl->update(['members' => $members],['Guild_ID' => $gp->Guild_ID]);
+        }**/
 
         $page = (isset($_REQUEST['page'])) ? filter_var($_REQUEST['page'], FILTER_SANITIZE_NUMBER_INT) : 1;
 
+        $guildWh = new Where();
+        $guildWh->notEqualTo('Guild_ID', 1);
         # Compile list of all guilds
         $guilds = [];
         $guildSel = new Select($this->mGuildTbl->getTable());
+        $guildSel->where($guildWh);
+        $guildSel->order('xp_total DESC');
         # Create a new pagination adapter object
         $oPaginatorAdapter = new DbSelect(
         # our configured select object
@@ -677,6 +734,52 @@ class GuildResource extends AbstractResourceListener
                 $guildAPI->userHasRequestOpen = 0;
             }
             $guilds[] =$guildAPI;
+        }
+
+        if(isset($_REQUEST['v2'])) {
+            $topSel = new Select($this->mGuildTbl->getTable());
+            $topSel->order('members DESC');
+            $topSel->limit(5);
+            $bigGuilds = $this->mGuildTbl->selectWith($topSel);
+            $guildsBig = [];
+            foreach($bigGuilds as $bg) {
+                $guildsBig[] = (object)[
+                    'id' => $bg->Guild_ID,
+                    'name' => utf8_decode($bg->label),
+                    'focus' => json_decode($bg->focus),
+                    'description' => utf8_decode($bg->description),
+                    'members' => $bg->members,
+                    'xp_level' => $bg->xp_level,
+                    'xp_current' => $bg->xp_current,
+                    'xp_total' => $bg->xp_total,
+                    'icon' => $bg->icon,'is_vip' => ($bg->is_vip == 1) ? true : false];
+            }
+
+            $newSel = new Select($this->mGuildTbl->getTable());
+            $newSel->order('created_date DESC');
+            $newSel->limit(5);
+            $newGuilds = $this->mGuildTbl->selectWith($newSel);
+            $guildsNew = [];
+            foreach($newGuilds as $ng) {
+                $guildsNew[] = (object)[
+                    'id' => $ng->Guild_ID,
+                    'name' => utf8_decode($ng->label),
+                    'focus' => json_decode($ng->focus),
+                    'description' => utf8_decode($ng->description),
+                    'members' => $ng->members,
+                    'xp_level' => $ng->xp_level,
+                    'xp_current' => $ng->xp_current,
+                    'xp_total' => $ng->xp_total,
+                    'icon' => $ng->icon,'is_vip' => ($ng->is_vip == 1) ? true : false];
+            }
+
+            $guildsV2 = [
+                'big' => $guildsBig,
+                'new' => $guildsNew,
+                'list' => $guilds
+            ];
+
+            $guilds = $guildsV2;
         }
 
         // TODO: Remove static URL
@@ -1176,6 +1279,8 @@ class GuildResource extends AbstractResourceListener
                             'date_joined' => '0000-00-00 00:00:00',
                             'date_declined' => '0000-00-00 00:00:00',
                         ]);
+
+                        $this->mGuildTbl->update(['members' => $guild->members+1],['Guild_ID' => $guild->Guild_ID]);
 
                         # success
                         return (object)[
