@@ -169,9 +169,7 @@ class MarketplaceResource extends AbstractResourceListener
             return new ApiProblem(400, 'Price must be greater than 0');
         }
 
-        $totalFee = $baseFee * $amount;
-
-        if($this->mTransaction->checkUserBalance($totalFee, $user->User_ID)) {
+        if($this->mTransaction->checkUserBalance($baseFee, $user->User_ID)) {
             if($itemInfo->stack_size > 1) {
                 # remove items from inventory
                 $amountToUse = $amount;
@@ -280,8 +278,8 @@ class MarketplaceResource extends AbstractResourceListener
 
         # create message to buyer inbox
         $this->mInboxTbl->insert([
-            'label' => 'Marketplace Auction cancelled',
-            'message' => 'Attached are is your Marketplace Auction Items',
+            'label' => 'MARKETPLACE.CANCELLEDMSG.SUBJECT',
+            'message' => 'MARKETPLACE.CANCELLEDMSG.MESSAGE',
             'credits' => 0,
             'from_idfs' => 1,
             'to_idfs' => $user->User_ID,

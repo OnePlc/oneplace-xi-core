@@ -55,11 +55,18 @@ class NewsController extends AbstractActionController
         if($website != 'sf' && $website != 'ca') {
             $website = 'sf';
         }
+        $lang = (isset($_REQUEST['lang'])) ? filter_var($_REQUEST['lang'], FILTER_SANITIZE_STRING) : 'en';
+
 
         $pageSize = 25;
         $news = [];
         $memberSel = new Select($this->mNewsTbl->getTable());
-        $memberSel->where(['website' => $website]);
+        if($lang != 'en') {
+            $memberSel->join(['nt' => 'faucet_news_translation'],'nt.news_idfs = faucet_news.News_ID');
+            $memberSel->where(['website' => $website,'nt.language' => $lang]);
+        } else {
+            $memberSel->where(['website' => $website]);
+        }
         $memberSel->order('date DESC');
         # Create a new pagination adapter object
         $oPaginatorAdapter = new DbSelect(
@@ -73,12 +80,21 @@ class NewsController extends AbstractActionController
         $newsPaginated->setCurrentPageNumber($page);
         $newsPaginated->setItemCountPerPage($pageSize);
         foreach($newsPaginated as $article) {
-            $news[] = (object)[
-                'id' => $article->News_ID,
-                'title' => $article->title,
-                'description' => str_replace(['##','- '],['<br/>##','<br/>- '],$article->description),
-                'date' => $article->date,
-            ];;
+            if($lang != 'en') {
+                $news[] = (object)[
+                    'id' => $article->News_ID,
+                    'title' => $article->t_title,
+                    'description' => str_replace(['##','- '],['<br/>##','<br/>- '],$article->t_description),
+                    'date' => $article->date,
+                ];
+            } else {
+                $news[] = (object)[
+                    'id' => $article->News_ID,
+                    'title' => $article->title,
+                    'description' => str_replace(['##','- '],['<br/>##','<br/>- '],$article->description),
+                    'date' => $article->date,
+                ];
+            }
         }
         $newsCount = $this->mNewsTbl->select()->count();
 

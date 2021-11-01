@@ -323,8 +323,13 @@ class InboxResource extends AbstractResourceListener
             return new ApiProblem(404, 'Message not found');
         }
 
-        $attachmentId = filter_var($data->attachment_id, FILTER_SANITIZE_NUMBER_INT);
         $credits = filter_var($data->credits, FILTER_SANITIZE_NUMBER_INT);
+
+        if(!isset($data->attachment_id) && $credits == 0) {
+            return new ApiProblem(404, 'Attachment not found');
+        } else {
+            $attachmentId = filter_var($data->attachment_id, FILTER_SANITIZE_NUMBER_INT);
+        }
 
         if($attachmentId == 0 && $credits == 1) {
             $this->mTransaction->executeTransaction($message->credits, 0, $user->User_ID, $messageId, 'msg-credit', 'Received Coins from Message '.$message->label);

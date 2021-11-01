@@ -183,15 +183,11 @@ class UserTools extends AbstractResourceListener {
             $iNewLvl++;
             $iCurrentXP = ($currentXP->xp_current + $iXP) - $oNextLvl->xp_total;
             # check if user has completed an achievement
-            if(array_key_exists($iNewLvl,$this->mAchievementPoints)) {
-                $this->completeAchievement($this->mAchievementPoints[$iNewLvl]->Achievement_ID, $userId);
-                $achievementComplete = (object)[
-                    'id' => $this->mAchievementPoints[$iNewLvl]->Achievement_ID,
-                    'name' => $this->mAchievementPoints[$iNewLvl]->label,
-                    'description' => $this->mAchievementPoints[$iNewLvl]->description,
-                    'reward' => $this->mAchievementPoints[$iNewLvl]->reward,
-                    'icon' => $this->mAchievementPoints[$iNewLvl]->reward,
-                ];
+            foreach(array_keys($this->mAchievementPoints) as $goal) {
+                if($iNewLvl >= $goal) {
+                    $achievementComplete = (object)['id' => $this->mAchievementPoints[$goal]->Achievement_ID];
+                    $this->completeAchievement($this->mAchievementPoints[$goal]->Achievement_ID, $userId);
+                }
             }
         } else {
             $iCurrentXP = $iCurrentXP + $iXP;

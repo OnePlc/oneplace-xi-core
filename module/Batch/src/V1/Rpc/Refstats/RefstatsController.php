@@ -553,7 +553,7 @@ class RefstatsController extends AbstractActionController
                      */
                     $gWh = new Where();
                     $gWh->notEqualTo('guild_idfs', 1);
-                    $gWh->like('date_claimed', '2021-09-%');
+                    $gWh->like('date_claimed', date('Y-m',time()).'-%');
 
                     $gTasks = $this->mGtaskTbl->select($gWh);
                     $tasksByGuild = [];

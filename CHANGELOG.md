@@ -11,6 +11,7 @@ All notable changes to this project will be documented in this file, in reverse 
 
 ### Fixed
 - nothing
+- you cannot add yourself as friend anymore (thx to @ethnat)
 
 ### Changed
 - nothing

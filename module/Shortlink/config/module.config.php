@@ -68,6 +68,7 @@ return [
             'entity_http_methods' => [
                 0 => 'GET',
                 1 => 'PUT',
+                2 => 'DELETE',
             ],
             'collection_http_methods' => [
                 0 => 'GET',
@@ -159,7 +160,7 @@ return [
                     'POST' => false,
                     'PUT' => true,
                     'PATCH' => false,
-                    'DELETE' => false,
+                    'DELETE' => true,
                 ],
             ],
             'Shortlink\\V1\\Rpc\\History\\Controller' => [
@@ -198,6 +199,7 @@ return [
             'service_name' => 'Complete',
             'http_methods' => [
                 0 => 'GET',
+                1 => 'POST',
             ],
             'route_name' => 'shortlink.rpc.complete',
         ],

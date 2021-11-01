@@ -215,6 +215,9 @@ class JoinController extends AbstractActionController
              * Check if User exists
              */
             $userId = filter_var($json->user_id, FILTER_SANITIZE_NUMBER_INT);
+            if($userId == 0) {
+                return new ApiProblemResponse(new ApiProblem(404, 'User not found'));
+            }
             $userFound = $this->mUserTbl->select(['User_ID' => $userId]);
             if(count($userFound) == 0) {
                 return new ApiProblemResponse(new ApiProblem(404, 'User not found'));
@@ -237,12 +240,24 @@ class JoinController extends AbstractActionController
                     'user_idfs' => $userId
                 ]);
             } else {
+                # remove all other join requests
+                $delWh = new Where();
+                $delWh->equalTo('user_idfs', $userId);
+                $delWh->notEqualTo('guild_idfs', $guild->Guild_ID);
+                $this->mGuildUserTbl->delete($delWh);
+
+                # join guild
                 $this->mGuildUserTbl->update([
                     'date_joined' => date('Y-m-d H:i:s', time()),
                 ], [
                     'guild_idfs' => $guild->Guild_ID,
                     'user_idfs' => $userId
                 ]);
+
+                # set guild on user table for joins
+                $this->mUserTbl->update([
+                    'user_guild_idfs' => $guild->Guild_ID
+                ],['User_ID' => $userId]);
             }
 
             /**

@@ -8,7 +8,7 @@ return [
     'view_manager' => [
         'display_exceptions' => false,
         'template_path_stack' => [
-            'user' =>  __DIR__ . '/../view',
+            'user' => __DIR__ . '/../view',
         ],
     ],
     'router' => [
@@ -118,12 +118,11 @@ return [
             'entity_http_methods' => [
                 0 => 'GET',
                 1 => 'DELETE',
+                2 => 'PUT',
             ],
             'collection_http_methods' => [
                 0 => 'POST',
                 1 => 'GET',
-                2 => 'PUT',
-                3 => 'PATCH',
             ],
             'collection_query_whitelist' => [],
             'page_size' => 25,
@@ -406,17 +405,17 @@ return [
             'User\\V1\\Rest\\User\\Controller' => [
                 'collection' => [
                     'GET' => true,
-                    'POST' => false,
-                    'PUT' => true,
-                    'PATCH' => true,
+                    'POST' => true,
+                    'PUT' => false,
+                    'PATCH' => false,
                     'DELETE' => false,
                 ],
                 'entity' => [
                     'GET' => true,
                     'POST' => false,
-                    'PUT' => false,
+                    'PUT' => true,
                     'PATCH' => false,
-                    'DELETE' => false,
+                    'DELETE' => true,
                 ],
             ],
             'User\\V1\\Rpc\\Logout\\Controller' => [

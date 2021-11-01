@@ -493,12 +493,14 @@ class PTCResource extends AbstractResourceListener
         $offersPaginated->setCurrentPageNumber($page);
         $offersPaginated->setItemCountPerPage($pageSize);
         foreach($offersPaginated as $offer) {
-            $history[] = (object)[
-                'date' => $offer->date_completed,
-                'reward' => $rewardsByTimer[$ptcById[$offer->ptc_idfs]->timer],
-                'url' => $ptcById[$offer->ptc_idfs]->url,
-                'title' => $ptcById[$offer->ptc_idfs]->title,
-            ];
+            if(array_key_exists($offer->ptc_idfs,$ptcById) && strlen($offer->date_completed) > 0) {
+                $history[] = (object)[
+                    'date' => $offer->date_completed,
+                    'reward' => $rewardsByTimer[$ptcById[$offer->ptc_idfs]->timer],
+                    'url' => $ptcById[$offer->ptc_idfs]->url,
+                    'title' => $ptcById[$offer->ptc_idfs]->title,
+                ];
+            }
         }
         $totalHistory = $this->mPTCViewTbl->select(['user_idfs' => $me->User_ID])->count();
 

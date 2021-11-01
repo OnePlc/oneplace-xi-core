@@ -88,7 +88,29 @@ class TransactionController extends AbstractActionController
     protected $mTransTbl;
 
     /**
-     * Constructor
+     * Guild Table User Table
+     *
+     * Relation between Guild and User
+     * to determine if user has a guild and
+     * if yes what guild it is
+     *
+     * @var TableGateway $mGuildUserTbl
+     * @since 1.0.0
+     */
+    protected $mGuildUserTbl;
+
+    /**
+     * Guild Activity Table
+     *
+     * Cached Activity of Guild Users
+     *
+     * @var TableGateway $mGuildActivityTbl
+     * @since 1.0.0
+     */
+    protected $mGuildActivityTbl;
+
+    /**
+     * ConstructormGuildActivityTbl
      *
      * TransactionController constructor.
      * @param $mapper
@@ -104,6 +126,8 @@ class TransactionController extends AbstractActionController
         $this->mUserSetTbl = new TableGateway('user_setting', $mapper);
         $this->mTransTbl = new TableGateway('faucet_transaction', $mapper);
         $this->mOffersDoneTbl = new TableGateway('offerwall_user', $mapper);
+        $this->mGuildUserTbl = new TableGateway('faucet_guild_user', $mapper);
+        $this->mGuildActivityTbl = new TableGateway('faucet_guild_activity', $mapper);
     }
 
     /**
@@ -159,66 +183,113 @@ class TransactionController extends AbstractActionController
             if($userId == 0) {
                 return new ApiProblemResponse(new ApiProblem(404, 'User not does exist'));
             }
-            $logUser = $this->mUserTbl->select(['User_ID' => $userId]);
-            if(count($logUser) == 0) {
-                return new ApiProblemResponse(new ApiProblem(404, 'User not does exist'));
-            }
 
-            $filter = '';
+            $filter = (isset($_REQUEST['filter'])) ? filter_var($_REQUEST['filter'], FILTER_SANITIZE_STRING) : '';
 
-            /**
-             * Get open Support Tickets
-             */
-            $page = (isset($_REQUEST['page'])) ? filter_var($_REQUEST['page'], FILTER_SANITIZE_NUMBER_INT) : 1;
-            $pageSize = 25;
-            $transactionLog = [];
-            $transactionSel = new Select($this->mTransTbl->getTable());
-            $checkWh = new Where();
-            if($filter == 'shortlink') {
-                $checkWh->nest()
-                    ->equalTo('ref_type', 'shortlink')
-                    ->OR
-                    ->equalTo('ref_type', 'shortlink-complete')
-                    ->unnest();
-            }
-            $checkWh->equalTo('user_idfs', $userId);
-            $transactionSel->where($checkWh);
-            $transactionSel->order('date DESC');
+            if($filter == 'guild') {
+                $checkWh = new Where();
+                $checkWh->equalTo('user_idfs', $me->User_ID);
+                $checkWh->notLike('date_joined', '0000-00-00 00:00:00');
+                $userHasGuild = $this->mGuildUserTbl->select($checkWh);
+                if($userHasGuild->count() > 0) {
+                    $userId = $userHasGuild->current()->guild_idfs;
 
-            # Create a new pagination adapter object
-            $oPaginatorAdapter = new DbSelect(
-            # our configured select object
-                $transactionSel,
-                # the $ticketSel to run it against
-                $this->mTransTbl->getAdapter()
-            );
-            # Create Paginator with Adapter
-            $transactionsPaginated = new Paginator($oPaginatorAdapter);
-            $transactionsPaginated->setCurrentPageNumber($page);
-            $transactionsPaginated->setItemCountPerPage($pageSize);
-            foreach($transactionsPaginated as $trans) {
-                $transactionLog[] = (object)[
-                    'id' => $trans->Transaction_ID,
-                    'amount' => $trans->amount,
-                    'is_output' => (boolean)$trans->is_output,
-                    'date' => $trans->date,
-                    'ref_idfs' => $trans->ref_idfs,
-                    'ref_type' => $trans->ref_type,
-                    'comment' => $trans->comment
+                    $transactionLog = [];
+                    $gSel = new Select($this->mGuildActivityTbl->getTable());
+                    $gSel->join(['u' => 'user'],'u.User_ID = faucet_guild_activity.user_idfs', ["username"]);
+                    $gSel->where(['guild_idfs' => $userId]);
+                    $gSel->order('date DESC');
+                    $gTrans = $this->mGuildActivityTbl->selectWith($gSel);
+                    if($gTrans->count() > 0) {
+                        $i = 0;
+                        foreach($gTrans as $gt) {
+                            $transactionLog[] = (object)[
+                                'id' => $i,
+                                'amount' => $gt->reward,
+                                'is_output' => 0,
+                                'date' => $gt->date,
+                                'ref_idfs' => $gt->ref_idfs,
+                                'ref_type' => $gt->ref_type,
+                                'comment' => '',
+                                'member' => [
+                                    'id' => $gt->user_idfs,
+                                    'name' => $gt->username
+                                ]
+                            ];
+                            $i++;
+                        }
+                    }
+                    # api response
+                    return [
+                        'transactions' => $transactionLog,
+                        'total_items' => 50,
+                        'page' => 1,
+                        'page_size' => 50,
+                        'page_count' => 1
+                    ];
+                } else {
+                    return new ApiProblemResponse(new ApiProblem(404, 'You are in no guild'));
+                }
+            } else {
+                $logUser = $this->mUserTbl->select(['User_ID' => $userId]);
+                if(count($logUser) == 0) {
+                    return new ApiProblemResponse(new ApiProblem(404, 'User not does exist'));
+                }
+
+                /**
+                 * Get open Support Tickets
+                 */
+                $page = (isset($_REQUEST['page'])) ? filter_var($_REQUEST['page'], FILTER_SANITIZE_NUMBER_INT) : 1;
+                $pageSize = 25;
+                $transactionLog = [];
+                $transactionSel = new Select($this->mTransTbl->getTable());
+                $checkWh = new Where();
+                if($filter == 'shortlink') {
+                    $checkWh->nest()
+                        ->equalTo('ref_type', 'shortlink')
+                        ->OR
+                        ->equalTo('ref_type', 'shortlink-complete')
+                        ->unnest();
+                }
+                $checkWh->equalTo('user_idfs', $userId);
+                $transactionSel->where($checkWh);
+                $transactionSel->order('date DESC');
+
+                # Create a new pagination adapter object
+                $oPaginatorAdapter = new DbSelect(
+                # our configured select object
+                    $transactionSel,
+                    # the $ticketSel to run it against
+                    $this->mTransTbl->getAdapter()
+                );
+                # Create Paginator with Adapter
+                $transactionsPaginated = new Paginator($oPaginatorAdapter);
+                $transactionsPaginated->setCurrentPageNumber($page);
+                $transactionsPaginated->setItemCountPerPage($pageSize);
+                foreach($transactionsPaginated as $trans) {
+                    $transactionLog[] = (object)[
+                        'id' => $trans->Transaction_ID,
+                        'amount' => $trans->amount,
+                        'is_output' => (boolean)$trans->is_output,
+                        'date' => $trans->date,
+                        'ref_idfs' => $trans->ref_idfs,
+                        'ref_type' => $trans->ref_type,
+                        'comment' => $trans->comment
+                    ];
+                }
+
+                # count all transactions
+                $totalTransactions = $this->mTransTbl->select($checkWh)->count();
+
+                # api response
+                return [
+                    'transactions' => $transactionLog,
+                    'total_items' => $totalTransactions,
+                    'page' => $page,
+                    'page_size' => $pageSize,
+                    'page_count' => (round($totalTransactions/$pageSize) > 0) ? round($totalTransactions/$pageSize) : 1
                 ];
             }
-
-            # count all transactions
-            $totalTransactions = $this->mTransTbl->select($checkWh)->count();
-
-            # api response
-            return [
-                'transactions' => $transactionLog,
-                'total_items' => $totalTransactions,
-                'page' => $page,
-                'page_size' => $pageSize,
-                'page_count' => (round($totalTransactions/$pageSize) > 0) ? round($totalTransactions/$pageSize) : 1
-            ];
         }
 
         return new ApiProblemResponse(new ApiProblem(405, 'Method not allowed'));

@@ -59,6 +59,8 @@ class HistoryController extends AbstractActionController
      */
     protected $mQuoteTbl;
 
+    protected $mMinerBatchTbl;
+
     /**
      * Constructor
      *
@@ -69,6 +71,7 @@ class HistoryController extends AbstractActionController
     public function __construct($mapper)
     {
         $this->mMinerTbl = new TableGateway('faucet_miner', $mapper);
+        $this->mMinerBatchTbl = new TableGateway('faucet_miner_shares', $mapper);
         $this->mQuoteTbl = new TableGateway('faucet_didyouknow', $mapper);
         $this->mSecTools = new SecurityTools($mapper);
         $this->mUserTools = new UserTools($mapper);
@@ -96,10 +99,11 @@ class HistoryController extends AbstractActionController
             $page = (isset($_REQUEST['page'])) ? filter_var($_REQUEST['page'], FILTER_SANITIZE_NUMBER_INT) : 1;
             $pageSize = 25;
             $miningHistory = [];
-            $historySel = new Select($this->mMinerTbl->getTable());
+            $historySel = new Select($this->mMinerBatchTbl->getTable());
             $checkWh = new Where();
             $checkWh->equalTo('user_idfs', $me->User_ID);
             $checkWh->greaterThan('amount_coin', 0);
+            $checkWh->greaterThanOrEqualTo('date', '2021-10-28 23:00:00');
             $historySel->where($checkWh);
             $historySel->order('date DESC');
             # Create a new pagination adapter object
@@ -122,16 +126,16 @@ class HistoryController extends AbstractActionController
                 }
             }
 
-            $totalHistory = $this->mMinerTbl->select($checkWh)->count();
+            $totalHistory = $this->mMinerBatchTbl->select($checkWh)->count();
 
             # get current hashrate for gpu miner
             $gpuCurrentHash = 0;
-            $bHashFound = $this->mUserTools->getSetting($me->User_ID, 'gpuminer-currenthashrate');
+            $bHashFound = $this->mUserTools->getSetting($me->User_ID, 'gpu-nano-currenthashrate');
             if($bHashFound) {
                 $gpuCurrentHash = number_format($bHashFound, 2);
             }
 
-            $bPoolFound = $this->mUserTools->getSetting($me->User_ID, 'gpuminer-currentpool');
+            $bPoolFound = $this->mUserTools->getSetting($me->User_ID, 'gpu-nano-currentpool');
             $poolUrl = "#";
             if($bPoolFound) {
                 $poolUrlDB = $this->mSecTools->getCoreSetting('nanopool-'.$bPoolFound);
@@ -142,11 +146,11 @@ class HistoryController extends AbstractActionController
 
             # get current hashrate for cpu miner
             $cpuCurrentHash = 0;
-            $bcpuHashFound = $this->mUserTools->getSetting($me->User_ID, 'cpuminer-currenthashrate');
+            $bcpuHashFound = $this->mUserTools->getSetting($me->User_ID, 'cpu-nano-currenthashrate');
             if($bcpuHashFound) {
                 $cpuCurrentHash = number_format($bcpuHashFound, 2);
             }
-            $bcpuPoolFound = $this->mUserTools->getSetting($me->User_ID, 'cpuminer-currentpool');
+            $bcpuPoolFound = $this->mUserTools->getSetting($me->User_ID, 'cpu-nano-currentpool');
             $cpuPoolUrl = "#";
             if($bcpuPoolFound) {
                 $poolUrlDB = $this->mSecTools->getCoreSetting('nanopool-'.$bcpuPoolFound);

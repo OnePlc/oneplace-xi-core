@@ -117,8 +117,7 @@ class TransactionHelper {
      * @param int $createdBy (optional) - Source User ID
      * @since 1.0.0
      */
-    public function executeTransaction(float $amount, bool $isOutput, int $userId, int $refId,
-                                              string $refType, string $description, int $createdBy = 0)
+    public function executeTransaction(float $amount, bool $isOutput, int $userId, int $refId, string $refType, string $description, int $createdBy = 0)
     {
         # no negative transactions allowed
         if($amount < 0) {

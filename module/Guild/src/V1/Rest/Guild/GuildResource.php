@@ -49,6 +49,22 @@ class GuildResource extends AbstractResourceListener
     protected $mGuildTbl;
 
     /**
+     * Focus Table
+     *
+     * @var TableGateway $mFocusTbl
+     * @since 1.0.0
+     */
+    protected $mFocusTbl;
+
+    /**
+     * Guild Focus Table
+     *
+     * @var TableGateway $mGuildFocusTbl
+     * @since 1.0.0
+     */
+    protected $mGuildFocusTbl;
+
+    /**
      * Guild Rank Table
      *
      * @var TableGateway $mGuildRankTbl
@@ -161,6 +177,8 @@ class GuildResource extends AbstractResourceListener
         $this->mGuildTbl = new TableGateway('faucet_guild', $mapper);
         $this->mGuildUserTbl = new TableGateway('faucet_guild_user', $mapper);
         $this->mGuildRankTbl = new TableGateway('faucet_guild_rank', $mapper);
+        $this->mFocusTbl = new TableGateway('faucet_guild_focus', $mapper);
+        $this->mGuildFocusTbl = new TableGateway('faucet_guild_focus_guild', $mapper);
         $this->mGuildTaskTbl = new TableGateway('faucet_guild_weekly', $mapper);
         $this->mGuildAchievTbl = new TableGateway('faucet_guild_achievement', $mapper);
         $this->mGuildStatTbl = new TableGateway('faucet_guild_statistic', $mapper);
@@ -221,6 +239,11 @@ class GuildResource extends AbstractResourceListener
                 $guildName = filter_var($guildName, FILTER_SANITIZE_STRING);
                 $guildIcon = filter_var($guildIcon, FILTER_SANITIZE_STRING);
 
+                # remove all join requests
+                if($me->User_ID != 0) {
+                    $this->mGuildUserTbl->delete(['user_idfs' => $me->User_ID]);
+                }
+
                 $guildData = [
                     'label' => $guildName,
                     'owner_idfs' => $me->User_ID,
@@ -246,6 +269,11 @@ class GuildResource extends AbstractResourceListener
                         'date_joined' => date('Y-m-d H:i:s', time()),
                         'date_declined' => '0000-00-00 00:00:00',
                     ]);
+
+                    # set guild on user table for joins
+                    $this->mUserTbl->update([
+                        'user_guild_idfs' => $newGuildId
+                    ],['User_ID' => $me->User_ID]);
 
                     # create guild ranks
                     $guildRanks = [0 => 'Guildmaster',1 => 'Officer',2 => 'Veteran', 3 => 'Member',9 => 'Newbie'];
@@ -354,7 +382,13 @@ class GuildResource extends AbstractResourceListener
 
                 $userGuildInfo = $userHasGuild->current();
                 if($userGuildInfo->rank == 0) {
-                    return new ApiProblem(403, 'You cannot leave the guild as guildmaster. Please promote a new guildmaster first');
+                    $gmCount = $this->mGuildUserTbl->select(['guild_idfs' => $userGuildInfo->guild_idfs,'rank' => 0])->count();
+                    if($gmCount == 1) {
+                        $memberCount = $this->mGuildUserTbl->select(['guild_idfs' => $userGuildInfo->guild_idfs])->count();
+                        if($memberCount > 1) {
+                            return new ApiProblem(403, 'You cannot leave the guild as guildmaster. Please promote a new guildmaster first or remove all members so the guild is empty.');
+                        }
+                    }
                 }
 
                 # make sure user id is not zero before delete
@@ -367,6 +401,14 @@ class GuildResource extends AbstractResourceListener
                     'user_idfs' => $me->User_ID,
                     'guild_idfs' => $userGuildInfo->guild_idfs
                 ]);
+
+                # remove guild if empty
+                $membersLeft = $this->mGuildUserTbl->select([
+                    'guild_idfs' => $userGuildInfo->guild_idfs
+                ])->count();
+                if($membersLeft == 0) {
+                    $this->mGuildTbl->delete(['Guild_ID' => $userGuildInfo->guild_idfs]);
+                }
 
                 return true;
             } elseif($id == 'remove') {
@@ -421,23 +463,36 @@ class GuildResource extends AbstractResourceListener
      */
     public function fetch($id)
     {
-        # Prevent 500 error
-        if(!$this->getIdentity()) {
-            return new ApiProblem(401, 'Not logged in');
-        }
-        $me = $this->mSecTools->getSecuredUserSession($this->getIdentity()->getName());
-        if(get_class($me) == 'Laminas\\ApiTools\\ApiProblem\\ApiProblem') {
-            return $me;
-        }
+        $guildId = 0;
+        if(isset($_REQUEST['mode'])) {
+            $guildUrl = filter_var($id, FILTER_SANITIZE_URL);
 
-        $guild = $this->mGuildTbl->select(['Guild_ID' => $id]);
-        if(count($guild) == 0) {
-            return new ApiProblem(404, 'Guild not found');
+            $guildFound = $this->mGuildTbl->select(['page_url' => $guildUrl]);
+            if($guildFound->count() > 0) {
+                $guild = $guildFound->current();
+                $guildId = $guild->Guild_ID;
+            }
+        } else {
+            # Prevent 500 error
+            if (!$this->getIdentity()) {
+                return new ApiProblem(401, 'Not logged in');
+            }
+            $me = $this->mSecTools->getSecuredUserSession($this->getIdentity()->getName());
+            if (get_class($me) == 'Laminas\\ApiTools\\ApiProblem\\ApiProblem') {
+                return $me;
+            }
+
+            $guildId = filter_var($id, FILTER_SANITIZE_NUMBER_INT);
+
+            $guild = $this->mGuildTbl->select(['Guild_ID' => $guildId]);
+            if (count($guild) == 0) {
+                return new ApiProblem(404, 'Guild not found');
+            }
+            $guild = $guild->current();
         }
-        $guild = $guild->current();
 
         $guildRanks = [];
-        $guildRanksDB = $this->mGuildRankTbl->select(['guild_idfs' => $id]);
+        $guildRanksDB = $this->mGuildRankTbl->select(['guild_idfs' => $guildId]);
         if(count($guildRanksDB) > 0) {
             foreach($guildRanksDB as $rank) {
                 $guildRanks[$rank->level] = $rank->label;
@@ -452,7 +507,7 @@ class GuildResource extends AbstractResourceListener
         $memberSel = new Select($this->mGuildUserTbl->getTable());
         $memberSel->join(['user' => 'user'], 'user.User_ID = faucet_guild_user.user_idfs');
         $checkWh = new Where();
-        $checkWh->equalTo('guild_idfs', $id);
+        $checkWh->equalTo('guild_idfs', $guildId);
         $checkWh->notLike('date_joined', '0000-00-00 00:00:00');
         $memberSel->where($checkWh);
         $memberSel->order(['rank ASC','user.username ASC']);
@@ -498,7 +553,7 @@ class GuildResource extends AbstractResourceListener
          * Load Guild Tasks List (Weeklys)
          */
         $weeklyTasks = [];
-        $weeklysDB = $this->mGuildTaskTbl->select();
+        $weeklysDB = $this->mGuildTaskTbl->select(['series' => 0]);
         foreach($weeklysDB as $weekly) {
             $progress = 0;
             switch($weekly->target_mode) {
@@ -514,15 +569,41 @@ class GuildResource extends AbstractResourceListener
                 default:
                     break;
             }
-            $weeklyTasks[] = (object)[
-                'id' => $weekly->Weekly_ID,
-                'name' => $weekly->label,
-                'description' => $weekly->description,
-                'target' => $weekly->target,
-                'target_mode' => $weekly->target_mode,
-                'reward' => $weekly->reward,
-                'current' => $progress,
-            ];
+            if($progress >= $weekly->target) {
+                $nextLvl = $this->mGuildTaskTbl->select(['series' => $weekly->Weekly_ID]);
+                if($nextLvl->count() == 0) {
+                    $weeklyTasks[] = (object)[
+                        'id' => $weekly->Weekly_ID,
+                        'name' => $weekly->label,
+                        'description' => $weekly->description,
+                        'target' => $weekly->target,
+                        'target_mode' => $weekly->target_mode,
+                        'reward' => $weekly->reward,
+                        'current' => $progress,
+                    ];
+                } else {
+                    $nextLvl = $nextLvl->current();
+                    $weeklyTasks[] = (object)[
+                        'id' => $nextLvl->Weekly_ID,
+                        'name' => $nextLvl->label,
+                        'description' => $nextLvl->description,
+                        'target' => $nextLvl->target,
+                        'target_mode' => $nextLvl->target_mode,
+                        'reward' => $nextLvl->reward,
+                        'current' => $progress,
+                    ];
+                }
+            } else {
+                $weeklyTasks[] = (object)[
+                    'id' => $weekly->Weekly_ID,
+                    'name' => $weekly->label,
+                    'description' => $weekly->description,
+                    'target' => $weekly->target,
+                    'target_mode' => $weekly->target_mode,
+                    'reward' => $weekly->reward,
+                    'current' => $progress,
+                ];
+            }
         }
 
         /**
@@ -553,7 +634,7 @@ class GuildResource extends AbstractResourceListener
          * Get open requests
          */
         $checkWh = new Where();
-        $checkWh->equalTo('guild_idfs', $id);
+        $checkWh->equalTo('guild_idfs', $guildId);
         $checkWh->like('date_joined', '0000-00-00 00:00:00');
         $checkWh->like('date_declined', '0000-00-00 00:00:00');
         $totalRequests = $this->mGuildUserTbl->select($checkWh)->count();
@@ -629,6 +710,8 @@ class GuildResource extends AbstractResourceListener
                 'name'=> utf8_decode($guild->label),
                 'description'=> utf8_decode($guild->description),
                 'icon' => $guild->icon,
+                'emblem_shield' => $guild->emblem_shield,
+                'emblem_icon' => $guild->emblem_icon,
                 'is_vip' => ($guild->is_vip == 1) ? true : false,
                 'token_balance' => $guild->token_balance,
                 'xp_level' => $guild->xp_level,
@@ -649,8 +732,6 @@ class GuildResource extends AbstractResourceListener
                 'page' => $page,
             ],
         ];
-
-        return new ApiProblem(405, 'The GET method has not been defined for individual resources');
     }
 
     /**
@@ -670,25 +751,81 @@ class GuildResource extends AbstractResourceListener
         if(get_class($me) == 'Laminas\\ApiTools\\ApiProblem\\ApiProblem') {
             return $me;
         }
+
         /**
-        $guildsPatch = $this->mGuildTbl->select();
-        foreach($guildsPatch as $gp) {
-            $checkWh = new Where();
-            $checkWh->equalTo('guild_idfs', $gp->Guild_ID);
-            $checkWh->notLike('date_joined', '0000-00-00 00:00:00');
-            $members = $this->mGuildUserTbl->select($checkWh)->count();
-            $this->mGuildTbl->update(['members' => $members],['Guild_ID' => $gp->Guild_ID]);
-        }**/
+        if($me->User_ID == 335874987) {
+            $guilds = $this->mGuildTbl->select();
+            foreach($guilds as $g) {
+                $focusOld = (array)json_decode($g->focus);
+                if($focusOld['f'] == 1) {
+                    $this->mGuildFocusTbl->insert([
+                        'guild_idfs' => $g->Guild_ID,
+                        'focus_idfs' => 1
+                    ]);
+                }
+                if($focusOld['sl'] == 1) {
+                    $this->mGuildFocusTbl->insert([
+                        'guild_idfs' => $g->Guild_ID,
+                        'focus_idfs' => 2
+                    ]);
+                }
+                if($focusOld['of'] == 1) {
+                    $this->mGuildFocusTbl->insert([
+                        'guild_idfs' => $g->Guild_ID,
+                        'focus_idfs' => 3
+                    ]);
+                }
+                if($focusOld['lt'] == 1) {
+                    $this->mGuildFocusTbl->insert([
+                        'guild_idfs' => $g->Guild_ID,
+                        'focus_idfs' => 4
+                    ]);
+                }
+                if($focusOld['m'] == 1) {
+                    $this->mGuildFocusTbl->insert([
+                        'guild_idfs' => $g->Guild_ID,
+                        'focus_idfs' => 5
+                    ]);
+                }
+                if($focusOld['p'] == 1) {
+                    $this->mGuildFocusTbl->insert([
+                        'guild_idfs' => $g->Guild_ID,
+                        'focus_idfs' => 6
+                    ]);
+                }
+            }
+        } **/
 
         $page = (isset($_REQUEST['page'])) ? filter_var($_REQUEST['page'], FILTER_SANITIZE_NUMBER_INT) : 1;
+        $focusFilter = (isset($_REQUEST['focus'])) ? filter_var($_REQUEST['focus'], FILTER_SANITIZE_NUMBER_INT) : 0;
+        $sizeFilter = (isset($_REQUEST['size'])) ? filter_var($_REQUEST['size'], FILTER_SANITIZE_STRING) : 'all';
 
         $guildWh = new Where();
-        $guildWh->notEqualTo('Guild_ID', 1);
         # Compile list of all guilds
         $guilds = [];
         $guildSel = new Select($this->mGuildTbl->getTable());
+        if($focusFilter != 0) {
+            $guildSel->join(['gf' => 'faucet_guild_focus_guild'], 'gf.guild_idfs = faucet_guild.Guild_ID');
+            $guildWh->equalTo('gf.focus_idfs', $focusFilter);
+        }
+        if($sizeFilter != 'all') {
+            switch($sizeFilter) {
+                case 's':
+                    $guildWh->lessThanOrEqualTo('members', 50);
+                    break;
+                case 'm':
+                    $guildWh->greaterThan('members', 50);
+                    $guildWh->lessThanOrEqualTo('members', 250);
+                    break;
+                case 'l':
+                    $guildWh->greaterThan('members', 250);
+                    break;
+                default:
+                    break;
+            }
+        }
         $guildSel->where($guildWh);
-        $guildSel->order('xp_total DESC');
+        $guildSel->order(['is_vip DESC','description DESC', 'token_balance DESC' ]);
         # Create a new pagination adapter object
         $oPaginatorAdapter = new DbSelect(
         # our configured select object
@@ -701,7 +838,7 @@ class GuildResource extends AbstractResourceListener
         $guildsPaginated->setCurrentPageNumber($page);
         $guildsPaginated->setItemCountPerPage(4);
 
-        $totalGuilds = $this->mGuildTbl->select()->count();
+        $totalGuilds = $this->mGuildTbl->selectWith($guildSel)->count();
 
         # check if user already has joined or created a guild
         $checkWh = new Where();
@@ -718,16 +855,34 @@ class GuildResource extends AbstractResourceListener
         foreach($guildsPaginated as $guild) {
             # count guild members
             $guild->members = $this->mGuildUserTbl->select(['guild_idfs' => $guild->Guild_ID])->count();
+            $gFocus = [];
+            $focusSel = new Select($this->mGuildFocusTbl->getTable());
+            $focusSel->join(['f' => 'faucet_guild_focus'],'f.Focus_ID = faucet_guild_focus_guild.focus_idfs');
+            $focusSel->where(['faucet_guild_focus_guild.guild_idfs' => $guild->Guild_ID]);
+            $focusGuild = $this->mGuildFocusTbl->selectWith($focusSel);
+            if($focusGuild->count() > 0) {
+                foreach($focusGuild as $f) {
+                    $gFocus[] = (object)[
+                        'id' => $f->focus_idfs,
+                        'name' => $f->label,
+                        'icon' => $f->icon
+                    ];
+                }
+            }
             $guildAPI = (object)[
                 'id' => $guild->Guild_ID,
                 'name' => utf8_decode($guild->label),
                 'focus' => json_decode($guild->focus),
+                'guild_focus' => $gFocus,
                 'description' => utf8_decode($guild->description),
                 'members' => $guild->members,
                 'xp_level' => $guild->xp_level,
                 'xp_current' => $guild->xp_current,
                 'xp_total' => $guild->xp_total,
-                'icon' => $guild->icon,'is_vip' => ($guild->is_vip == 1) ? true : false];
+                'icon' => $guild->icon,'is_vip' => ($guild->is_vip == 1) ? true : false,
+                'emblem_shield' => $guild->emblem_shield,
+                'emblem_icon' => $guild->emblem_icon,
+            ];
             if(array_key_exists($guild->Guild_ID,$userRequests)) {
                 $guildAPI->userHasRequestOpen = 1;
             } else {
@@ -782,6 +937,15 @@ class GuildResource extends AbstractResourceListener
             $guilds = $guildsV2;
         }
 
+        $focus = [];
+        $guildFocus = $this->mFocusTbl->select();
+        foreach($guildFocus as $gf) {
+            $focus[] = [
+                'id' => $gf->Focus_ID,
+                'name' => $gf->label
+            ];
+        }
+
         // TODO: Remove static URL
         return (object)[
             '_links' => (object)['self' => (object)['href' => 'https://xi.api.swissfaucet.io/guild']],
@@ -790,6 +954,7 @@ class GuildResource extends AbstractResourceListener
             'page_count' => round($totalGuilds/4),
             'page_size' => 4,
             'page' => $page,
+            'focus' => $focus
         ];
     }
 
@@ -1082,6 +1247,34 @@ class GuildResource extends AbstractResourceListener
                     ]);
                 }
 
+                # check if emblem should be updated
+                if(isset($data->emblem_shield) && isset($data->emblem_icon)) {
+                    $renamePrice = 0;
+                    if($this->mTransaction->checkGuildBalance($renamePrice, $userGuildRole->guild_idfs)) {
+
+                        $newBalance = $this->mTransaction->executeGuildTransaction($renamePrice, true,
+                            $userGuildRole->guild_idfs, $userGuildRole->guild_idfs,
+                            'emblem-change', 'Emblem Change', $me->User_ID);
+
+                        # rename
+                        if ($newBalance !== false) {
+                            $newShield = filter_var($data->emblem_shield, FILTER_SANITIZE_NUMBER_INT);
+                            $newIcon = filter_var($data->emblem_icon, FILTER_SANITIZE_NUMBER_INT);
+
+                            $this->mGuildTbl->update([
+                                'emblem_shield' => $newShield,
+                                'emblem_icon' => $newIcon,
+                            ],[
+                                'Guild_ID' => $userGuildRole->guild_idfs,
+                            ]);
+                        } else {
+                            return new ApiProblem(400, 'Transaction Error. Please contact support');
+                        }
+                    } else {
+                        return new ApiProblem(400, 'Guild Balance is too low for emblem change');
+                    }
+                }
+
                 # check if description should be updated
                 if(isset($data->welcome_message)) {
                     $secResult = $this->mSecTools->basicInputCheck([$data->welcome_message]);
@@ -1125,18 +1318,56 @@ class GuildResource extends AbstractResourceListener
                     $fOF = filter_var($data->focus_offerwalls, FILTER_SANITIZE_STRING);
                     $fLot = filter_var($data->focus_lottery, FILTER_SANITIZE_STRING);
                     $fMin = filter_var($data->focus_mining, FILTER_SANITIZE_STRING);
+                    $fProf = filter_var($data->focus_professions, FILTER_SANITIZE_STRING);
+
                     $focus = [
                         'f' => (!empty($fFaucet)) ? 1 : 0,
                         'sl' => (!empty($fSH)) ? 1 : 0,
                         'of' => (!empty($fOF)) ? 1 : 0,
                         'lt' => (!empty($fLot)) ? 1 : 0,
                         'm' => (!empty($fMin)) ? 1 : 0,
+                        'p' => (!empty($fProf)) ? 1 : 0,
                     ];
-                    $this->mGuildTbl->update([
-                        'focus' => json_encode($focus),
-                    ],[
-                        'Guild_ID' => $userGuildRole->guild_idfs,
-                    ]);
+
+                    if($userGuildRole->guild_idfs != 0) {
+                        $this->mGuildFocusTbl->delete(['guild_idfs' => $userGuildRole->guild_idfs]);
+                    }
+                    if($focus['f'] == 1) {
+                        $this->mGuildFocusTbl->insert([
+                            'guild_idfs' => $userGuildRole->guild_idfs,
+                            'focus_idfs' => 1
+                        ]);
+                    }
+                    if($focus['sl'] == 1) {
+                        $this->mGuildFocusTbl->insert([
+                            'guild_idfs' => $userGuildRole->guild_idfs,
+                            'focus_idfs' => 2
+                        ]);
+                    }
+                    if($focus['of'] == 1) {
+                        $this->mGuildFocusTbl->insert([
+                            'guild_idfs' => $userGuildRole->guild_idfs,
+                            'focus_idfs' => 3
+                        ]);
+                    }
+                    if($focus['lt'] == 1) {
+                        $this->mGuildFocusTbl->insert([
+                            'guild_idfs' => $userGuildRole->guild_idfs,
+                            'focus_idfs' => 4
+                        ]);
+                    }
+                    if($focus['m'] == 1) {
+                        $this->mGuildFocusTbl->insert([
+                            'guild_idfs' => $userGuildRole->guild_idfs,
+                            'focus_idfs' => 5
+                        ]);
+                    }
+                    if($focus['p'] == 1) {
+                        $this->mGuildFocusTbl->insert([
+                            'guild_idfs' => $userGuildRole->guild_idfs,
+                            'focus_idfs' => 6
+                        ]);
+                    }
                 }
 
                 # check if name should be updated

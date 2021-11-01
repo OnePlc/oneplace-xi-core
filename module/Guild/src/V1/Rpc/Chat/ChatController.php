@@ -100,7 +100,7 @@ class ChatController extends AbstractActionController
             }
 
             $action = filter_var($json->action, FILTER_SANITIZE_STRING);
-            if($action != 'ban' && $action != 'unban' && $action != 'report') {
+            if($action != 'ban' && $action != 'unban' && $action != 'report' && $action != 'minify') {
                 return new ApiProblemResponse(new ApiProblem(400, 'Invalid Action'));
             }
             $userId = filter_var($json->user_id, FILTER_SANITIZE_NUMBER_INT);
@@ -123,10 +123,21 @@ class ChatController extends AbstractActionController
                 }
             }
             if($action == 'unban' && $userId != 0 && $me->User_ID != 0) {
-                $banCheck = $this->mGuildChatBanTbl->delete([
-                    'user_idfs' => $me->User_ID,
-                    'ban_user_idfs' => $userId,
-                ]);
+                if($me->User_ID != 0) {
+                    $banCheck = $this->mGuildChatBanTbl->delete([
+                        'user_idfs' => $me->User_ID,
+                        'ban_user_idfs' => $userId,
+                    ]);
+                }
+            }
+
+            if($action == 'minify') {
+                $isMinified = ($me->chat_minified == 0) ? 1 : 0;
+                if($me->User_ID != 0) {
+                    $this->mUserTbl->update([
+                        'chat_minified' => $isMinified
+                    ],['User_ID' => $me->User_ID]);
+                }
             }
 
             if($action == 'report') {

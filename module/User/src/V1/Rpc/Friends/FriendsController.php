@@ -208,6 +208,9 @@ class FriendsController extends AbstractActionController
                 return new ApiProblemResponse(new ApiProblem(404, 'User not found'));
             }
             $friendFound = $friendFound->current();
+            if($friendFound->User_ID == $me->User_ID) {
+                return new ApiProblemResponse(new ApiProblem(400, 'You cannot add yourself as a friend.'));
+            }
 
             $friendCheck = $this->mFriendTbl->select([
                 'user_idfs' => $me->User_ID,

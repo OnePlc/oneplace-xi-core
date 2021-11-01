@@ -31,6 +31,8 @@ class WebstatsController extends AbstractActionController
 
     private $mMapper;
 
+    protected $mFaucetStatsTbl;
+
     /**
      * Constructor
      *
@@ -41,6 +43,7 @@ class WebstatsController extends AbstractActionController
     public function __construct($mapper)
     {
         $this->mStatisticsTbl = new TableGateway('core_statistic', $mapper);
+        $this->mFaucetStatsTbl = new TableGateway('faucet_statistic', $mapper);
         $this->mMapper = $mapper;
     }
 
@@ -77,20 +80,44 @@ class WebstatsController extends AbstractActionController
             $wthSel->limit(1);
             $withdrawnDB = $this->mStatisticsTbl->selectWith($wthSel);
             if(count($withdrawnDB) > 0) {
-                $withdrawn = json_decode($withdrawnDB->current()->data)->withdraw_total*0.00004;
+                $withdrawn = round(json_decode($withdrawnDB->current()->data)->withdraw_total*0.00004,2);
             }
 
             # get shortlinks done
-            $shortDoneTbl = new TableGateway('shortlink_link_user', $this->mMapper);
-            $shortlinks = $shortDoneTbl->select()->count();
+            $shortlinks = 0;
+            $wthSel = new Select($this->mFaucetStatsTbl->getTable());
+            $wthSel->where(['stat-key' => 'shdone-total']);
+            $wthSel->order('date DESC');
+            $wthSel->limit(1);
+            $withdrawnDB = $this->mFaucetStatsTbl->selectWith($wthSel);
+            if(count($withdrawnDB) > 0) {
+                $shortlinksDB = (array)$withdrawnDB->current();
+                $shortlinks = $shortlinksDB['stat-data'];
+            }
 
             # get offerwalls done
-            $offerDoneTbl = new TableGateway('offerwall_user', $this->mMapper);
-            $offers = $offerDoneTbl->select()->count();
+            $offers = 0;
+            $wthSel = new Select($this->mFaucetStatsTbl->getTable());
+            $wthSel->where(['stat-key' => 'ofdone-total']);
+            $wthSel->order('date DESC');
+            $wthSel->limit(1);
+            $withdrawnDB = $this->mFaucetStatsTbl->selectWith($wthSel);
+            if(count($withdrawnDB) > 0) {
+                $shortlinksDB = (array)$withdrawnDB->current();
+                $offers = $shortlinksDB['stat-data'];
+            }
 
             # get faucet claims
-            $claimDoneTbl = new TableGateway('faucet_claim', $this->mMapper);
-            $claims = $claimDoneTbl->select()->count();
+            $claims = 0;
+            $wthSel = new Select($this->mFaucetStatsTbl->getTable());
+            $wthSel->where(['stat-key' => 'claim-total']);
+            $wthSel->order('date DESC');
+            $wthSel->limit(1);
+            $withdrawnDB = $this->mFaucetStatsTbl->selectWith($wthSel);
+            if(count($withdrawnDB) > 0) {
+                $shortlinksDB = (array)$withdrawnDB->current();
+                $claims = $shortlinksDB['stat-data'];
+            }
 
             # get days online
             $now = time(); // or your date as well

@@ -28,6 +28,7 @@ use Laminas\Http\ClientStatic;
 use Laminas\Paginator\Adapter\DbSelect;
 use Laminas\Paginator\Paginator;
 use Laminas\Session\Container;
+use function PHPUnit\Framework\containsIdentical;
 
 class ShortlinkResource extends AbstractResourceListener
 {
@@ -65,6 +66,13 @@ class ShortlinkResource extends AbstractResourceListener
      * @since 1.0.0
      */
     protected $mShortDoneTbl;
+
+    /**
+     * Shortlink Hide Table
+     * @var TableGateway $mShortHideTbl
+     * @since 1.2.8
+     */
+    protected $mShortHideTbl;
 
     /**
      * User Settings Table
@@ -111,7 +119,9 @@ class ShortlinkResource extends AbstractResourceListener
         $this->mShortProviderTbl = new TableGateway('shortlink', $mapper);
         $this->mShortTbl = new TableGateway('shortlink_link', $mapper);
         $this->mShortDoneTbl = new TableGateway('shortlink_link_user', $mapper);
+        $this->mShortHideTbl = new TableGateway('shortlink_hide', $mapper);
         $this->mUserSetTbl = new TableGateway('user_setting', $mapper);
+
         $this->mUserTools = new UserTools($mapper);
         $this->mTransaction = new TransactionHelper($mapper);
         $this->mSecTools = new SecurityTools($mapper);
@@ -152,7 +162,27 @@ class ShortlinkResource extends AbstractResourceListener
      */
     public function delete($id)
     {
-        return new ApiProblem(405, 'The DELETE method has not been defined for individual resources');
+        # Prevent 500 error
+        if(!$this->getIdentity()) {
+            return new ApiProblem(401, 'Not logged in');
+        }
+        $me = $this->mSecTools->getSecuredUserSession($this->getIdentity()->getName());
+        if(get_class($me) == 'Laminas\\ApiTools\\ApiProblem\\ApiProblem') {
+            return $me;
+        }
+
+        $shortlinkId = filter_var($id, FILTER_SANITIZE_NUMBER_INT);
+
+        $isHidden = $this->mShortHideTbl->select(['user_idfs' => $me->User_ID, 'shortlink_idfs' => $shortlinkId]);
+        if($isHidden->count() == 0) {
+            $this->mShortHideTbl->insert(['user_idfs' => $me->User_ID, 'shortlink_idfs' => $shortlinkId]);
+
+            return true;
+        } else {
+            $this->mShortHideTbl->delete(['user_idfs' => $me->User_ID, 'shortlink_idfs' => $shortlinkId]);
+
+            return true;
+        }
     }
 
     /**
@@ -316,6 +346,19 @@ class ShortlinkResource extends AbstractResourceListener
             return $me;
         }
 
+        $hiddenLinks = [];
+        $myHidden = $this->mShortHideTbl->select(['user_idfs' => $me->User_ID]);
+        if($myHidden->count() > 0) {
+            foreach($myHidden as $hide) {
+                $hiddenLinks[$hide->shortlink_idfs] = true;
+            }
+        }
+
+        $showAll = false;
+        if(isset($_REQUEST['showall'])) {
+            $showAll = true;
+        }
+
         # Load Shortlink Provider List
         $provSel = new Select($this->mShortProviderTbl->getTable());
         $provSel->where(['active' => 1]);
@@ -327,6 +370,13 @@ class ShortlinkResource extends AbstractResourceListener
         $totalReward = 0;
         $totalLinksDone24h = 0;
         foreach($shortlinksDB as $sh) {
+            $hidden = false;
+            if(array_key_exists($sh->Shortlink_ID, $hiddenLinks)) {
+                $hidden = true;
+                if(!$showAll) {
+                    continue;
+                }
+            }
             # get links for provider
             $shortlinksById[$sh->Shortlink_ID] = ['name' =>  $sh->label,'reward' =>  $sh->reward];
             # Count links for provider
@@ -360,6 +410,7 @@ class ShortlinkResource extends AbstractResourceListener
                 'name' => $sh->label,
                 'reward' => $sh->reward,
                 'url' => $sh->url,
+                'hidden' => $hidden,
                 'rating' => $sh->rating,
                 'rating_count' => $sh->rating_count,
                 'links_done' => $sh->linksDone,

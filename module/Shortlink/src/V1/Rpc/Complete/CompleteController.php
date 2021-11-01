@@ -137,7 +137,9 @@ class CompleteController extends AbstractActionController
                 $bMultiCheck = stripos($sCheck, '|');
                 $bHostFound = false;
                 if($bMultiCheck === false) {
-                    $bHostFound = stripos($_SERVER['HTTP_REFERER'], $sCheck);
+                    if(isset($_SERVER['HTTP_REFERER'])) {
+                        $bHostFound = stripos($_SERVER['HTTP_REFERER'], $sCheck);
+                    }
                 } else {
                     $aChecks = explode('|', $sCheck);
                     foreach($aChecks as $sCheckM) {
@@ -157,10 +159,15 @@ class CompleteController extends AbstractActionController
                     $bFixForNow = true;
                 }
                 if($bHostFound === false && !$bCanSkip && !$bFixForNow) {
-                    echo '<div class="container">';
+                    echo '<form action="" method="POST"><div class="container">';
+                    echo '<input type="hidden" name="shortlink_id" value="'.$token.'" />';
                     echo 'invalid referer '.$_SERVER['HTTP_REFERER'].' != '.$linkInfo->refer_check;
                     $actual_link = "https://$_SERVER[HTTP_HOST]$_SERVER[REQUEST_URI]";
-                    echo '<br/><b>Please copy this link and send an E-Mail to <a href="mailto:admin@swissfaucet.io?subject=Please verify Shortlink&body='.$actual_link.'">admin@swissfaucet.io</a> - The Shortlink will be credited! You see this because there seems to be an issue with the shortlink verification. <b>Your Coins are not lost</b></b></div>';
+                    echo '<br/><b>Please copy this link and send an E-Mail to <a href="mailto:admin@swissfaucet.io?subject=Please verify Shortlink&body='.$actual_link.'">admin@swissfaucet.io</a> - The Shortlink will be credited! You see this because there seems to be an issue with the shortlink verification. <b>Your Coins are not lost</b></b>';
+                    //echo '<div class="g-recaptcha" data-sitekey="6LcP5h0UAAAAACCA2YcZnschPWLbujY_vZPFjhQk"></div>';
+                    //echo '<script src="https://www.google.com/recaptcha/api.js" async defer></script>';
+                    //echo '<input type="submit" value="Confirm Shortlink manually" \>';
+                    echo '</div></form>';
                 } else {
                     if($shFound->date_completed == '0000-00-00 00:00:00') {
                         $this->mShortDoneTbl->update([
@@ -201,6 +208,11 @@ class CompleteController extends AbstractActionController
                     }
                 }
             }
+        }
+
+        if($request->isPost()) {
+            echo 'verify link';
+            var_dump($_POST);
         }
 
         return false;

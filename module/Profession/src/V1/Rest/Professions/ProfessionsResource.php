@@ -601,18 +601,20 @@ class ProfessionsResource extends AbstractResourceListener
         for($i = 0;$i < $amount;$i++) {
             if($myCurrentSkill >= $profSkill->skill && $myCurrentSkill < $profSkill->skill_max) {
                 $skillIncrease = 5;
-                $this->mUserTools->addXP('profession-skill-max', $user->User_ID);
+                $xpInfo = $this->mUserTools->addXP('profession-skill-max', $user->User_ID);
             }
             if($myCurrentSkill >= $profSkill->skill_max && $myCurrentSkill < $profSkill->skill_mid) {
                 $skillIncrease = 2;
-                $this->mUserTools->addXP('profession-skill-mid', $user->User_ID);
+                $xpInfo = $this->mUserTools->addXP('profession-skill-mid', $user->User_ID);
             }
             if($myCurrentSkill >= $profSkill->skill_mid && $myCurrentSkill < $profSkill->skill_min) {
                 $skillIncrease = 1;
-                $this->mUserTools->addXP('profession-skill-min', $user->User_ID);
+                $xpInfo = $this->mUserTools->addXP('profession-skill-min', $user->User_ID);
             }
             $myCurrentSkill+=$skillIncrease;
         }
+
+        $xpInfo = $this->mUserTools->addXP('profession-skill-def', $user->User_ID);
 
         $myLevel = $skillLevel->level;
         if($myCurrentSkill >= $skillLevel->skill_end) {
@@ -679,7 +681,11 @@ class ProfessionsResource extends AbstractResourceListener
             ]);
         }
 
-        return true;
+        return [
+            'professions' => [
+                'user' => $xpInfo
+            ]
+        ];
     }
 
     /**
