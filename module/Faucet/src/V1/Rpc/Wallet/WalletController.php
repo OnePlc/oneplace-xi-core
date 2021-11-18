@@ -58,6 +58,8 @@ class WalletController extends AbstractActionController
      */
     protected $mSecTools;
 
+    protected $mLinkAccTbl;
+
     /**
      * Constructor
      *
@@ -69,6 +71,7 @@ class WalletController extends AbstractActionController
     {
         $this->mWithdrawTbl = new TableGateway('faucet_withdraw', $mapper);
         $this->mWalletTbl = new TableGateway('faucet_wallet', $mapper);
+        $this->mLinkAccTbl = new TableGateway('user_linked_account', $mapper);
         $this->mSecTools = new SecurityTools($mapper);
         $this->mUserTools = new UserTools($mapper);
     }
@@ -114,8 +117,17 @@ class WalletController extends AbstractActionController
                 $myWalletsAPI[] = $wal;
             }
 
+            $linkedAccs = [];
+            $links = $this->mLinkAccTbl->select(['user_idfs' => $me->User_ID]);
+            if($links->count() > 0) {
+                foreach ($links as $link) {
+                    $linkedAccs[] = $link;
+                }
+            }
+
             return new ViewModel([
-                'wallet' => $myWalletsAPI
+                'wallet' => $myWalletsAPI,
+                'linked' => $linkedAccs
             ]);
         }
     }

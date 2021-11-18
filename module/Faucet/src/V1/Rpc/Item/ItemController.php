@@ -171,8 +171,7 @@ class ItemController extends AbstractActionController
                     ],[
                         'item_idfs' => $itemId,
                         'user_idfs' => $me->User_ID,
-                        'date_created' => $userItem->date_created,
-                        'date_received' => $userItem->date_received
+                        'hash' => $userItem->hash,
                     ]);
 
                     $userInventory =$this->mInventory->getInventory($me->User_ID);

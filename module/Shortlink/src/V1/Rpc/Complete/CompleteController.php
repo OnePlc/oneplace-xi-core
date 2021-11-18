@@ -151,6 +151,7 @@ class CompleteController extends AbstractActionController
                         }
                     }
                 }
+                $bCanSkip = true;
 
                 $bCanSkip = ($_SERVER['HTTP_REFERER'] == NULL && $linkInfo->refer_check == NULL);
                 //$bCanSkip = false;

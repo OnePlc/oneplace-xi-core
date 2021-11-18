@@ -225,7 +225,7 @@ class TokenController extends AbstractActionController
                     $tokenBuyedToday+=$tkbuy->amount;
                 }
             }
-            $tokenLeft = 100-$tokenBuyedToday;
+            $tokenLeft = 1000-$tokenBuyedToday;
 
             $paySel = new Select($this->mTokenPayTbl->getTable());
             $paySel->order('week DESC');
@@ -354,9 +354,9 @@ class TokenController extends AbstractActionController
                     $tokenBuyedToday+=$tkbuy->amount;
                 }
             }
-            $tokenLeft = 100-$tokenBuyedToday;
+            $tokenLeft = 1000-$tokenBuyedToday;
             if($tokenLeft-$amount < 0) {
-                return new ApiProblemResponse(new ApiProblem(400, 'You have already reached the daily limit of 100 token. You can buy more tomorrow.'));
+                return new ApiProblemResponse(new ApiProblem(400, 'You have already reached the daily limit of 1000 token. You can buy more tomorrow.'));
             }
 
             $walletReceive = "";
@@ -512,7 +512,7 @@ class TokenController extends AbstractActionController
                     $tokenBuyedToday+=$tkbuy->amount;
                 }
             }
-            $tokenLeft = 100-$tokenBuyedToday;
+            $tokenLeft = 1000-$tokenBuyedToday;
             if($tokenLeft-$amount < 0) {
                 return new ApiProblemResponse(new ApiProblem(400, 'You have already reached the daily limit of 100 token. You can buy more tomorrow.'));
             }

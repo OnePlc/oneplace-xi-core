@@ -710,6 +710,7 @@ class GuildResource extends AbstractResourceListener
                 'name'=> utf8_decode($guild->label),
                 'description'=> utf8_decode($guild->description),
                 'icon' => $guild->icon,
+                'language' => $guild->main_language,
                 'emblem_shield' => $guild->emblem_shield,
                 'emblem_icon' => $guild->emblem_icon,
                 'is_vip' => ($guild->is_vip == 1) ? true : false,
@@ -799,6 +800,7 @@ class GuildResource extends AbstractResourceListener
         $page = (isset($_REQUEST['page'])) ? filter_var($_REQUEST['page'], FILTER_SANITIZE_NUMBER_INT) : 1;
         $focusFilter = (isset($_REQUEST['focus'])) ? filter_var($_REQUEST['focus'], FILTER_SANITIZE_NUMBER_INT) : 0;
         $sizeFilter = (isset($_REQUEST['size'])) ? filter_var($_REQUEST['size'], FILTER_SANITIZE_STRING) : 'all';
+        $langFilter = (isset($_REQUEST['lang'])) ? filter_var($_REQUEST['lang'], FILTER_SANITIZE_STRING) : 'all';
 
         $guildWh = new Where();
         # Compile list of all guilds
@@ -823,6 +825,9 @@ class GuildResource extends AbstractResourceListener
                 default:
                     break;
             }
+        }
+        if($langFilter != 'all') {
+            $guildWh->like('main_language', $langFilter);
         }
         $guildSel->where($guildWh);
         $guildSel->order(['is_vip DESC','description DESC', 'token_balance DESC' ]);
@@ -1159,6 +1164,29 @@ class GuildResource extends AbstractResourceListener
                         return new ApiProblem(400, 'Guild Balance is too low for rename');
                     }
 
+                }
+
+                # check if language should be updated
+                if(isset($data->language)) {
+                    $secResult = $this->mSecTools->basicInputCheck([$data->language]);
+                    if($secResult !== 'ok') {
+                        # ban user and force logout on client
+                        $this->mUserSetTbl->insert([
+                            'user_idfs' => $me->User_ID,
+                            'setting_name' => 'user-tempban',
+                            'setting_value' => 'Potential '.$secResult.' Attack @ '.date('Y-m-d H:i:s').' Guild Rank Rename',
+                        ]);
+                        return new ApiProblem(418, 'Potential '.$secResult.' Attack - Goodbye');
+                    }
+
+                    $newLang = filter_var($data->language, FILTER_SANITIZE_STRING);
+                    if(strlen($newLang) > 3) {
+                        return new ApiProblem(400, 'Invalid Language');
+                    }
+
+                    $this->mGuildTbl->update([
+                        'main_language' => $newLang
+                    ],['Guild_ID' => $guild->Guild_ID]);
                 }
 
                 # check if rank should be updated

@@ -168,6 +168,8 @@ class UserResource extends AbstractResourceListener
      */
     protected $mInboxTbl;
 
+    protected $mUserAccsTbl;
+
     /**
      * Constructor
      *
@@ -189,6 +191,7 @@ class UserResource extends AbstractResourceListener
         $this->mSessionTbl = new TableGateway('user_session', $mapper);
         $this->mInboxTbl = new TableGateway('user_inbox', $mapper);
         $this->mUserSetTbl = new TableGateway('user_setting', $mapper);
+        $this->mUserAccsTbl = new TableGateway('user_linked_account', $mapper);
 
         $this->mTransaction = new TransactionHelper($mapper);
         $this->mSecTools = new SecurityTools($mapper);
@@ -1009,6 +1012,9 @@ class UserResource extends AbstractResourceListener
         if(isset($data->avatar)) {
             $checkFields[] = $data->avatar;
         }
+        if(isset($data->account_gacha)) {
+            $checkFields[] = $data->account_gacha;
+        }
         if(isset($data->passwordCheck)) {
             $checkFields[] = $data->passwordCheck;
             $checkFields[] = $data->passwordNew;
@@ -1036,6 +1042,7 @@ class UserResource extends AbstractResourceListener
         $passwordNewVer = filter_var($data->passwordNewVerify, FILTER_SANITIZE_STRING);
         $passwordCheck = filter_var($data->passwordCheck, FILTER_SANITIZE_STRING);
         $avatar = filter_var($data->avatar, FILTER_SANITIZE_STRING);
+        $gachaAcc = filter_var($data->account_gacha, FILTER_SANITIZE_STRING);
 
         $favCoin = filter_var($data->favCoin, FILTER_SANITIZE_STRING);
 
@@ -1114,6 +1121,23 @@ class UserResource extends AbstractResourceListener
             # timezone achievement
             if(!$this->mUserTools->hasAchievementCompleted(28, $user->User_ID)) {
                 $this->mUserTools->completeAchievement(28, $user->User_ID);
+            }
+        }
+
+        /**
+         * Link Gachaminer Account
+         */
+        // account_gacha
+        if($gachaAcc != '') {
+            $check = $this->mUserAccsTbl->select(['user_idfs' => $user->User_ID, 'account' => 'gachaminer']);
+            if($check->count() == 0) {
+                $this->mUserAccsTbl->insert([
+                    'user_idfs' => $user->User_ID,
+                    'account' => 'gachaminer',
+                    'email' => $gachaAcc
+                ]);
+            } else {
+                return new ApiProblem(404, 'You have already linked a gachaminer account');
             }
         }
 

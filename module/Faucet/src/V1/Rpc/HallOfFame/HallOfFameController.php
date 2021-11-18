@@ -499,6 +499,12 @@ class HallOfFameController extends AbstractActionController
             }
 
             if($detail == 'contest') {
+                $skipList = [
+                    335880436 => true,
+                    335875071 => true,
+                    335874987 => true,
+                    335902227 => true
+                ];
                 $top3Level = [];
                 $statSel = new Select($this->mUsrStatsTbl->getTable());
                 $statSel->order('date DESC');
@@ -608,6 +614,9 @@ class HallOfFameController extends AbstractActionController
                         if($iCount == 3) {
                             break;
                         }
+                        if(array_key_exists($top->id,$skipList)) {
+                            continue;
+                        }
                         $topInfo = $this->mUserTbl->select(['User_ID' => $top->id]);
                         if($topInfo->count() > 0) {
                             $topInfo = $topInfo->current();
@@ -633,6 +642,9 @@ class HallOfFameController extends AbstractActionController
                         if($iCount == 3) {
                             break;
                         }
+                        if(array_key_exists($top->id,$skipList)) {
+                            continue;
+                        }
                         $topInfo = $this->mUserTbl->select(['User_ID' => $top->id]);
                         if($topInfo->count() > 0) {
                             $topInfo = $topInfo->current();
@@ -657,6 +669,9 @@ class HallOfFameController extends AbstractActionController
                     foreach($topList as $top) {
                         if($iCount == 3) {
                             break;
+                        }
+                        if(array_key_exists($top->id,$skipList)) {
+                            continue;
                         }
                         $topInfo = $this->mUserTbl->select(['User_ID' => $top->id]);
                         if($topInfo->count() > 0) {
