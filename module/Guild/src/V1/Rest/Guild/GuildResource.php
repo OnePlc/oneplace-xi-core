@@ -563,6 +563,9 @@ class GuildResource extends AbstractResourceListener
                 case 'shortlink':
                     $progress = $weeklyStats->shortlinks;
                     break;
+                case 'offerwall':
+                    $progress = $weeklyStats->offerwalls;
+                    break;
                 case 'gpushare':
                     $progress = $weeklyStats->gpushares;
                     break;

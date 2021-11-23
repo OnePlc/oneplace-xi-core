@@ -185,6 +185,13 @@ class TokenController extends AbstractActionController
                 $amountCryptoZEN = number_format($amountCrypto*$coinInfoZEN->dollar_val,8,'.','');
             }
 
+            $coinInfoDOGE = $this->mWalletTbl->select(['coin_sign' => 'DOGE'])->current();
+            if($coinInfoDOGE->dollar_val > 0) {
+                $amountCryptoDOGE = number_format($amountCrypto/$coinInfoDOGE->dollar_val,8,'.','');
+            } else {
+                $amountCryptoDOGE = number_format($amountCrypto*$coinInfoDOGE->dollar_val,8,'.','');
+            }
+
             # get wallets for crypto payments
             $walletBCH = $this->mSecTools->getCoreSetting('tokenbuy-BCH');
             $walletLTC = $this->mSecTools->getCoreSetting('tokenbuy-LTC');
@@ -272,6 +279,81 @@ class TokenController extends AbstractActionController
 
             $totalStakingHistory = $this->mTokenPayHistoryTbl->select(['user_idfs' => $me->User_ID])->count();
 
+            $chartValues = [];
+            $chartIncome = [];
+            $chartCost = [];
+            $chartProfit = [];
+            $chartPercent = [];
+            $chartLabels = [];
+            $chartTokens = [];
+            $totalPay = 0;
+
+            $paySel = new Select($this->mTokenPayTbl->getTable());
+            $paySel->order('week DESC');
+            $lastPayments = $this->mTokenPayTbl->selectWith($paySel);
+            if($lastPayments->count() > 0) {
+                foreach($lastPayments as $lp) {
+                    $chartLabels['wk'.$lp->week] = 'Week '.$lp->week;
+                    $chartValues['wk'.$lp->week] = $lp->coins_per_token;
+                    $chartIncome['wk'.$lp->week] = $lp->total_in;
+                    $chartCost['wk'.$lp->week] = $lp->total_out;
+                    $chartPercent['wk'.$lp->week] = $lp->active_bonus;
+                    $chartProfit['wk'.$lp->week] = $lp->total_profit;
+                    $chartTokens['wk'.$lp->week] = $lp->tokens_circulating;
+                    $totalPay+=$lp->coins_per_token;
+                }
+            }
+
+            ksort($chartLabels);
+            ksort($chartValues);
+            ksort($chartIncome);
+            ksort($chartCost);
+            ksort($chartPercent);
+            ksort($chartProfit);
+            ksort($chartTokens);
+
+            $finLabels = [];
+            foreach($chartLabels as $chartLabel) {
+                $finLabels[] = $chartLabel;
+            }
+            $chartLabels = $finLabels;
+
+            $finLabels = [];
+            foreach($chartValues as $chartValue) {
+                $finLabels[] = $chartValue;
+            }
+            $chartValues = $finLabels;
+
+            $finLabels = [];
+            foreach($chartIncome as $chartIncom) {
+                $finLabels[] = $chartIncom;
+            }
+            $chartIncome = $finLabels;
+
+            $finLabels = [];
+            foreach($chartCost as $chartCos) {
+                $finLabels[] = $chartCos;
+            }
+            $chartCost = $finLabels;
+
+            $finLabels = [];
+            foreach($chartPercent as $chartPercen) {
+                $finLabels[] = $chartPercen;
+            }
+            $chartPercent = $finLabels;
+
+            $finLabels = [];
+            foreach($chartProfit as $chartProfi) {
+                $finLabels[] = $chartProfi;
+            }
+            $chartProfit = $finLabels;
+
+            $finLabels = [];
+            foreach($chartTokens as $chartToken) {
+                $finLabels[] = $chartToken;
+            }
+            $chartTokens = $finLabels;
+
             return [
                 '_links' => [],
                 '_embedded' => [
@@ -295,12 +377,25 @@ class TokenController extends AbstractActionController
                         'bch_price' => number_format($amountCryptoBCH, 8),
                         'ltc_price' => number_format($amountCryptoLTC,8),
                         'zen_price' => number_format($amountCryptoZEN,8),
+                        'doge_price' => number_format($amountCryptoDOGE,8),
                         'total' => 21000000,
                         'sold' => (int)$soldToken,
                         'linked' => $linkedTokens,
                         'last_payment' => number_format($lastPayment,2),
                         'value' => $tokenValue,
                     ],
+                    'history' => [
+                        'chart' => [
+                            'data' => $chartValues,
+                            'labels' => $chartLabels,
+                            'income' => $chartIncome,
+                            'cost' => $chartCost,
+                            'profit' => $chartProfit,
+                            'percent' => $chartPercent,
+                            'tokens' => $chartTokens
+                        ],
+                        'total' => $totalPay
+                    ]
                 ]
             ];
         }
@@ -340,7 +435,7 @@ class TokenController extends AbstractActionController
             }
 
             $coin = filter_var($json->coin, FILTER_SANITIZE_STRING);
-            if($coin != 'COINS' && $coin != 'BCH' && $coin != 'LTC' && $coin != 'ZEN') {
+            if($coin != 'COINS' && $coin != 'BCH' && $coin != 'LTC' && $coin != 'ZEN' && $coin != 'DOGE') {
                 return new ApiProblemResponse(new ApiProblem(400, 'Invalid Coin'));
             }
 
@@ -368,6 +463,24 @@ class TokenController extends AbstractActionController
             $price = 0;
 
             switch(strtolower($coin)) {
+                case 'doge':
+                    $sBCHNodeUrl = $this->mSecTools->getCoreSetting('dogenode-rpcurl');
+                    if($sBCHNodeUrl) {
+                        $client = new Client();
+                        $client->setUri($sBCHNodeUrl);
+                        $client->setMethod('POST');
+                        $client->setRawBody('{"jsonrpc":"2.0","id":"curltext","method":"getnewaddress","params":[]}');
+                        $response = $client->send();
+                        $googleResponse = json_decode($response->getBody());
+                        $walletReceive = $googleResponse->result;
+                    }
+                    $coinInfoBCH = $this->mWalletTbl->select(['coin_sign' => 'DOGE'])->current();
+                    if($coinInfoBCH->dollar_val > 0) {
+                        $price = number_format($amountCrypto/$coinInfoBCH->dollar_val,8,'.','');
+                    } else {
+                        $price = number_format($amountCrypto*$coinInfoBCH->dollar_val,8,'.','');
+                    }
+                    break;
                 case 'bch':
                     $sBCHNodeUrl = $this->mSecTools->getCoreSetting('bchnode-rpcurl');
                     if($sBCHNodeUrl) {

@@ -264,7 +264,7 @@ class BankController extends AbstractActionController
                             $lastWth = $this->mTransaction->findGuildTransaction($userHasGuild->guild_idfs,date('Y-m-d H:i:s', time()-(3600*24)),'member-wth', $me->User_ID);
 
                             if($lastWth !== false) {
-                                return new ApiProblemResponse(new ApiProblem(409, 'You have already withdrawn from guildbank today'));
+                                return new ApiProblemResponse(new ApiProblem(409, 'You have already withdrawn from guildbank in the last 24hours'));
                             } else {
                                 $withdrawAllowed = true;
                             }
@@ -274,6 +274,9 @@ class BankController extends AbstractActionController
                 if($withdrawAllowed) {
                     # check guild balance
                     if($this->mTransaction->checkGuildBalance($amount, $guild->Guild_ID)) {
+                        if($amount > $rankInfo->daily_withdraw) {
+                            return new ApiProblemResponse(new ApiProblem(409, 'You cannot withdraw more than '.$rankInfo->daily_withdraw.' Coins per Day'));
+                        }
                         $newGuildBalance = $this->mTransaction->executeGuildTransaction($amount, true, $guild->Guild_ID, 0, 'member-wth','Withdraw from User '.$me->username, $me->User_ID);
                         if($newGuildBalance !== false) {
                             # move coins from guild to user
