@@ -43,4 +43,5 @@ return [
     'Mailbox',
     'Profession',
     'Marketplace',
+    'Batch',
 ];

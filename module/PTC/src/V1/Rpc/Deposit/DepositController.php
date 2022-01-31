@@ -88,7 +88,7 @@ class DepositController extends AbstractActionController
 
         $request = $this->getRequest();
 
-        $coinPrice = 20;
+        $coinPrice = 30;
 
         # get price per token in crypto
         $tokenValue = $this->mTransaction->getTokenValue();
@@ -202,9 +202,10 @@ class DepositController extends AbstractActionController
 
             # get price per token in crypto
             $tokenValue = $this->mTransaction->getTokenValue();
-            $tokenPrice = 20;
+            $tokenPrice = 30;
             $amountCrypto = ($amount*$tokenPrice)*$tokenValue;
 
+            $sent = 0;
 
             $walletReceive = "";
             switch(strtolower($currency)) {
@@ -265,6 +266,26 @@ class DepositController extends AbstractActionController
                 case 'coins':
                     $walletReceive = $me->User_ID;
                     $price = $tokenPrice*$amount;
+
+                    if (!$this->mTransaction->checkUserBalance(($amount * $tokenPrice), $me->User_ID)) {
+                        return new ApiProblemResponse(new ApiProblem(400, 'Your balance is too low to buy ' . $amount . ' tokens'));
+                    }
+                    $newBalance = $this->mTransaction->executeTransaction(($amount * $tokenPrice), true, $me->User_ID, $amount, 'ptc-buy', 'Bought '.$amount.' PTC Credits with COINS');
+                    /**
+                     * Send Coins to Admins - do not Burn
+                     */
+                    if($newBalance !== false) {
+                        # Burn the Coins
+                        $newCreditBalance = $this->mTransaction->executeCreditTransaction($amount, false, $me->User_ID, 0, 'deposit');
+                        if($newCreditBalance !== false) {
+                            $me->credit_balance = $newCreditBalance;
+                            $sent = 1;
+                        } else {
+                            return new ApiProblemResponse(new ApiProblem(500, 'Error during transaction'));
+                        }
+                    } else {
+                        return new ApiProblemResponse(new ApiProblem(500, 'Error during transaction'));
+                    }
                     break;
                 default:
                     break;
@@ -277,8 +298,8 @@ class DepositController extends AbstractActionController
                 'wallet_receive' => $walletReceive,
                 'amount' => $amount,
                 'price' => $price,
-                'received' => 0,
-                'sent' => 0,
+                'received' => $sent,
+                'sent' => $sent,
             ]);
 
             return [

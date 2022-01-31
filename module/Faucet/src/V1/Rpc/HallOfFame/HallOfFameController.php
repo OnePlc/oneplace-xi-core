@@ -240,6 +240,7 @@ class HallOfFameController extends AbstractActionController
                 case 'achievement':
                 case 'cpumining':
                 case 'offerwalls':
+                case 'loyalty':
                 case 'lottery':
                 case 'faucet':
                     $detail = $detailSet;
@@ -260,6 +261,47 @@ class HallOfFameController extends AbstractActionController
                 'top_winners' => $topEarners,
             ]);
         } else {
+            if($detail == 'loyalty') {
+                $topPlayers = [];
+
+                $loyalSel = new Select($this->mUserTbl->getTable());
+                $loyalSel->order('created_date ASC');
+                $loyalWh = new Where();
+                $loyalWh->equalTo('is_employee', 0);
+                $loyalWh->greaterThan('last_action', date('Y-m-d H:i:s', time()-((24*3600)*14)));
+                $loyalSel->where($loyalWh);
+                $loyalSel->limit(50);
+
+                $allTimeLoyal = $this->mUserTbl->selectWith($loyalSel);
+                $rank = 1;
+                foreach($allTimeLoyal as $top) {
+                    $topPlayers[] = (object)[
+                        'name' => $top->username,
+                        'avatar' => ($top->avatar != '') ? $top->avatar : $top->username,
+                        'id' => $top->User_ID,
+                        'rank' => $rank,
+                        'xp' => date('Y-m-d', strtotime($top->created_date)),
+                        'xp_level' => (int)$top->xp_level,
+                    ];
+                    $rank++;
+                }
+
+                $myShorts = 0;
+                $myRank = 0;
+                $rankMe = 0;
+                $topShorters = [];
+                # Show Stats
+                return new ViewModel([
+                    'date' => date('Y-m-d H:i:s'),
+                    'player_list' => [
+                        'month' => $topShorters,
+                        'all' => $topPlayers,
+                    ],
+                    'me_month' => ['xp_total' => $myShorts,'rank' => $myRank],
+                    'me_all' => ['xp_level' => date('Y-m-d', strtotime($me->created_date)),'rank' => $rankMe]
+                ]);
+            }
+
             if($detail == 'experience') {
                 $topPlayers = [];
                 $statSel = new Select($this->mUserTbl->getTable());
@@ -287,7 +329,7 @@ class HallOfFameController extends AbstractActionController
                     }
                 }
 
-                $totalUserShorts = $this->mUsrStatsTbl->select(['stat_key' => 'user-xp-'.date('m-Y', time())]);
+                $totalUserShorts = $this->mUsrStatsTbl->select(['stat_key' => 'user-xp-'.date('n-Y', time())]);
                 $shortsByUser = [];
                 if(count($totalUserShorts) > 0) {
                     foreach($totalUserShorts as $shd) {
@@ -336,7 +378,7 @@ class HallOfFameController extends AbstractActionController
             if($detail == 'referral') {
                 $aAdAcounts = [335875860 => true, 335877074 => true,335876060 => true,335880700 => true,335875071 => true,335880436 => true,335890616 => true,335898589 => true];
 
-                $totalUserShorts = $this->mUsrStatsTbl->select(['stat_key' => 'ref-count-'.date('m-Y', time())]);
+                $totalUserShorts = $this->mUsrStatsTbl->select(['stat_key' => 'ref-count-'.date('n-Y', time())]);
                 $shortsByUser = [];
                 if(count($totalUserShorts) > 0) {
                     foreach($totalUserShorts as $shd) {
@@ -508,7 +550,7 @@ class HallOfFameController extends AbstractActionController
                 $top3Level = [];
                 $statSel = new Select($this->mUsrStatsTbl->getTable());
                 $statSel->order('date DESC');
-                $statSel->where(['stat_key' => 'user-xp-'.date('m-Y', time())]);
+                $statSel->where(['stat_key' => 'user-xp-'.date('n-Y', time())]);
                 $statFound = $this->mUsrStatsTbl->selectWith($statSel);
                 if($statFound->count() > 0) {
                     $top3ShById = [];
@@ -541,7 +583,7 @@ class HallOfFameController extends AbstractActionController
                 $top3Sh = [];
                 $statSel = new Select($this->mUsrStatsTbl->getTable());
                 $statSel->order('date DESC');
-                $statSel->where(['stat_key' => 'shdone-m-'.date('m-Y',time())]);
+                $statSel->where(['stat_key' => 'shdone-m-'.date('n-Y',time())]);
                 $statFound = $this->mUsrStatsTbl->selectWith($statSel);
                 if($statFound->count() > 0) {
                     $top3ShById = [];
@@ -572,7 +614,7 @@ class HallOfFameController extends AbstractActionController
                 $top3SOf = [];
                 $statSel = new Select($this->mUsrStatsTbl->getTable());
                 $statSel->order('date DESC');
-                $statSel->where(['stat_key' => 'ofdone-m-'.date('m-Y',time())]);
+                $statSel->where(['stat_key' => 'ofdone-m-'.date('n-Y',time())]);
                 $statFound = $this->mUsrStatsTbl->selectWith($statSel);
                 if($statFound->count() > 0) {
                     $top3ShById = [];
@@ -603,7 +645,7 @@ class HallOfFameController extends AbstractActionController
                 $top3Xmr = [];
                 $statSel = new Select($this->mStatsTbl->getTable());
                 $statSel->order('date DESC');
-                $statSel->where(['stat-key' => 'concpu-'.date('m-Y', time())]);
+                $statSel->where(['stat-key' => 'concpu-'.date('n-Y', time())]);
                 $statSel->limit(1);
                 $statFound = $this->mStatsTbl->selectWith($statSel);
                 if($statFound->count() > 0) {
@@ -631,7 +673,7 @@ class HallOfFameController extends AbstractActionController
                 $top3Gpu = [];
                 $statSel = new Select($this->mStatsTbl->getTable());
                 $statSel->order('date DESC');
-                $statSel->where(['stat-key' => 'congpu-'.date('m-Y', time())]);
+                $statSel->where(['stat-key' => 'congpu-'.date('n-Y', time())]);
                 $statSel->limit(1);
                 $statFound = $this->mStatsTbl->selectWith($statSel);
                 if($statFound->count() > 0) {
@@ -659,7 +701,7 @@ class HallOfFameController extends AbstractActionController
                 $top3Ref = [];
                 $statSel = new Select($this->mStatsTbl->getTable());
                 $statSel->order('date DESC');
-                $statSel->where(['stat-key' => 'conrefs-'.date('m-Y', time())]);
+                $statSel->where(['stat-key' => 'conrefs-'.date('n-Y', time())]);
                 $statSel->limit(1);
                 $statFound = $this->mStatsTbl->selectWith($statSel);
                 if($statFound->count() > 0) {
@@ -703,6 +745,24 @@ class HallOfFameController extends AbstractActionController
                     }
                 }
 
+                $top3Vets = [];
+                $loyalSel = new Select($this->mUserTbl->getTable());
+                $loyalSel->order('created_date ASC');
+                $loyalWh = new Where();
+                $loyalWh->equalTo('is_employee', 0);
+                $loyalWh->greaterThan('last_action', date('Y-m-d H:i:s', time()-((24*3600)*14)));
+                $loyalSel->where($loyalWh);
+                $loyalSel->limit(50);
+
+                $allTimeLoyal = $this->mUserTbl->selectWith($loyalSel);
+                foreach($allTimeLoyal as $top) {
+                    $top3Vets[] = (object)[
+                        'name' => $top->username,
+                        'id' => $top->User_ID,
+                        'count' => date('Y-m-d', strtotime($top->created_date)),
+                    ];
+                }
+
                 # Show Stats
                 return new ViewModel([
                     'date' => date('Y-m-d H:i:s'),
@@ -713,6 +773,7 @@ class HallOfFameController extends AbstractActionController
                     'player_cpushares' => $top3Xmr,
                     'player_gpushares' => $top3Gpu,
                     'player_referral' => $top3Ref,
+                    'player_veteran' => $top3Vets,
                     'guild_toplist' => $top3Guild
                 ]);
             }
@@ -812,7 +873,7 @@ class HallOfFameController extends AbstractActionController
                     $rank++;
                 }
 
-                $totalUserShorts = $this->mUsrStatsTbl->select(['stat_key' => 'shdone-m-'.date('m',time()).'-2021']);
+                $totalUserShorts = $this->mUsrStatsTbl->select(['stat_key' => 'shdone-m-'.date('n-Y',time())]);
                 $shortsByUser = [];
                 if(count($totalUserShorts) > 0) {
                     foreach($totalUserShorts as $shd) {
@@ -1071,7 +1132,7 @@ class HallOfFameController extends AbstractActionController
                     $rank++;
                 }
 
-                $totalUserShorts = $this->mUsrStatsTbl->select(['stat_key' => 'ofdone-m-'.date('m',time()).'-2021']);
+                $totalUserShorts = $this->mUsrStatsTbl->select(['stat_key' => 'ofdone-m-'.date('n-Y',time())]);
                 $shortsByUser = [];
                 if(count($totalUserShorts) > 0) {
                     foreach($totalUserShorts as $shd) {

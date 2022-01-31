@@ -215,6 +215,19 @@ class ClaimController extends AbstractActionController
             $oTransHelper = new TransactionHelper($this->mMapper);
             $newBalance = $oTransHelper->executeTransaction($claimAmount, false, $me->User_ID, 10, 'web-faucet', 'Website Faucet claimed');
             if($newBalance) {
+                # check if ip is blacklisted
+                if (!empty($_SERVER['HTTP_CLIENT_IP'])) {
+                    $sIpAddr = filter_var ($_SERVER['HTTP_CLIENT_IP'], FILTER_SANITIZE_STRING);
+                } elseif (!empty($_SERVER['HTTP_X_FORWARDED_FOR'])) {
+                    $sIpAddr = filter_var ($_SERVER['HTTP_X_FORWARDED_FOR'], FILTER_SANITIZE_STRING);
+                } else {
+                    $sIpAddr = filter_var ($_SERVER['REMOTE_ADDR'], FILTER_SANITIZE_STRING);
+                }
+
+                if($device == 'browser') {
+                    $device = substr($_SERVER['HTTP_USER_AGENT'],0,100);
+                }
+
                 # Execute Claim
                 $this->mClaimTbl->insert([
                     'user_idfs' => $me->User_ID,
@@ -225,7 +238,8 @@ class ClaimController extends AbstractActionController
                     'source' => ($platform != 'website') ? 'android' : 'website',
                     'ad_id' => $ad_id,
                     'advertiser' => $advertiser,
-                    'device' => $device
+                    'device' => $device,
+                    'claim_ip' => $sIpAddr
                 ]);
 
                 # Add User XP

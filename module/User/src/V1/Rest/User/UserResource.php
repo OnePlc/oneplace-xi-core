@@ -293,7 +293,7 @@ class UserResource extends AbstractResourceListener
                     $lastTime = $time;
                 }
             }
-            if(count($aUsersByIp) > 5) {
+            if(count($aUsersByIp) > 10) {
                 return new ApiProblem(400, 'It is not allowed to have multiple accounts per household / ip. Please contact admin@swissfaucet.io if this is your first account.');
             } else {
                 if(time()-$lastTime <= 3600) {
@@ -336,13 +336,24 @@ class UserResource extends AbstractResourceListener
             return new ApiProblem(400, 'Username not valid. Please choose another one.');
         }
 
-            # check email
+        # check email
         $existingUser = $this->mapper->select(['email' => $email]);
         if(count($existingUser) > 0) {
             return new ApiProblem(400, 'There is already an account with that e-mail. please use login.');
         }
         if(array_key_exists($email, $this->mSecTools->getUsernameBlacklist()) || empty($email) || !filter_var($email, FILTER_VALIDATE_EMAIL)) {
             return new ApiProblem(400, 'Invalid E-Mail address. Please choose another one');
+        }
+        # don't let "." mess up verification
+        $tmp = explode('@', $email);
+        $hasDot = stripos( $tmp[0], '.');
+        if($hasDot !== false) {
+            $noDot = str_replace(['.'],[''],$tmp[0]).'@'.$tmp[1];
+
+            $existingUser = $this->mapper->select(['email' => $noDot]);
+            if(count($existingUser) > 0) {
+                return new ApiProblem(400, 'There is already an account with that e-mail. please use login.');
+            }
         }
 
         $referal = 0;
@@ -375,7 +386,7 @@ class UserResource extends AbstractResourceListener
             'ref_user_idfs' => $referal,
             'full_name' => $username,
             'email' => $email,
-            'email_verified' => 1,
+            'email_verified' => 0,
             'password' => $passwordHash,
             'xp_level' => 1,
             'xp_total' => 0,
@@ -441,22 +452,38 @@ class UserResource extends AbstractResourceListener
             ],[
                 'User_ID' => $userNew->User_ID
             ]);
+
+            $emailV = new \SendGrid\Mail\Mail();
+            $emailV->setFrom("no-reply@swissfaucet.io", "Swissfaucet.io");
+            $emailV->setSubject("Sending with SendGrid is Fun");
+            $emailV->addTo($email, utf8_decode($username));
+            /**
+            $email->addContent("text/plain", "and easy to do anywhere, even with PHP");
+            $email->addContent(
+            "text/html", "<strong>and easy to do anywhere, even with PHP</strong>"
+            );
+             * **/
+            $emailV->setTemplateId('d-74a424e5ad4540ad8fa2585f575aff04');
+            $emailV->addDynamicTemplateDatas( [
+                'token'     => $secToken,
+                'user_name' => 'Praesidiarius'
+            ] );
+            $apiKey = $this->mSecTools->getCoreSetting('sendgrid-api-key');
+            $sendgrid = new \SendGrid($apiKey);
+
             try {
-                $this->mMailTools->sendMail('email_verify', [
-                    'sEmailTitle' => 'Verify your E-Mail Address',
-                    'footerInfo' => 'Swissfaucet.io - Faucet #1',
-                    'link' => $confirmLink
-                ], $this->mMailTools->getAdminEmail(), $userNew->email, 'Verify your E-Mail Address');
-            } catch (\RuntimeException $e) {
-                // email send error
+                $response = $sendgrid->send($emailV);
+                //print $response->statusCode() . "\n";
+                //print_r($response->headers());
+                //print $response->body() . "\n";
+            } catch (Exception $e) {
+                //echo 'Caught exception: '. $e->getMessage() ."\n";
             }
         }
 
         return [
             'state' => 'success',
         ];
-
-        return new ApiProblem(405, 'The POST method has not been defined');
     }
 
     /**

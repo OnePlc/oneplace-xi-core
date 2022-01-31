@@ -255,7 +255,7 @@ class TokenController extends AbstractActionController
             $stakingHistory = [];
             $historySel = new Select($this->mTokenPayHistoryTbl->getTable());
             $historySel->where(['user_idfs' => $me->User_ID]);
-            $historySel->order('week DESC');
+            $historySel->order(['year DESC', 'week DESC']);
             # Create a new pagination adapter object
             $oPaginatorAdapterStak = new DbSelect(
             # our configured select object

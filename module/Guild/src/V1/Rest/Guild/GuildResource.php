@@ -872,17 +872,17 @@ class GuildResource extends AbstractResourceListener
                 foreach($focusGuild as $f) {
                     $gFocus[] = (object)[
                         'id' => $f->focus_idfs,
-                        'name' => $f->label,
+                        'name' => utf8_encode($f->label),
                         'icon' => $f->icon
                     ];
                 }
             }
             $guildAPI = (object)[
                 'id' => $guild->Guild_ID,
-                'name' => utf8_decode($guild->label),
-                'focus' => json_decode($guild->focus),
+                'name' => utf8_encode($guild->label),
+                'focus' => utf8_encode($guild->focus),
                 'guild_focus' => $gFocus,
-                'description' => utf8_decode($guild->description),
+                'description' => utf8_encode($guild->description),
                 'members' => $guild->members,
                 'xp_level' => $guild->xp_level,
                 'xp_current' => $guild->xp_current,
@@ -926,9 +926,9 @@ class GuildResource extends AbstractResourceListener
             foreach($newGuilds as $ng) {
                 $guildsNew[] = (object)[
                     'id' => $ng->Guild_ID,
-                    'name' => utf8_decode($ng->label),
-                    'focus' => json_decode($ng->focus),
-                    'description' => utf8_decode($ng->description),
+                    'name' => utf8_encode(filter_var($ng->label, FILTER_SANITIZE_STRING)),
+                    'focus' => utf8_encode(filter_var($ng->focus, FILTER_SANITIZE_STRING)),
+                    'description' => utf8_encode(filter_var($ng->description, FILTER_SANITIZE_STRING)),
                     'members' => $ng->members,
                     'xp_level' => $ng->xp_level,
                     'xp_current' => $ng->xp_current,

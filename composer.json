@@ -34,6 +34,7 @@
         "laminas/laminas-session": "^2.10",
         "laminas/laminas-xmlrpc": "^2.10",
         "laminas/laminas-zendframework-bridge": "^1.0",
+        "sendgrid/sendgrid": "^7.11",
         "shieldon/shieldon": "^2"
     },
     "require-dev": {

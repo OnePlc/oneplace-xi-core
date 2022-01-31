@@ -156,10 +156,12 @@ class CompleteController extends AbstractActionController
                 $bCanSkip = ($_SERVER['HTTP_REFERER'] == NULL && $linkInfo->refer_check == NULL);
                 //$bCanSkip = false;
                 $bFixForNow = false;
+                /**
                 if($_SERVER['HTTP_REFERER'] == NULL || $_SERVER['HTTP_REFERER'] == "") {
                     $bFixForNow = true;
                 }
-                if($bHostFound === false && !$bCanSkip && !$bFixForNow) {
+                 * **/
+                if($bFixForNow) {
                     echo '<form action="" method="POST"><div class="container">';
                     echo '<input type="hidden" name="shortlink_id" value="'.$token.'" />';
                     echo 'invalid referer '.$_SERVER['HTTP_REFERER'].' != '.$linkInfo->refer_check;
