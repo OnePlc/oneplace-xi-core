@@ -102,6 +102,8 @@ class TicketsController extends AbstractActionController
             return new ApiProblemResponse($me);
         }
 
+        return new ApiProblemResponse(new ApiProblem(400, 'Lottery is disabled'));
+
         # Get current lottery round
         $roundSel = new Select($this->mLotteryTbl->getTable());
         $roundSel->order('Round_ID DESC');

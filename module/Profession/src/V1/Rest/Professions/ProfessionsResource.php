@@ -149,6 +149,7 @@ class ProfessionsResource extends AbstractResourceListener
         if(get_class($user) == 'Laminas\\ApiTools\\ApiProblem\\ApiProblem') {
             return $user;
         }
+        return new ApiProblem(400, 'Professions are disabled in the next update');
 
         $profId = filter_var($data->id, FILTER_SANITIZE_STRING);
         $profInfo = $this->mProfTbl->select(['url' => $profId]);
@@ -478,6 +479,8 @@ class ProfessionsResource extends AbstractResourceListener
             return $user;
         }
 
+        return new ApiProblem(400, 'Professions are disabled in the next update');
+
         $skillInfo = (array)$data['skill'];
         $amountInfo = (array)$data['amount'];
 
@@ -705,6 +708,9 @@ class ProfessionsResource extends AbstractResourceListener
         if(get_class($user) == 'Laminas\\ApiTools\\ApiProblem\\ApiProblem') {
             return $user;
         }
+
+        return new ApiProblem(400, 'Professions are disabled in the next update');
+
 
         $profUrl = filter_var($id, FILTER_SANITIZE_STRING);
 

@@ -188,7 +188,7 @@ class OfferwallResource extends AbstractResourceListener
         }
         $totalOffers = $this->mOfferwallUserTbl->select(['user_idfs' => $me->User_ID])->count();
 
-        return (object)[
+        $viewData = [
             '_links' => [],
             '_embedded' => [
                 'offerwall' => $offerwalls,
@@ -199,6 +199,30 @@ class OfferwallResource extends AbstractResourceListener
                 'page' => $page
             ]
         ];
+
+        $hasMessage = $this->mSecTools->getCoreSetting('faucet-offers-msg-content');
+        if($hasMessage) {
+            $message = $hasMessage;
+            $messageType = $this->mSecTools->getCoreSetting('faucet-offers-msg-level');
+            $xpReq = $this->mSecTools->getCoreSetting('faucet-offers-msg-xplevel');
+            $addMsg = false;
+            if($xpReq) {
+                if($me->xp_level >= $xpReq) {
+                    $addMsg = true;
+                }
+            } else {
+                $addMsg = true;
+            }
+
+            if($addMsg && strlen($message) > 0) {
+                $viewData['message'] = [
+                    'type' => $messageType,
+                    'message' => $message
+                ];
+            }
+        }
+
+        return (object)$viewData;
     }
 
     /**

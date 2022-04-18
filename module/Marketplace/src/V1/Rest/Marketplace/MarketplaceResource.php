@@ -113,6 +113,14 @@ class MarketplaceResource extends AbstractResourceListener
         if(get_class($user) == 'Laminas\\ApiTools\\ApiProblem\\ApiProblem') {
             return $user;
         }
+        return new ApiProblem(400, 'Marketplace is removed in the next update.');
+
+        if($user->email_verified == 0) {
+            return new ApiProblem(404, 'You cannot use marketplace with unverified account.');
+        }
+        if($user->xp_level < 5) {
+            return new ApiProblem(404, 'You need to be Level 5 or more to create an auction.');
+        }
 
         $itemId = filter_var($data->item_id, FILTER_SANITIZE_NUMBER_INT);
 

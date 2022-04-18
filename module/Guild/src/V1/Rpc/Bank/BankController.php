@@ -280,7 +280,7 @@ class BankController extends AbstractActionController
                         $newGuildBalance = $this->mTransaction->executeGuildTransaction($amount, true, $guild->Guild_ID, 0, 'member-wth','Withdraw from User '.$me->username, $me->User_ID);
                         if($newGuildBalance !== false) {
                             # move coins from guild to user
-                            $newBalance = $this->mTransaction->executeTransaction($amount, false, $me->User_ID, $guild->Guild_ID, 'guild-deposit', '');
+                            $newBalance = $this->mTransaction->executeTransaction($amount, false, $me->User_ID, $guild->Guild_ID, 'guild-withdraw', '');
                             if($newBalance !== false) {
                                 return [
                                     'state' => 'success',

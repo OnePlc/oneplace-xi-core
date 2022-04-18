@@ -659,12 +659,13 @@ class UserResource extends AbstractResourceListener
          * Load User Withdrawals
          */
         $withdrawals = ['done' => [],'cancel' => [],'new' => [], 'total_items' => 0];
+        /**
         $userWithdrawals = $this->mWithdrawTbl->select(['user_idfs' => $user->User_ID,'state' => 'new']);
         if(count($userWithdrawals) > 0) {
             foreach($userWithdrawals as $wth) {
                 $withdrawals[$wth->state][] = $wth;
             }
-        }
+        } **/
 
         /**
          * Calculate Crypto Balance
@@ -686,7 +687,7 @@ class UserResource extends AbstractResourceListener
         /**
          * Public User Object
          */
-        $userInventory = $this->mInventory->getInventory($user->User_ID);
+        //$userInventory = $this->mInventory->getInventory($user->User_ID);
 
         $inboxMessages = $this->mInboxTbl->select(['to_idfs' => $user->User_ID,'is_read' => 0])->count();
 
@@ -708,10 +709,13 @@ class UserResource extends AbstractResourceListener
             'prefered_coin' => $user->prefered_coin,
             'guild' => $guild,
             'withdrawals' => $withdrawals,
-            'inventory' => $userInventory,
-            'inventory_bags' => $this->mInventory->getUserBags($user->User_ID),
-            'inventory_slots' => $this->mInventory->getInventorySlots($user->User_ID),
-            'inventory_slots_used' => count($userInventory),
+            'inventory' => [],
+            //'inventory_bags' => $this->mInventory->getUserBags($user->User_ID),
+            'inventory_bags' => [],
+            'inventory_slots' => 0,
+            'inventory_slots_used' => 0,
+            //'inventory_slots' => $this->mInventory->getInventorySlots($user->User_ID),
+            //'inventory_slots_used' => count($userInventory),
             'inbox_count' => $inboxMessages
         ];
 

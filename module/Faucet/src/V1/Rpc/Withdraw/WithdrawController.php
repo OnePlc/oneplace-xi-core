@@ -298,6 +298,9 @@ class WithdrawController extends AbstractActionController
         }
 
         if($request->isPut()) {
+            return new ApiProblemResponse(new ApiProblem(400, 'Withdrawals are disabled for 24hours, we are implementing an update. Please try again tomorrow.'));
+
+
             # Get Data from Request Body
             $json = IndexController::loadJSONFromRequestBody(['amount','coin','wallet'],$this->getRequest()->getContent());
             if(!$json) {

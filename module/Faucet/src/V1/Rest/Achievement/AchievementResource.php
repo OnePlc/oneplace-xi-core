@@ -317,6 +317,23 @@ class AchievementResource extends AbstractResourceListener
             return new ApiProblem(400, 'You must specify a plattform (website|app)');
         }
 
+        $achievCats = $this->mAchievCatTbl->select();
+        $achievementCategories = [];
+        foreach($achievCats as $category) {
+            $targetCat = $this->mAchievTbl->select(['category_idfs' => $category->Category_ID])->count();
+
+            $achievementCategories[$category->Category_ID] = (object)[
+                'id' => $category->Category_ID,
+                'name' => $category->label,
+                'icon' => $category->icon,
+                'counter' => $category->counter,
+                'target' => $targetCat,
+                'progress' => 0,
+                'achievements' => [],
+                'user_achievements' => [],
+            ];
+        }
+
         # get recent achievements
         $recent = [];
         $recSel = new Select($this->mAchievDoneTbl->getTable());
@@ -334,6 +351,9 @@ class AchievementResource extends AbstractResourceListener
                     $totalDone++;
                     $achievRec = $achievRec->current();
                     if(count($recent) < 4) {
+                        if(!array_key_exists($achievRec->category_idfs, $achievementCategories)) {
+                            continue;
+                        }
                         $recent[] =(object)[
                             'id' => $achievRec->Achievement_ID,
                             'name' => $achievRec->label,
@@ -360,22 +380,9 @@ class AchievementResource extends AbstractResourceListener
         $achievementsDB = $this->mAchievTbl->select($oWh);
         $achievements = [];
         $totalAchievements = $this->mAchievTbl->select()->count();
-        $achievementCategories = [];
         foreach($achievementsDB as $achiev) {
-            if(!array_key_exists($achiev->category_idfs,$achievements)) {
-                $category = $this->mAchievCatTbl->select(['Category_ID' => $achiev->category_idfs])->current();
-                $achievements[$achiev->category_idfs] = [];
-                $targetCat = $this->mAchievTbl->select(['category_idfs' => $achiev->category_idfs])->count();
-                $achievementCategories[$category->Category_ID] = (object)[
-                    'id' => $category->Category_ID,
-                    'name' => $category->label,
-                    'icon' => $category->icon,
-                    'counter' => $category->counter,
-                    'target' => $targetCat,
-                    'progress' => 0,
-                    'achievements' => [],
-                    'user_achievements' => [],
-                ];
+            if(!array_key_exists($achiev->category_idfs, $achievementCategories)) {
+                continue;
             }
             $progress = 0;
             if(array_key_exists($achiev->Achievement_ID, $userAchievementsDone)) {

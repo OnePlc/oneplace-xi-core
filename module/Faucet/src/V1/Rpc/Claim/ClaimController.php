@@ -148,6 +148,12 @@ class ClaimController extends AbstractActionController
         # Only show timer if GET
         $oRequest = $this->getRequest();
         if(!$oRequest->isPost()) {
+            $oWhT = new Where();
+            $oWhT->equalTo('user_idfs', $me->User_ID);
+            $oWhT->like('source', $platform);
+            $oWhT->greaterThanOrEqualTo('date', date('Y-m-d H:i:s', strtotime('-24 hours')));
+            $todayClaims = $this->mClaimTbl->select($oWhT)->count();
+
             # get some random satoshi quote
             $quotes = $this->mQuoteTbl->select(['page' => 'claim']);
             $quotesOrdered = [];
@@ -157,12 +163,42 @@ class ClaimController extends AbstractActionController
             $quoteRandom = rand(0, count($quotesOrdered)-1);
             $quote = $quotesOrdered[$quoteRandom];
 
-            return new ViewModel([
+            $viewData = [
                 'status' => 'wait',
                 'numbers' => [15,20,25],
                 'next_claim' => $sTime,
                 'quote' => $quote,
-            ]);
+            ];
+
+            $showGoogle = true;
+            if($todayClaims >= 3) {
+                $showGoogle = false;
+            }
+            $viewData['show_main_ad'] = $showGoogle;
+
+            $hasMessage = $this->mSecTools->getCoreSetting('faucet-claim-msg-content');
+            if($hasMessage) {
+                $message = $hasMessage;
+                $messageType = $this->mSecTools->getCoreSetting('faucet-claim-msg-level');
+                $xpReq = $this->mSecTools->getCoreSetting('faucet-claim-msg-xplevel');
+                $addMsg = false;
+                if($xpReq) {
+                    if($me->xp_level >= $xpReq) {
+                        $addMsg = true;
+                    }
+                } else {
+                    $addMsg = true;
+                }
+
+                if($addMsg && strlen($message) > 0) {
+                    $viewData['message'] = [
+                        'type' => $messageType,
+                        'message' => $message
+                    ];
+                }
+            }
+
+            return new ViewModel($viewData);
         }
 
         # Prevent double claims
@@ -200,6 +236,9 @@ class ClaimController extends AbstractActionController
                     break;
                 default:
                     $claimAmount = 10;
+                    if($me->xp_level >= 20 && time() <= strtotime('2022-05-20')) {
+                        $claimAmount = 30;
+                    }
                     break;
             }
 

@@ -536,7 +536,8 @@ class HallOfFameController extends AbstractActionController
                 }
 
                 return [
-                    'winners' => $contestWinners
+                    'winners' => $contestWinners,
+                    'title' => $month.' '.$year
                 ];
             }
 
@@ -763,8 +764,7 @@ class HallOfFameController extends AbstractActionController
                     ];
                 }
 
-                # Show Stats
-                return new ViewModel([
+                $viewData = [
                     'date' => date('Y-m-d H:i:s'),
                     'date_end' => date('Y-m-t', time()).' 23:59:59',
                     'player_level' => $top3Level,
@@ -775,7 +775,32 @@ class HallOfFameController extends AbstractActionController
                     'player_referral' => $top3Ref,
                     'player_veteran' => $top3Vets,
                     'guild_toplist' => $top3Guild
-                ]);
+                ];
+
+                $hasMessage = $this->mSecTools->getCoreSetting('faucet-contest-msg-content');
+                if($hasMessage) {
+                    $message = $hasMessage;
+                    $messageType = $this->mSecTools->getCoreSetting('faucet-contest-msg-level');
+                    $xpReq = $this->mSecTools->getCoreSetting('faucet-contest-msg-xplevel');
+                    $addMsg = false;
+                    if($xpReq) {
+                        if($me->xp_level >= $xpReq) {
+                            $addMsg = true;
+                        }
+                    } else {
+                        $addMsg = true;
+                    }
+
+                    if($addMsg && strlen($message) > 0) {
+                        $viewData['message'] = [
+                            'type' => $messageType,
+                            'message' => $message
+                        ];
+                    }
+                }
+
+                # Show Stats
+                return new ViewModel($viewData);
             }
 
             if($detail == 'achievement') {

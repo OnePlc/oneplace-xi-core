@@ -116,6 +116,8 @@ class ItemController extends AbstractActionController
         }
 
         if($request->isPost()) {
+            return new ApiProblemResponse(new ApiProblem(400, 'Items got disabled in last update'));
+
             $json = IndexController::loadJSONFromRequestBody(['item_id'],$this->getRequest()->getContent());
             if(!$json) {
                 return new ApiProblemResponse(new ApiProblem(400, 'Invalid JSON Body'));
@@ -227,6 +229,8 @@ class ItemController extends AbstractActionController
          * Replace Bag
          */
         if($request->isPut()) {
+            return new ApiProblemResponse(new ApiProblem(400, 'Items got disabled in last update'));
+
             $json = IndexController::loadJSONFromRequestBody(['item_id'],$this->getRequest()->getContent());
             if(!$json) {
                 return new ApiProblemResponse(new ApiProblem(400, 'Invalid JSON Body'));
@@ -289,6 +293,8 @@ class ItemController extends AbstractActionController
          * Remove Item from Inventory
          **/
         if($request->isDelete()) {
+            return new ApiProblemResponse(new ApiProblem(400, 'Items got disabled in last update'));
+
             $itemHash = filter_var($_REQUEST['hash'], FILTER_SANITIZE_STRING);
 
             $slotFound = $this->mItemUserTbl->select(['user_idfs' => $me->User_ID, 'hash' => $itemHash]);
