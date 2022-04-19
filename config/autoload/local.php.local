@@ -1,0 +1,37 @@
+<?php
+return [
+    'statuslib' => [
+        'array_mapper_path' => 'data/statuslib.php',
+    ],
+    'api-tools-oauth2' => [
+        'allow_implicit' => true,
+    ],
+    'api-tools-mvc-auth' => [
+        'authentication' => [
+            'adapters' => [
+                'oneplace' => [
+                    'adapter' => \Laminas\ApiTools\MvcAuth\Authentication\OAuth2Adapter::class,
+                    'storage' => [
+                        'adapter' => \pdo::class,
+                        'dsn' => 'mysql:dbname=plc_faucet_local;host=localhost;charset=utf8',
+                        'route' => '/oauth',
+                        'username' => 'root',
+                        'password' => '',
+                    ],
+                ],
+            ],
+        ],
+    ],
+    'db' => [
+        'adapters' => [
+            'faucetdev' => [
+                'database' => 'plc_faucet_local',
+                'driver' => 'PDO_Mysql',
+                'hostname' => 'localhost',
+                'username' => 'root',
+                'password' => '',
+                'dsn' => 'mysql:dbname=plc_faucet_local;host=localhost;charset=utf8',
+            ],
+        ],
+    ],
+];

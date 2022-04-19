@@ -171,22 +171,46 @@ class HistoryController extends AbstractActionController
                 $quote = $quotesOrdered[$quoteRandom];
             }
 
+            $viewData = [
+                'gpu_current_hash' => $gpuCurrentHash,
+                'cpu_current_hash' => $cpuCurrentHash,
+                'total_items' => $totalHistory,
+                'pool_url' => $poolUrl.'/swissfaucetio'.$me->User_ID,
+                'cpu_pool_url' => $cpuPoolUrl.'/swissfaucetio'.$me->User_ID,
+                'page' => $page,
+                'page_size' => $pageSize,
+                'page_count' => (round($totalHistory / $pageSize) > 0) ? round($totalHistory / $pageSize) : 1,
+                'history' => $miningHistory,
+                'show_info' => false,
+                'quote' => $quote,
+                'show_info_msg' => ''
+            ];
+
+            $hasMessage = $this->mSecTools->getCoreSetting('faucet-mining-msg-content');
+            if($hasMessage) {
+                $message = $hasMessage;
+                $messageType = $this->mSecTools->getCoreSetting('faucet-mining-msg-level');
+                $xpReq = $this->mSecTools->getCoreSetting('faucet-mining-msg-xplevel');
+                $addMsg = false;
+                if($xpReq) {
+                    if($me->xp_level >= $xpReq) {
+                        $addMsg = true;
+                    }
+                } else {
+                    $addMsg = true;
+                }
+
+                if($addMsg && strlen($message) > 0) {
+                    $viewData['message'] = [
+                        'type' => $messageType,
+                        'message' => $message
+                    ];
+                }
+            }
+
             return [
                 '_self' => [],
-                '_embedded' => [
-                    'gpu_current_hash' => $gpuCurrentHash,
-                    'cpu_current_hash' => $cpuCurrentHash,
-                    'total_items' => $totalHistory,
-                    'pool_url' => $poolUrl.'/swissfaucetio'.$me->User_ID,
-                    'cpu_pool_url' => $cpuPoolUrl.'/swissfaucetio'.$me->User_ID,
-                    'page' => $page,
-                    'page_size' => $pageSize,
-                    'page_count' => (round($totalHistory / $pageSize) > 0) ? round($totalHistory / $pageSize) : 1,
-                    'history' => $miningHistory,
-                    'show_info' => false,
-                    'quote' => $quote,
-                    'show_info_msg' => ''
-                ]
+                '_embedded' => $viewData
             ];
         }
 

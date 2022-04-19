@@ -3,6 +3,7 @@ return [
     'service_manager' => [
         'factories' => [
             \User\V1\Rest\User\UserResource::class => \User\V1\Rest\User\UserResourceFactory::class,
+            \User\V1\Rest\Poll\PollResource::class => \User\V1\Rest\Poll\PollResourceFactory::class,
         ],
     ],
     'view_manager' => [
@@ -95,6 +96,15 @@ return [
                     ],
                 ],
             ],
+            'user.rest.poll' => [
+                'type' => 'Segment',
+                'options' => [
+                    'route' => '/poll[/:poll_id]',
+                    'defaults' => [
+                        'controller' => 'User\\V1\\Rest\\Poll\\Controller',
+                    ],
+                ],
+            ],
         ],
     ],
     'api-tools-versioning' => [
@@ -107,6 +117,7 @@ return [
             5 => 'user.rpc.verify',
             6 => 'user.rpc.forgot',
             7 => 'user.rpc.friends',
+            8 => 'user.rest.poll',
         ],
     ],
     'api-tools-rest' => [
@@ -131,6 +142,28 @@ return [
             'collection_class' => \User\V1\Rest\User\UserCollection::class,
             'service_name' => 'User',
         ],
+        'User\\V1\\Rest\\Poll\\Controller' => [
+            'listener' => \User\V1\Rest\Poll\PollResource::class,
+            'route_name' => 'user.rest.poll',
+            'route_identifier_name' => 'poll_id',
+            'collection_name' => 'poll',
+            'entity_http_methods' => [
+                0 => 'GET',
+                1 => 'PATCH',
+                2 => 'PUT',
+                3 => 'DELETE',
+            ],
+            'collection_http_methods' => [
+                0 => 'GET',
+                1 => 'POST',
+            ],
+            'collection_query_whitelist' => [],
+            'page_size' => 25,
+            'page_size_param' => null,
+            'entity_class' => \User\V1\Rest\Poll\PollEntity::class,
+            'collection_class' => \User\V1\Rest\Poll\PollCollection::class,
+            'service_name' => 'Poll',
+        ],
     ],
     'api-tools-content-negotiation' => [
         'controllers' => [
@@ -142,6 +175,7 @@ return [
             'User\\V1\\Rpc\\Verify\\Controller' => 'Json',
             'User\\V1\\Rpc\\Forgot\\Controller' => 'Json',
             'User\\V1\\Rpc\\Friends\\Controller' => 'Json',
+            'User\\V1\\Rest\\Poll\\Controller' => 'HalJson',
         ],
         'accept_whitelist' => [
             'User\\V1\\Rest\\User\\Controller' => [
@@ -184,6 +218,11 @@ return [
                 1 => 'application/json',
                 2 => 'application/*+json',
             ],
+            'User\\V1\\Rest\\Poll\\Controller' => [
+                0 => 'application/vnd.user.v1+json',
+                1 => 'application/hal+json',
+                2 => 'application/json',
+            ],
         ],
         'content_type_whitelist' => [
             'User\\V1\\Rest\\User\\Controller' => [
@@ -218,6 +257,10 @@ return [
                 0 => 'application/vnd.user.v1+json',
                 1 => 'application/json',
             ],
+            'User\\V1\\Rest\\Poll\\Controller' => [
+                0 => 'application/vnd.user.v1+json',
+                1 => 'application/json',
+            ],
         ],
     ],
     'api-tools-hal' => [
@@ -232,6 +275,18 @@ return [
                 'entity_identifier_name' => 'id',
                 'route_name' => 'user.rest.user',
                 'route_identifier_name' => 'user_id',
+                'is_collection' => true,
+            ],
+            \User\V1\Rest\Poll\PollEntity::class => [
+                'entity_identifier_name' => 'id',
+                'route_name' => 'user.rest.poll',
+                'route_identifier_name' => 'poll_id',
+                'hydrator' => \Laminas\Hydrator\ObjectPropertyHydrator::class,
+            ],
+            \User\V1\Rest\Poll\PollCollection::class => [
+                'entity_identifier_name' => 'id',
+                'route_name' => 'user.rest.poll',
+                'route_identifier_name' => 'poll_id',
                 'is_collection' => true,
             ],
         ],
@@ -471,6 +526,22 @@ return [
                         'PATCH' => false,
                         'DELETE' => false,
                     ],
+                ],
+            ],
+            'User\\V1\\Rest\\Poll\\Controller' => [
+                'collection' => [
+                    'GET' => true,
+                    'POST' => true,
+                    'PUT' => false,
+                    'PATCH' => false,
+                    'DELETE' => false,
+                ],
+                'entity' => [
+                    'GET' => true,
+                    'POST' => false,
+                    'PUT' => true,
+                    'PATCH' => true,
+                    'DELETE' => true,
                 ],
             ],
         ],

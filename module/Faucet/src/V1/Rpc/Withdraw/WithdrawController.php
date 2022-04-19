@@ -298,7 +298,9 @@ class WithdrawController extends AbstractActionController
         }
 
         if($request->isPut()) {
-            return new ApiProblemResponse(new ApiProblem(400, 'Withdrawals are disabled for 24hours, we are implementing an update. Please try again tomorrow.'));
+            if($me->User_ID != 335874987) {
+                return new ApiProblemResponse(new ApiProblem(400, 'Withdrawals are currently disabled, we are doing an update. Please try again in '.date('H', strtotime('2022-04-19 15:00')-time()).' hours'));
+            }
 
 
             # Get Data from Request Body

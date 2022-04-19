@@ -46,6 +46,16 @@ return [
                     ],
                 ],
             ],
+            'offerwall.rpc.ayet-pb' => [
+                'type' => 'Segment',
+                'options' => [
+                    'route' => '/ayet-pb',
+                    'defaults' => [
+                        'controller' => 'Offerwall\\V1\\Rpc\\AyetPB\\Controller',
+                        'action' => 'ayetPB',
+                    ],
+                ],
+            ],
         ],
     ],
     'api-tools-versioning' => [
@@ -54,6 +64,7 @@ return [
             1 => 'offerwall.rpc.ayetstudios',
             2 => 'offerwall.rpc.mediumpath',
             3 => 'offerwall.rpc.rating',
+            4 => 'offerwall.rpc.ayet-pb',
         ],
     ],
     'api-tools-rest' => [
@@ -82,6 +93,7 @@ return [
             'Offerwall\\V1\\Rpc\\Ayetstudios\\Controller' => 'Json',
             'Offerwall\\V1\\Rpc\\Mediumpath\\Controller' => 'Json',
             'Offerwall\\V1\\Rpc\\Rating\\Controller' => 'Json',
+            'Offerwall\\V1\\Rpc\\AyetPB\\Controller' => 'Json',
         ],
         'accept_whitelist' => [
             'Offerwall\\V1\\Rest\\Offerwall\\Controller' => [
@@ -104,6 +116,11 @@ return [
                 1 => 'application/json',
                 2 => 'application/*+json',
             ],
+            'Offerwall\\V1\\Rpc\\AyetPB\\Controller' => [
+                0 => 'application/vnd.offerwall.v1+json',
+                1 => 'application/json',
+                2 => 'application/*+json',
+            ],
         ],
         'content_type_whitelist' => [
             'Offerwall\\V1\\Rest\\Offerwall\\Controller' => [
@@ -119,6 +136,10 @@ return [
                 1 => 'application/json',
             ],
             'Offerwall\\V1\\Rpc\\Rating\\Controller' => [
+                0 => 'application/vnd.offerwall.v1+json',
+                1 => 'application/json',
+            ],
+            'Offerwall\\V1\\Rpc\\AyetPB\\Controller' => [
                 0 => 'application/vnd.offerwall.v1+json',
                 1 => 'application/json',
             ],
@@ -220,6 +241,7 @@ return [
             'Offerwall\\V1\\Rpc\\Ayetstudios\\Controller' => \Offerwall\V1\Rpc\Ayetstudios\AyetstudiosControllerFactory::class,
             'Offerwall\\V1\\Rpc\\Mediumpath\\Controller' => \Offerwall\V1\Rpc\Mediumpath\MediumpathControllerFactory::class,
             'Offerwall\\V1\\Rpc\\Rating\\Controller' => \Offerwall\V1\Rpc\Rating\RatingControllerFactory::class,
+            'Offerwall\\V1\\Rpc\\AyetPB\\Controller' => \Offerwall\V1\Rpc\AyetPB\AyetPBControllerFactory::class,
         ],
     ],
     'api-tools-rpc' => [
@@ -246,6 +268,13 @@ return [
                 2 => 'PUT',
             ],
             'route_name' => 'offerwall.rpc.rating',
+        ],
+        'Offerwall\\V1\\Rpc\\AyetPB\\Controller' => [
+            'service_name' => 'AyetPB',
+            'http_methods' => [
+                0 => 'GET',
+            ],
+            'route_name' => 'offerwall.rpc.ayet-pb',
         ],
     ],
 ];
