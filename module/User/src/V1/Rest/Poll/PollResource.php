@@ -150,7 +150,7 @@ class PollResource extends AbstractResourceListener
             $voted = false;
             $totalVotes = 0;
 
-            if($userVote->count() == 0 && $user->User_ID != 40 && $poll->archived == 0) {
+            if($userVote->count() == 0 && $user->User_ID != 335874987 && $poll->archived == 0) {
                 $pollChoices = $this->mPollChoiceTbl->select(['poll_idfs' => $poll->Poll_ID]);
                 if(count($pollChoices) > 0) {
                     foreach($pollChoices as $choice) {

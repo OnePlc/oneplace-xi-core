@@ -56,6 +56,26 @@ return [
                     ],
                 ],
             ],
+            'offerwall.rpc.cpx-pb' => [
+                'type' => 'Segment',
+                'options' => [
+                    'route' => '/cpx-pb',
+                    'defaults' => [
+                        'controller' => 'Offerwall\\V1\\Rpc\\CpxPB\\Controller',
+                        'action' => 'cpxPB',
+                    ],
+                ],
+            ],
+            'offerwall.rpc.wanna-pb' => [
+                'type' => 'Segment',
+                'options' => [
+                    'route' => '/wanna-pb',
+                    'defaults' => [
+                        'controller' => 'Offerwall\\V1\\Rpc\\WannaPB\\Controller',
+                        'action' => 'wannaPB',
+                    ],
+                ],
+            ],
         ],
     ],
     'api-tools-versioning' => [
@@ -65,6 +85,8 @@ return [
             2 => 'offerwall.rpc.mediumpath',
             3 => 'offerwall.rpc.rating',
             4 => 'offerwall.rpc.ayet-pb',
+            5 => 'offerwall.rpc.cpx-pb',
+            6 => 'offerwall.rpc.wanna-pb',
         ],
     ],
     'api-tools-rest' => [
@@ -94,6 +116,8 @@ return [
             'Offerwall\\V1\\Rpc\\Mediumpath\\Controller' => 'Json',
             'Offerwall\\V1\\Rpc\\Rating\\Controller' => 'Json',
             'Offerwall\\V1\\Rpc\\AyetPB\\Controller' => 'Json',
+            'Offerwall\\V1\\Rpc\\CpxPB\\Controller' => 'Json',
+            'Offerwall\\V1\\Rpc\\WannaPB\\Controller' => 'Json',
         ],
         'accept_whitelist' => [
             'Offerwall\\V1\\Rest\\Offerwall\\Controller' => [
@@ -121,6 +145,16 @@ return [
                 1 => 'application/json',
                 2 => 'application/*+json',
             ],
+            'Offerwall\\V1\\Rpc\\CpxPB\\Controller' => [
+                0 => 'application/vnd.offerwall.v1+json',
+                1 => 'application/json',
+                2 => 'application/*+json',
+            ],
+            'Offerwall\\V1\\Rpc\\WannaPB\\Controller' => [
+                0 => 'application/vnd.offerwall.v1+json',
+                1 => 'application/json',
+                2 => 'application/*+json',
+            ],
         ],
         'content_type_whitelist' => [
             'Offerwall\\V1\\Rest\\Offerwall\\Controller' => [
@@ -140,6 +174,14 @@ return [
                 1 => 'application/json',
             ],
             'Offerwall\\V1\\Rpc\\AyetPB\\Controller' => [
+                0 => 'application/vnd.offerwall.v1+json',
+                1 => 'application/json',
+            ],
+            'Offerwall\\V1\\Rpc\\CpxPB\\Controller' => [
+                0 => 'application/vnd.offerwall.v1+json',
+                1 => 'application/json',
+            ],
+            'Offerwall\\V1\\Rpc\\WannaPB\\Controller' => [
                 0 => 'application/vnd.offerwall.v1+json',
                 1 => 'application/json',
             ],
@@ -242,6 +284,8 @@ return [
             'Offerwall\\V1\\Rpc\\Mediumpath\\Controller' => \Offerwall\V1\Rpc\Mediumpath\MediumpathControllerFactory::class,
             'Offerwall\\V1\\Rpc\\Rating\\Controller' => \Offerwall\V1\Rpc\Rating\RatingControllerFactory::class,
             'Offerwall\\V1\\Rpc\\AyetPB\\Controller' => \Offerwall\V1\Rpc\AyetPB\AyetPBControllerFactory::class,
+            'Offerwall\\V1\\Rpc\\CpxPB\\Controller' => \Offerwall\V1\Rpc\CpxPB\CpxPBControllerFactory::class,
+            'Offerwall\\V1\\Rpc\\WannaPB\\Controller' => \Offerwall\V1\Rpc\WannaPB\WannaPBControllerFactory::class,
         ],
     ],
     'api-tools-rpc' => [
@@ -275,6 +319,20 @@ return [
                 0 => 'GET',
             ],
             'route_name' => 'offerwall.rpc.ayet-pb',
+        ],
+        'Offerwall\\V1\\Rpc\\CpxPB\\Controller' => [
+            'service_name' => 'CpxPB',
+            'http_methods' => [
+                0 => 'GET',
+            ],
+            'route_name' => 'offerwall.rpc.cpx-pb',
+        ],
+        'Offerwall\\V1\\Rpc\\WannaPB\\Controller' => [
+            'service_name' => 'WannaPB',
+            'http_methods' => [
+                0 => 'GET',
+            ],
+            'route_name' => 'offerwall.rpc.wanna-pb',
         ],
     ],
 ];

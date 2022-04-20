@@ -298,10 +298,10 @@ class WithdrawController extends AbstractActionController
         }
 
         if($request->isPut()) {
+            /**
             if($me->User_ID != 335874987) {
                 return new ApiProblemResponse(new ApiProblem(400, 'Withdrawals are currently disabled, we are doing an update. Please try again in '.date('H', strtotime('2022-04-19 15:00')-time()).' hours'));
-            }
-
+            } **/
 
             # Get Data from Request Body
             $json = IndexController::loadJSONFromRequestBody(['amount','coin','wallet'],$this->getRequest()->getContent());

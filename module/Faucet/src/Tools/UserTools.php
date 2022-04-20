@@ -251,7 +251,9 @@ class UserTools extends AbstractResourceListener {
         $buffWh = new Where();
         $buffWh->like('buff_type', $buffType);
         $buffWh->equalTo('user_idfs', $userId);
-        $buffWh->like('date', $date.'%');
+        //$buffWh->like('date', $date.'%');
+        //$buffWh->greaterThanOrEqualTo('date', $date.'%');
+        $buffWh->greaterThanOrEqualTo('expires', $date.'%');
         $buffsActive = $this->mUserBuffTbl->select($buffWh);
         $buffs = [];
 

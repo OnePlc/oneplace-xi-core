@@ -169,8 +169,8 @@ return [
             'collection_query_whitelist' => [],
             'page_size' => 25,
             'page_size_param' => null,
-            'entity_class' => \StatusLib\Entity::class,
-            'collection_class' => \StatusLib\Collection::class,
+            'entity_class' => 'StatusLib\\Entity',
+            'collection_class' => 'StatusLib\\Collection',
             'service_name' => 'Status',
         ],
     ],
@@ -188,13 +188,13 @@ return [
                 'route_identifier_name' => 'status_id',
                 'is_collection' => true,
             ],
-            \StatusLib\Entity::class => [
+            'StatusLib\\Entity' => [
                 'entity_identifier_name' => 'id',
                 'route_name' => 'status.rest.status',
                 'route_identifier_name' => 'status_id',
                 'hydrator' => \Laminas\Hydrator\ObjectPropertyHydrator::class,
             ],
-            \StatusLib\Collection::class => [
+            'StatusLib\\Collection' => [
                 'entity_identifier_name' => 'id',
                 'route_name' => 'status.rest.status',
                 'route_identifier_name' => 'status_id',
