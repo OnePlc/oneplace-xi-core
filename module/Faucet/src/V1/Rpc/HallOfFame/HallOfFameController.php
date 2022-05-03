@@ -134,6 +134,7 @@ class HallOfFameController extends AbstractActionController
         $this->mUsrStatsTbl = new TableGateway('user_faucet_stat', $mapper);
         $this->mContestWinners = new TableGateway('faucet_contest_winner', $mapper);
         $this->mContest = new TableGateway('faucet_contest', $mapper);
+        $this->mContestRewards = new TableGateway('faucet_contest_reward', $mapper);
 
         $this->mSecTools = new SecurityTools($mapper);
     }
@@ -542,6 +543,46 @@ class HallOfFameController extends AbstractActionController
             }
 
             if($detail == 'contest') {
+                $conMonth = date('n', time());
+                $conYear = date('Y', time());
+
+                $conSel = new Select($this->mContest->getTable());
+                $conSel->join(['fcr' => 'faucet_contest_reward'], 'fcr.contest_idfs = faucet_contest.Contest_ID');
+                $conSel->where(['fcr.month' => $conMonth, 'fcr.year' => $conYear]);
+                $conSel->group('faucet_contest.Contest_ID');
+
+                $activeContests = $this->mContest->selectWith($conSel);
+
+                $contestsData = [];
+                foreach($activeContests as $con) {
+                    $rewSel = new Select($this->mContestRewards->getTable());
+                    $rewSel->where(['contest_idfs' => $con->Contest_ID, 'month' => $conMonth, 'year' => $conYear]);
+                    $rewSel->order('rank ASC');
+
+                    $rewards = $this->mContestRewards->selectWith($rewSel);
+                    $contestRewards = [];
+                    foreach($rewards as $rew) {
+                        $contestRewards[] = [
+                            'rank' => $rew->rank,
+                            'amount' => $rew->amount
+                        ];
+                    }
+                    $contestsData[] = [
+                        'id' => $con->Contest_ID,
+                        'name' => $con->contest_name,
+                        'type' => $con->contest_type,
+                        'reward' => $contestRewards
+                    ];
+                }
+
+                return [
+                    'contest' => $contestsData,
+                    'date' => date('Y-m-d H:i:s'),
+                    'date_end' => date('Y-m-t', time()).' 23:59:59',
+                ];
+            }
+
+            if($detail == 'contestdep') {
                 $skipList = [
                     335880436 => true,
                     335875071 => true,

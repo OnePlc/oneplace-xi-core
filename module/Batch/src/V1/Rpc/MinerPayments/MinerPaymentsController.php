@@ -35,6 +35,14 @@ class MinerPaymentsController extends AbstractActionController
     protected $mTransaction;
 
     /**
+     * User Buff Table
+     *
+     * @var TableGateway $mBuffTbl
+     * @since 1.0.0
+     */
+    protected $mBuffTbl;
+
+    /**
      * Constructor
      *
      * UserResource constructor.
@@ -44,6 +52,7 @@ class MinerPaymentsController extends AbstractActionController
     public function __construct($mapper)
     {
         $this->mSharesTbl = new TableGateway('faucet_miner_shares', $mapper);
+        $this->mBuffTbl = new TableGateway('user_buff', $mapper);
 
         $this->mTransaction = new TransactionHelper($mapper);
         $this->mSecTools = new SecurityTools($mapper);
@@ -67,6 +76,16 @@ class MinerPaymentsController extends AbstractActionController
                             if($newBalance) {
                                 $paid += $pay->amount_approx;
                                 $this->mSharesTbl->update(['state' => 'paid', 'amount_coin' => $pay->amount_approx],['id' => $pay->id]);
+
+                                $this->mBuffTbl->insert([
+                                    'source_idfs' => 44,
+                                    'source_type' => 'item',
+                                    'date' => date('Y-m-d H:i:s', time()),
+                                    'expires' => date('Y-m-d H:i:s', time() + (3600*24)),
+                                    'buff' => $pay->amount_approx,
+                                    'buff_type' => 'daily-withdraw-buff',
+                                    'user_idfs' => $pay->user_idfs
+                                ]);
                             }
                         }
                         return [

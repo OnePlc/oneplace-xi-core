@@ -225,7 +225,7 @@ class WithdrawController extends AbstractActionController
                 ];
             }
 
-            return [
+            $viewData = [
                 '_links' => [],
                 'wallet' => $wallets,
                 'daily_limit_base' => $withdrawLimit,
@@ -234,6 +234,30 @@ class WithdrawController extends AbstractActionController
                 'token_val' => $tokenValue,
                 'daily_left' => (($withdrawLimit+$withdrawBonus) - $coinsWithdrawnToday)
             ];
+
+            $hasMessage = $this->mSecTools->getCoreSetting('faucet-withdraw-msg-content');
+            if($hasMessage) {
+                $message = $hasMessage;
+                $messageType = $this->mSecTools->getCoreSetting('faucet-withdraw-msg-level');
+                $xpReq = $this->mSecTools->getCoreSetting('faucet-withdraw-msg-xplevel');
+                $addMsg = false;
+                if($xpReq) {
+                    if($me->xp_level >= $xpReq) {
+                        $addMsg = true;
+                    }
+                } else {
+                    $addMsg = true;
+                }
+
+                if($addMsg && strlen($message) > 0) {
+                    $viewData['message'] = [
+                        'type' => $messageType,
+                        'message' => $message
+                    ];
+                }
+            }
+
+            return $viewData;
         }
 
         if($request->isPost()) {
@@ -285,7 +309,9 @@ class WithdrawController extends AbstractActionController
             }
             $total = round($total, 2);
 
-            return [
+            $nextPay = $this->mSecTools->getCoreSetting('payment-next');
+
+            $viewData = [
                 'history' => [
                     'items' => $myWithdrawals,
                     'total_items' => $totalItems,
@@ -293,8 +319,33 @@ class WithdrawController extends AbstractActionController
                     'page' => $page,
                     'page_size' => $pageSize,
                     'page_count' => (round($totalItems/$pageSize) > 0) ? round($totalItems/$pageSize) : 1,
-                ]
+                ],
+                'next_payment' => $nextPay
             ];
+
+            $hasMessage = $this->mSecTools->getCoreSetting('faucet-withdraw-msg-content');
+            if($hasMessage) {
+                $message = $hasMessage;
+                $messageType = $this->mSecTools->getCoreSetting('faucet-withdraw-msg-level');
+                $xpReq = $this->mSecTools->getCoreSetting('faucet-withdraw-msg-xplevel');
+                $addMsg = false;
+                if($xpReq) {
+                    if($me->xp_level >= $xpReq) {
+                        $addMsg = true;
+                    }
+                } else {
+                    $addMsg = true;
+                }
+
+                if($addMsg && strlen($message) > 0) {
+                    $viewData['message'] = [
+                        'type' => $messageType,
+                        'message' => $message
+                    ];
+                }
+            }
+
+            return $viewData;
         }
 
         if($request->isPut()) {
