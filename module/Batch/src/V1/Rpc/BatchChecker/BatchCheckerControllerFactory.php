@@ -5,6 +5,6 @@ class BatchCheckerControllerFactory
 {
     public function __invoke($controllers)
     {
-        return new BatchCheckerController($controllers->get('faucetdev'));
+        return new BatchCheckerController($controllers->get('faucetdev'), $controllers->get('ViewRenderer'));
     }
 }

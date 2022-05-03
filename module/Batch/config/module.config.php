@@ -8,6 +8,12 @@ return [
             'Batch\\V1\\Rpc\\BatchChecker\\Controller' => \Batch\V1\Rpc\BatchChecker\BatchCheckerControllerFactory::class,
         ],
     ],
+    'view_manager' => [
+        'display_exceptions' => false,
+        'template_path_stack' => [
+            'batch' => __DIR__ . '/../view',
+        ],
+    ],
     'router' => [
         'routes' => [
             'batch.rpc.refstats' => [

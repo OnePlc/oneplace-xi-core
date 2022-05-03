@@ -289,17 +289,18 @@ class TokenController extends AbstractActionController
             $totalPay = 0;
 
             $paySel = new Select($this->mTokenPayTbl->getTable());
-            $paySel->order('week DESC');
+            $paySel->order(['week DESC']);
+            $paySel->where(['year' => date('Y', time())]);
             $lastPayments = $this->mTokenPayTbl->selectWith($paySel);
             if($lastPayments->count() > 0) {
                 foreach($lastPayments as $lp) {
-                    $chartLabels['wk'.$lp->week] = 'Week '.$lp->week;
-                    $chartValues['wk'.$lp->week] = $lp->coins_per_token;
-                    $chartIncome['wk'.$lp->week] = $lp->total_in;
-                    $chartCost['wk'.$lp->week] = $lp->total_out;
-                    $chartPercent['wk'.$lp->week] = $lp->active_bonus;
-                    $chartProfit['wk'.$lp->week] = $lp->total_profit;
-                    $chartTokens['wk'.$lp->week] = $lp->tokens_circulating;
+                    $chartLabels[$lp->week] = 'Week '.$lp->week.' '.$lp->year;
+                    $chartValues[$lp->week] = $lp->coins_per_token;
+                    $chartIncome[$lp->week] = $lp->total_in;
+                    $chartCost[$lp->week] = $lp->total_out;
+                    $chartPercent[$lp->week] = $lp->active_bonus;
+                    $chartProfit[$lp->week] = $lp->total_profit;
+                    $chartTokens[$lp->week] = $lp->tokens_circulating;
                     $totalPay+=$lp->coins_per_token;
                 }
             }
