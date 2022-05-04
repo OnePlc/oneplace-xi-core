@@ -25,6 +25,7 @@ use Laminas\ApiTools\Rest\AbstractResourceListener;
 use Laminas\Db\TableGateway\TableGateway;
 use Laminas\Db\Sql\Where;
 use Laminas\Http\ClientStatic;
+use Mailjet\Resources;
 
 class UserResource extends AbstractResourceListener
 {
@@ -453,6 +454,7 @@ class UserResource extends AbstractResourceListener
                 'User_ID' => $userNew->User_ID
             ]);
 
+            /**
             $emailV = new \SendGrid\Mail\Mail();
             $emailV->setFrom("no-reply@swissfaucet.io", "Swissfaucet.io");
             $emailV->setSubject("Sending with SendGrid is Fun");
@@ -462,7 +464,7 @@ class UserResource extends AbstractResourceListener
             $email->addContent(
             "text/html", "<strong>and easy to do anywhere, even with PHP</strong>"
             );
-             * **/
+
             $emailV->setTemplateId('d-74a424e5ad4540ad8fa2585f575aff04');
             $emailV->addDynamicTemplateDatas( [
                 'token'     => $secToken,
@@ -478,6 +480,34 @@ class UserResource extends AbstractResourceListener
                 //print $response->body() . "\n";
             } catch (Exception $e) {
                 //echo 'Caught exception: '. $e->getMessage() ."\n";
+            }
+             **/
+            $mj = new \Mailjet\Client('8a3c8754bab2b0ffa7d37ded8d6a6224','fd96f8149cd72bb4e52bbd6ec59ae517',true,['version' => 'v3.1']);
+            $body = [
+                'Messages' => [
+                    [
+                        'From' => [
+                            'Email' => "admin@swissfaucet.io",
+                            'Name' => "Swissfaucet.io"
+                        ],
+                        'To' => [
+                            [
+                                'Email' => $email,
+                                'Name' => $email
+                            ]
+                        ],
+                        'Subject' => "Activate your Account",
+                        'HTMLPart' => "<p>All we need to do is validate your email address to activate your Swissfaucet account. Just click on the following link:</p><h3><a href='".$confirmLink."'>Activate Account</a></h3>",
+                        'CustomID' => "AppGettingStartedTest"
+                    ]
+                ]
+            ];
+
+            try {
+                $response = $mj->post(Resources::$Email, ['body' => $body]);
+                $response->success();
+            } catch (Exception $e) {
+
             }
         }
 

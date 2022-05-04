@@ -142,30 +142,42 @@ class TransactionHelper {
         $userInfo = TransactionHelper::$mUserTbl->select(['User_ID' => $userId]);
         if(count($userInfo) > 0) {
             $userInfo = $userInfo->current();
-            # calculate new balance
-            $newBalance = ($isOutput) ? $userInfo->token_balance-$amount : $userInfo->token_balance+$amount;
-            # Insert Transaction
-            if(TransactionHelper::$mTransTbl->insert([
-                'Transaction_ID' => $sTransactionID,
+            $txCheck = TransactionHelper::$mTransTbl->select([
                 'amount' => $amount,
-                'token_balance' => $userInfo->token_balance,
-                'token_balance_new' => $newBalance,
-                'is_output' => ($isOutput) ? 1 : 0,
                 'date' => date('Y-m-d H:i:s', time()),
                 'ref_idfs' => $refId,
                 'ref_type' => $refType,
                 'comment' => $description,
                 'user_idfs' => $userId,
-                'created_by' => ($createdBy == 0) ? $userId : $createdBy,
-            ])) {
-                # update user balance
-                TransactionHelper::$mUserTbl->update([
-                    'token_balance' => $newBalance,
-                    'last_action' => date('Y-m-d H:i:s', time()),
-                ],[
-                    'User_ID' => $userId
-                ]);
-                return $newBalance;
+            ]);
+            if($txCheck->count() == 0) {
+                # calculate new balance
+                $newBalance = ($isOutput) ? $userInfo->token_balance-$amount : $userInfo->token_balance+$amount;
+                # Insert Transaction
+                if(TransactionHelper::$mTransTbl->insert([
+                    'Transaction_ID' => $sTransactionID,
+                    'amount' => $amount,
+                    'token_balance' => $userInfo->token_balance,
+                    'token_balance_new' => $newBalance,
+                    'is_output' => ($isOutput) ? 1 : 0,
+                    'date' => date('Y-m-d H:i:s', time()),
+                    'ref_idfs' => $refId,
+                    'ref_type' => $refType,
+                    'comment' => $description,
+                    'user_idfs' => $userId,
+                    'created_by' => ($createdBy == 0) ? $userId : $createdBy,
+                ])) {
+                    # update user balance
+                    TransactionHelper::$mUserTbl->update([
+                        'token_balance' => $newBalance,
+                        'last_action' => date('Y-m-d H:i:s', time()),
+                    ],[
+                        'User_ID' => $userId
+                    ]);
+                    return $newBalance;
+                } else {
+                    return false;
+                }
             } else {
                 return false;
             }

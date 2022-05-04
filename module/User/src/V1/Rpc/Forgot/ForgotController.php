@@ -10,6 +10,7 @@ use Laminas\Db\TableGateway\TableGateway;
 use Laminas\Http\ClientStatic;
 use Laminas\Mvc\Controller\AbstractActionController;
 use Laminas\View\Model\ViewModel;
+use Mailjet\Resources;
 
 class ForgotController extends AbstractActionController
 {
@@ -167,7 +168,7 @@ class ForgotController extends AbstractActionController
             $user = $this->mUserTbl->select(['email' => $email]);
             if(count($user) > 0) {
                 $user = $user->current();
-                if($user->password_reset_date == null) {
+                if($user->password_reset_date == null || strtotime($user->password_reset_date) >= time()-(3600*24)) {
                     $secToken = $this->mMailTools->generateSecurityToken($user);
                     $confirmLink = $this->mMailTools->getSystemURL().'/#/reset-pw/'.$secToken;
                     $this->mUserTbl->update([
@@ -176,11 +177,41 @@ class ForgotController extends AbstractActionController
                     ],[
                         'User_ID' => $user->User_ID
                     ]);
+                    /**
                     $this->mMailTools->sendMail('email_forgot', [
                         'sEmailTitle' => 'Reset your Password',
                         'footerInfo' => 'Swissfaucet.io - Faucet #1',
                         'link' => $confirmLink
                     ], $this->mMailTools->getAdminEmail(), $user->email, 'Reset your Password');
+                    **/
+
+                    $mj = new \Mailjet\Client('8a3c8754bab2b0ffa7d37ded8d6a6224','fd96f8149cd72bb4e52bbd6ec59ae517',true,['version' => 'v3.1']);
+                    $body = [
+                        'Messages' => [
+                            [
+                                'From' => [
+                                    'Email' => "admin@swissfaucet.io",
+                                    'Name' => "Swissfaucet.io"
+                                ],
+                                'To' => [
+                                    [
+                                        'Email' => $email,
+                                        'Name' => $email
+                                    ]
+                                ],
+                                'Subject' => "Set a new Password",
+                                'HTMLPart' => "<p>You have requested to set a new password. If it was not you, you can safely ignore this email and nothing will happen. Otherwise use this link to set a new password:</p><h3><a href='".$confirmLink."'>Set new Passowrd</a></h3>",
+                                'CustomID' => "AppGettingStartedTest"
+                            ]
+                        ]
+                    ];
+
+                    try {
+                        $response = $mj->post(Resources::$Email, ['body' => $body]);
+                        $response->success();
+                    } catch (Exception $e) {
+
+                    }
 
                     return [
                         'status' => 'sent',

@@ -16,11 +16,22 @@ return [
                     ],
                 ],
             ],
+            'backend.rpc.short-earnings' => [
+                'type' => 'Segment',
+                'options' => [
+                    'route' => '/backend/shearn',
+                    'defaults' => [
+                        'controller' => 'Backend\\V1\\Rpc\\ShortEarnings\\Controller',
+                        'action' => 'shortEarnings',
+                    ],
+                ],
+            ],
         ],
     ],
     'api-tools-versioning' => [
         'uri' => [
             0 => 'backend.rest.contest',
+            1 => 'backend.rpc.short-earnings',
         ],
     ],
     'api-tools-rest' => [
@@ -51,6 +62,7 @@ return [
     'api-tools-content-negotiation' => [
         'controllers' => [
             'Backend\\V1\\Rest\\Contest\\Controller' => 'HalJson',
+            'Backend\\V1\\Rpc\\ShortEarnings\\Controller' => 'Json',
         ],
         'accept_whitelist' => [
             'Backend\\V1\\Rest\\Contest\\Controller' => [
@@ -58,9 +70,18 @@ return [
                 1 => 'application/hal+json',
                 2 => 'application/json',
             ],
+            'Backend\\V1\\Rpc\\ShortEarnings\\Controller' => [
+                0 => 'application/vnd.backend.v1+json',
+                1 => 'application/json',
+                2 => 'application/*+json',
+            ],
         ],
         'content_type_whitelist' => [
             'Backend\\V1\\Rest\\Contest\\Controller' => [
+                0 => 'application/vnd.backend.v1+json',
+                1 => 'application/json',
+            ],
+            'Backend\\V1\\Rpc\\ShortEarnings\\Controller' => [
                 0 => 'application/vnd.backend.v1+json',
                 1 => 'application/json',
             ],
@@ -100,6 +121,32 @@ return [
                     'DELETE' => true,
                 ],
             ],
+            'Backend\\V1\\Rpc\\ShortEarnings\\Controller' => [
+                'actions' => [
+                    'shortEarnings' => [
+                        'GET' => false,
+                        'POST' => true,
+                        'PUT' => true,
+                        'PATCH' => false,
+                        'DELETE' => false,
+                    ],
+                ],
+            ],
+        ],
+    ],
+    'controllers' => [
+        'factories' => [
+            'Backend\\V1\\Rpc\\ShortEarnings\\Controller' => \Backend\V1\Rpc\ShortEarnings\ShortEarningsControllerFactory::class,
+        ],
+    ],
+    'api-tools-rpc' => [
+        'Backend\\V1\\Rpc\\ShortEarnings\\Controller' => [
+            'service_name' => 'ShortEarnings',
+            'http_methods' => [
+                0 => 'POST',
+                1 => 'PUT',
+            ],
+            'route_name' => 'backend.rpc.short-earnings',
         ],
     ],
 ];
