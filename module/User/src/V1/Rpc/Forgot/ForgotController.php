@@ -200,7 +200,7 @@ class ForgotController extends AbstractActionController
                                     ]
                                 ],
                                 'Subject' => "Set a new Password",
-                                'HTMLPart' => "<p>You have requested to set a new password. If it was not you, you can safely ignore this email and nothing will happen. Otherwise use this link to set a new password:</p><h3><a href='".$confirmLink."'>Set new Passowrd</a></h3>",
+                                'HTMLPart' => "<p>You have requested to set a new password. If it was not you, you can safely ignore this email and nothing will happen. Otherwise use this link to set a new password:</p><h3><a href='".$confirmLink."'>Set new Password</a></h3>",
                                 'CustomID' => "AppGettingStartedTest"
                             ]
                         ]

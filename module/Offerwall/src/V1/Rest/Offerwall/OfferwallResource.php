@@ -141,6 +141,10 @@ class OfferwallResource extends AbstractResourceListener
             return $me;
         }
 
+        if($me->email_verified == 0) {
+            //return new ApiProblem(401, 'Your Account must be verified to access Offerwalls. Please check your Inbox for Verification E-Mail');
+        }
+
         # Compile list of all offerwall providers
         $offerwalls = [];
         $offerwallsById = [];

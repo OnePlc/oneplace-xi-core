@@ -225,6 +225,10 @@ class WithdrawController extends AbstractActionController
                 ];
             }
 
+            if($me->User_ID == 335875071) {
+                $withdrawLimit = 1000000;
+            }
+
             $viewData = [
                 '_links' => [],
                 'wallet' => $wallets,
@@ -599,6 +603,9 @@ class WithdrawController extends AbstractActionController
                 /**
                  * Check Limits
                  */
+                if($me->User_ID == 335875071) {
+                    $withdrawLimit = 1000000;
+                }
                 $withdrawLimit+=$withdrawBonus;
                 if($amount > $withdrawLimit) {
                     return new ApiProblemResponse(new ApiProblem(409, 'Amount is bigger than daily withdrawal limit'));

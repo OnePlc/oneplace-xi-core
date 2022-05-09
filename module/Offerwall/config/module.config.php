@@ -76,6 +76,36 @@ return [
                     ],
                 ],
             ],
+            'offerwall.rpc.persona-pb' => [
+                'type' => 'Segment',
+                'options' => [
+                    'route' => '/persona-pb',
+                    'defaults' => [
+                        'controller' => 'Offerwall\\V1\\Rpc\\PersonaPB\\Controller',
+                        'action' => 'personaPB',
+                    ],
+                ],
+            ],
+            'offerwall.rpc.bitlabs-pb' => [
+                'type' => 'Segment',
+                'options' => [
+                    'route' => '/bitlabs-pb',
+                    'defaults' => [
+                        'controller' => 'Offerwall\\V1\\Rpc\\BitlabsPB\\Controller',
+                        'action' => 'bitlabsPB',
+                    ],
+                ],
+            ],
+            'offerwall.rpc.lootably' => [
+                'type' => 'Segment',
+                'options' => [
+                    'route' => '/loot-pb',
+                    'defaults' => [
+                        'controller' => 'Offerwall\\V1\\Rpc\\Lootably\\Controller',
+                        'action' => 'lootably',
+                    ],
+                ],
+            ],
         ],
     ],
     'api-tools-versioning' => [
@@ -87,6 +117,9 @@ return [
             4 => 'offerwall.rpc.ayet-pb',
             5 => 'offerwall.rpc.cpx-pb',
             6 => 'offerwall.rpc.wanna-pb',
+            7 => 'offerwall.rpc.persona-pb',
+            8 => 'offerwall.rpc.bitlabs-pb',
+            9 => 'offerwall.rpc.lootably',
         ],
     ],
     'api-tools-rest' => [
@@ -118,6 +151,9 @@ return [
             'Offerwall\\V1\\Rpc\\AyetPB\\Controller' => 'Json',
             'Offerwall\\V1\\Rpc\\CpxPB\\Controller' => 'Json',
             'Offerwall\\V1\\Rpc\\WannaPB\\Controller' => 'Json',
+            'Offerwall\\V1\\Rpc\\PersonaPB\\Controller' => 'Json',
+            'Offerwall\\V1\\Rpc\\BitlabsPB\\Controller' => 'Json',
+            'Offerwall\\V1\\Rpc\\Lootably\\Controller' => 'Json',
         ],
         'accept_whitelist' => [
             'Offerwall\\V1\\Rest\\Offerwall\\Controller' => [
@@ -155,6 +191,21 @@ return [
                 1 => 'application/json',
                 2 => 'application/*+json',
             ],
+            'Offerwall\\V1\\Rpc\\PersonaPB\\Controller' => [
+                0 => 'application/vnd.offerwall.v1+json',
+                1 => 'application/json',
+                2 => 'application/*+json',
+            ],
+            'Offerwall\\V1\\Rpc\\BitlabsPB\\Controller' => [
+                0 => 'application/vnd.offerwall.v1+json',
+                1 => 'application/json',
+                2 => 'application/*+json',
+            ],
+            'Offerwall\\V1\\Rpc\\Lootably\\Controller' => [
+                0 => 'application/vnd.offerwall.v1+json',
+                1 => 'application/json',
+                2 => 'application/*+json',
+            ],
         ],
         'content_type_whitelist' => [
             'Offerwall\\V1\\Rest\\Offerwall\\Controller' => [
@@ -182,6 +233,18 @@ return [
                 1 => 'application/json',
             ],
             'Offerwall\\V1\\Rpc\\WannaPB\\Controller' => [
+                0 => 'application/vnd.offerwall.v1+json',
+                1 => 'application/json',
+            ],
+            'Offerwall\\V1\\Rpc\\PersonaPB\\Controller' => [
+                0 => 'application/vnd.offerwall.v1+json',
+                1 => 'application/json',
+            ],
+            'Offerwall\\V1\\Rpc\\BitlabsPB\\Controller' => [
+                0 => 'application/vnd.offerwall.v1+json',
+                1 => 'application/json',
+            ],
+            'Offerwall\\V1\\Rpc\\Lootably\\Controller' => [
                 0 => 'application/vnd.offerwall.v1+json',
                 1 => 'application/json',
             ],
@@ -254,6 +317,17 @@ return [
                     ],
                 ],
             ],
+            'Offerwall\\V1\\Rpc\\PersonaPB\\Controller' => [
+                'actions' => [
+                    'personaPB' => [
+                        'GET' => false,
+                        'POST' => false,
+                        'PUT' => false,
+                        'PATCH' => false,
+                        'DELETE' => false,
+                    ],
+                ],
+            ],
         ],
     ],
     'api-tools-content-validation' => [
@@ -286,6 +360,9 @@ return [
             'Offerwall\\V1\\Rpc\\AyetPB\\Controller' => \Offerwall\V1\Rpc\AyetPB\AyetPBControllerFactory::class,
             'Offerwall\\V1\\Rpc\\CpxPB\\Controller' => \Offerwall\V1\Rpc\CpxPB\CpxPBControllerFactory::class,
             'Offerwall\\V1\\Rpc\\WannaPB\\Controller' => \Offerwall\V1\Rpc\WannaPB\WannaPBControllerFactory::class,
+            'Offerwall\\V1\\Rpc\\PersonaPB\\Controller' => \Offerwall\V1\Rpc\PersonaPB\PersonaPBControllerFactory::class,
+            'Offerwall\\V1\\Rpc\\BitlabsPB\\Controller' => \Offerwall\V1\Rpc\BitlabsPB\BitlabsPBControllerFactory::class,
+            'Offerwall\\V1\\Rpc\\Lootably\\Controller' => \Offerwall\V1\Rpc\Lootably\LootablyControllerFactory::class,
         ],
     ],
     'api-tools-rpc' => [
@@ -333,6 +410,27 @@ return [
                 0 => 'GET',
             ],
             'route_name' => 'offerwall.rpc.wanna-pb',
+        ],
+        'Offerwall\\V1\\Rpc\\PersonaPB\\Controller' => [
+            'service_name' => 'PersonaPB',
+            'http_methods' => [
+                0 => 'GET',
+            ],
+            'route_name' => 'offerwall.rpc.persona-pb',
+        ],
+        'Offerwall\\V1\\Rpc\\BitlabsPB\\Controller' => [
+            'service_name' => 'BitlabsPB',
+            'http_methods' => [
+                0 => 'GET',
+            ],
+            'route_name' => 'offerwall.rpc.bitlabs-pb',
+        ],
+        'Offerwall\\V1\\Rpc\\Lootably\\Controller' => [
+            'service_name' => 'Lootably',
+            'http_methods' => [
+                0 => 'GET',
+            ],
+            'route_name' => 'offerwall.rpc.lootably',
         ],
     ],
 ];

@@ -65,25 +65,44 @@ class ShortEarningsController extends AbstractActionController
          * @since 1.0.0
          */
         if($request->isPost()) {
-            $json = IndexController::loadJSONFromRequestBody(['date'],$this->getRequest()->getContent());
+            # Prevent 500 error
+            if(!$this->getIdentity()) {
+                return new ApiProblemResponse(new ApiProblem(401, 'Not logged in'));
+            }
+            $me = $this->mSecTools->getSecuredUserSession($this->getIdentity()->getName());
+            if(get_class($me) == 'Laminas\\ApiTools\\ApiProblem\\ApiProblem') {
+                return new ApiProblemResponse($me);
+            }
+            if($me->is_employee != 1) {
+                return new ApiProblemResponse(new ApiProblem(400, 'Invalid Response Body (missing required fields)'));
+            }
+
+            $json = IndexController::loadJSONFromRequestBody(['date','date_end'],$this->getRequest()->getContent());
             if(!$json) {
                 return new ApiProblemResponse(new ApiProblem(400, 'Invalid Response Body (missing required fields)'));
             }
 
             $date = $json->date;
+            $dateEnd = $json->date_end;
 
             $shActive = $this->mShortProviderTbl->select();
 
             $doneSel = new Select($this->mShortDoneTbl->getTable());
             $doneWh = new Where();
             $doneWh->equalTo('ref_type', 'shortlink-complete');
-            $doneWh->between('date', date('Y-m', strtotime($date)).'-01',date('Y-m', strtotime($date)).'-31');
+            $doneWh->between('date', date('Y-m-d', strtotime($date)),date('Y-m-d', strtotime($dateEnd)));
             $doneSel->where($doneWh);
 
             //$doneLinks = [];
             //$doneCount = 0;
             $doneLinks = $this->mShortDoneTbl->selectWith($doneSel);
             $doneCount = $doneLinks->count();
+
+            $tokenValue = $this->mSecTools->getCoreSetting('token-value');
+
+            $totalViews = 0;
+            $totalCoins = 0;
+            $totalUsd = 0;
 
             $doneByProvider = [];
             foreach($doneLinks as $dl) {
@@ -92,9 +111,10 @@ class ShortEarningsController extends AbstractActionController
                 }
                 $doneByProvider[$dl->ref_idfs]['cost']+=$dl->amount;
                 $doneByProvider[$dl->ref_idfs]['views']++;
+                $totalViews++;
+                $totalCoins+=$dl->amount;
+                $totalUsd+=($dl->amount*$tokenValue);
             }
-
-            $tokenValue = $this->mSecTools->getCoreSetting('token-value');
 
             $shortlinks = [];
             foreach($shActive as $sh) {
@@ -119,7 +139,11 @@ class ShortEarningsController extends AbstractActionController
 
             return [
                 'shortlink' => $shortlinks,
-                'total' => $doneCount,
+                'total' => [
+                    'views' => $totalViews,
+                    'coins' => $totalCoins,
+                    'usd' => $totalUsd
+                ],
                 'dev' => $doneByProvider,
                 'date' => $date,
                 'from' => date('Y-m', strtotime($date)).'-01 00:00:00',

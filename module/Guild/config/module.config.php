@@ -56,6 +56,16 @@ return [
                     ],
                 ],
             ],
+            'guild.rpc.statistics' => [
+                'type' => 'Segment',
+                'options' => [
+                    'route' => '/guild-stats',
+                    'defaults' => [
+                        'controller' => 'Guild\\V1\\Rpc\\Statistics\\Controller',
+                        'action' => 'statistics',
+                    ],
+                ],
+            ],
         ],
     ],
     'api-tools-versioning' => [
@@ -65,6 +75,7 @@ return [
             2 => 'guild.rpc.join',
             3 => 'guild.rpc.chat',
             4 => 'guild.rest.rank',
+            5 => 'guild.rpc.statistics',
         ],
     ],
     'api-tools-rest' => [
@@ -120,6 +131,7 @@ return [
             'Guild\\V1\\Rpc\\Join\\Controller' => 'Json',
             'Guild\\V1\\Rpc\\Chat\\Controller' => 'Json',
             'Guild\\V1\\Rest\\Rank\\Controller' => 'HalJson',
+            'Guild\\V1\\Rpc\\Statistics\\Controller' => 'Json',
         ],
         'accept_whitelist' => [
             'Guild\\V1\\Rest\\Guild\\Controller' => [
@@ -147,6 +159,11 @@ return [
                 1 => 'application/hal+json',
                 2 => 'application/json',
             ],
+            'Guild\\V1\\Rpc\\Statistics\\Controller' => [
+                0 => 'application/vnd.guild.v1+json',
+                1 => 'application/json',
+                2 => 'application/*+json',
+            ],
         ],
         'content_type_whitelist' => [
             'Guild\\V1\\Rest\\Guild\\Controller' => [
@@ -166,6 +183,10 @@ return [
                 1 => 'application/json',
             ],
             'Guild\\V1\\Rest\\Rank\\Controller' => [
+                0 => 'application/vnd.guild.v1+json',
+                1 => 'application/json',
+            ],
+            'Guild\\V1\\Rpc\\Statistics\\Controller' => [
                 0 => 'application/vnd.guild.v1+json',
                 1 => 'application/json',
             ],
@@ -363,6 +384,17 @@ return [
                     'DELETE' => true,
                 ],
             ],
+            'Guild\\V1\\Rpc\\Statistics\\Controller' => [
+                'actions' => [
+                    'statistics' => [
+                        'GET' => true,
+                        'POST' => false,
+                        'PUT' => false,
+                        'PATCH' => false,
+                        'DELETE' => false,
+                    ],
+                ],
+            ],
         ],
     ],
     'controllers' => [
@@ -370,6 +402,7 @@ return [
             'Guild\\V1\\Rpc\\Bank\\Controller' => \Guild\V1\Rpc\Bank\BankControllerFactory::class,
             'Guild\\V1\\Rpc\\Join\\Controller' => \Guild\V1\Rpc\Join\JoinControllerFactory::class,
             'Guild\\V1\\Rpc\\Chat\\Controller' => \Guild\V1\Rpc\Chat\ChatControllerFactory::class,
+            'Guild\\V1\\Rpc\\Statistics\\Controller' => \Guild\V1\Rpc\Statistics\StatisticsControllerFactory::class,
         ],
     ],
     'api-tools-rpc' => [
@@ -399,6 +432,13 @@ return [
                 1 => 'GET',
             ],
             'route_name' => 'guild.rpc.chat',
+        ],
+        'Guild\\V1\\Rpc\\Statistics\\Controller' => [
+            'service_name' => 'Statistics',
+            'http_methods' => [
+                0 => 'GET',
+            ],
+            'route_name' => 'guild.rpc.statistics',
         ],
     ],
 ];
