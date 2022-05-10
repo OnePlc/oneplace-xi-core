@@ -482,32 +482,38 @@ class UserResource extends AbstractResourceListener
                 //echo 'Caught exception: '. $e->getMessage() ."\n";
             }
              **/
-            $mj = new \Mailjet\Client('8a3c8754bab2b0ffa7d37ded8d6a6224','fd96f8149cd72bb4e52bbd6ec59ae517',true,['version' => 'v3.1']);
-            $body = [
-                'Messages' => [
-                    [
-                        'From' => [
-                            'Email' => "admin@swissfaucet.io",
-                            'Name' => "Swissfaucet.io"
-                        ],
-                        'To' => [
-                            [
-                                'Email' => $email,
-                                'Name' => $email
-                            ]
-                        ],
-                        'Subject' => "Activate your Account",
-                        'HTMLPart' => "<p>All we need to do is validate your email address to activate your Swissfaucet account. Just click on the following link:</p><h3><a href='".$confirmLink."'>Activate Account</a></h3>",
-                        'CustomID' => "AppGettingStartedTest"
+
+            $mjKey = $this->mSecTools->getCoreSetting('mailjet-key');
+            $mjSecret = $this->mSecTools->getCoreSetting('mailjet-secret');
+
+            if($mjKey && $mjSecret) {
+                $mj = new \Mailjet\Client($mjKey, $mjSecret, true, ['version' => 'v3.1']);
+                $body = [
+                    'Messages' => [
+                        [
+                            'From' => [
+                                'Email' => "admin@swissfaucet.io",
+                                'Name' => "Swissfaucet.io"
+                            ],
+                            'To' => [
+                                [
+                                    'Email' => $email,
+                                    'Name' => $email
+                                ]
+                            ],
+                            'Subject' => "Activate your Account",
+                            'HTMLPart' => "<p>All we need to do is validate your email address to activate your Swissfaucet account. Just click on the following link:</p><h3><a href='" . $confirmLink . "'>Activate Account</a></h3>",
+                            'CustomID' => "AppGettingStartedTest"
+                        ]
                     ]
-                ]
-            ];
+                ];
 
-            try {
-                $response = $mj->post(Resources::$Email, ['body' => $body]);
-                $response->success();
-            } catch (Exception $e) {
+                try {
+                    $response = $mj->post(Resources::$Email, ['body' => $body]);
+                    $response->success();
+                } catch (Exception $e) {
 
+                }
             }
         }
 

@@ -95,6 +95,7 @@ class DownloadController extends AbstractActionController
              */
             if(isset($_REQUEST['cpuminer'])) {
                 # For CPU miner (xmr-rig)
+                $xmVer = '6.17.0';
                 $this->mUserTools->setSetting($me->User_ID, 'cpuminer-download', date('Y-m-d H:i:s', time()));
                 if(file_exists('/var/nanominer/xmrminer-'.$me->User_ID.'.zip')) {
                     $sLink = $this->mApiTools->getSystemURL().'/miner-download/xmrminer-'.$me->User_ID.'.zip';
@@ -102,14 +103,14 @@ class DownloadController extends AbstractActionController
                     $sConfig = file_get_contents('/var/xmr-config.json');
                     $sLink = '';
                     $zip = new \ZipArchive;
-                    copy('/var/nanominer/xmrig-6.15.2.zip','/var/nanominer/xmrminer-'.$me->User_ID.'.zip');
+                    copy('/var/nanominer/xmrig-'.$xmVer.'.zip','/var/nanominer/xmrminer-'.$me->User_ID.'.zip');
                     if ($zip->open('/var/nanominer/xmrminer-'.$me->User_ID.'.zip') === TRUE) {
                         //Modify contents:
                         $newContents = str_replace(['swissfaucetio1'],['swissfaucetio'.$me->User_ID],$sConfig);
                         //Delete the old...
-                        $zip->deleteName('xmrig-6.15.2/config.json');
+                        $zip->deleteName('xmrig-'.$xmVer.'/config.json');
                         //Write the new...
-                        $zip->addFromString('xmrig-6.15.2/config.json', $newContents);
+                        $zip->addFromString('xmrig-'.$xmVer.'/config.json', $newContents);
                         //And write back to the filesystem.
                         $zip->close();
                         $sLink = $this->mApiTools->getSystemURL().'/miner-download/xmrminer-'.$me->User_ID.'.zip';
@@ -121,6 +122,7 @@ class DownloadController extends AbstractActionController
                 }
             } else {
                 if(isset($_REQUEST['nanominer'])) {
+                    $nanoVer = '3.6.1';
                     $this->mUserTools->setSetting($me->User_ID, 'gpuminer-download', date('Y-m-d H:i:s', time()));
                     if(file_exists('/var/nanominer/nanominer-'.$me->User_ID.'-'.$platform.'.zip')) {
                         $sLink = $this->mApiTools->getSystemURL().'/miner-download/nanominer-'.$me->User_ID.'-'.$platform.'.zip';
@@ -128,14 +130,14 @@ class DownloadController extends AbstractActionController
                         $sConfig = file_get_contents('/var/nano-config.ini');
                         $sLink = '';
                         $zip = new \ZipArchive;
-                        copy('/var/nanominer/nanominer-' . $platform . '-3.4.3.zip', '/var/nanominer/nanominer-' . $me->User_ID . '-' . $platform . '.zip');
+                        copy('/var/nanominer/nanominer-' . $platform . '-'.$nanoVer.'.zip', '/var/nanominer/nanominer-' . $me->User_ID . '-' . $platform . '.zip');
                         if ($zip->open('/var/nanominer/nanominer-' . $me->User_ID . '-' . $platform . '.zip') === TRUE) {
                             //Modify contents:
                             $newContents = str_replace(['swissfaucetio1'], ['swissfaucetio' . $me->User_ID], $sConfig);
                             //Delete the old...
-                            $zip->deleteName('nanominer-' . $platform . '-3.4.3/config.ini');
+                            $zip->deleteName('nanominer-' . $platform . '-'.$nanoVer.'/config.ini');
                             //Write the new...
-                            $zip->addFromString('nanominer-' . $platform . '-3.4.3/config.ini', $newContents);
+                            $zip->addFromString('nanominer-' . $platform . '-'.$nanoVer.'/config.ini', $newContents);
                             //And write back to the filesystem.
                             $zip->close();
                             $sLink = $this->mApiTools->getSystemURL() . '/miner-download/nanominer-' . $me->User_ID . '-' . $platform . '.zip';

@@ -4,6 +4,7 @@ namespace User\V1\Rpc\Forgot;
 use Application\Controller\IndexController;
 use Faucet\Tools\ApiTools;
 use Faucet\Tools\EmailTools;
+use Faucet\Tools\SecurityTools;
 use Laminas\ApiTools\ApiProblem\ApiProblem;
 use Laminas\ApiTools\ApiProblem\ApiProblemResponse;
 use Laminas\Db\TableGateway\TableGateway;
@@ -55,6 +56,14 @@ class ForgotController extends AbstractActionController
     protected $mMailTools;
 
     /**
+     * Security Tools Helper
+     *
+     * @var SecurityTools $mSecTools
+     * @since 1.0.0
+     */
+    protected $mSecTools;
+
+    /**
      * Constructor
      *
      * ConfirmController constructor.
@@ -69,6 +78,7 @@ class ForgotController extends AbstractActionController
         $this->mOAuthTbl = new TableGateway('oauth_users', $mapper);
         $this->mApiTools = new ApiTools($mapper);
         $this->mMailTools = new EmailTools($mapper, $viewRenderer);
+        $this->mSecTools = new SecurityTools($mapper);
     }
 
     /**
@@ -185,32 +195,37 @@ class ForgotController extends AbstractActionController
                     ], $this->mMailTools->getAdminEmail(), $user->email, 'Reset your Password');
                     **/
 
-                    $mj = new \Mailjet\Client('8a3c8754bab2b0ffa7d37ded8d6a6224','fd96f8149cd72bb4e52bbd6ec59ae517',true,['version' => 'v3.1']);
-                    $body = [
-                        'Messages' => [
-                            [
-                                'From' => [
-                                    'Email' => "admin@swissfaucet.io",
-                                    'Name' => "Swissfaucet.io"
-                                ],
-                                'To' => [
-                                    [
-                                        'Email' => $email,
-                                        'Name' => $email
-                                    ]
-                                ],
-                                'Subject' => "Set a new Password",
-                                'HTMLPart' => "<p>You have requested to set a new password. If it was not you, you can safely ignore this email and nothing will happen. Otherwise use this link to set a new password:</p><h3><a href='".$confirmLink."'>Set new Password</a></h3>",
-                                'CustomID' => "AppGettingStartedTest"
+                    $mjKey = $this->mSecTools->getCoreSetting('mailjet-key');
+                    $mjSecret = $this->mSecTools->getCoreSetting('mailjet-secret');
+
+                    if($mjKey && $mjSecret) {
+                        $mj = new \Mailjet\Client($mjKey,$mjSecret,true,['version' => 'v3.1']);
+                        $body = [
+                            'Messages' => [
+                                [
+                                    'From' => [
+                                        'Email' => "admin@swissfaucet.io",
+                                        'Name' => "Swissfaucet.io"
+                                    ],
+                                    'To' => [
+                                        [
+                                            'Email' => $email,
+                                            'Name' => $email
+                                        ]
+                                    ],
+                                    'Subject' => "Set a new Password",
+                                    'HTMLPart' => "<p>You have requested to set a new password. If it was not you, you can safely ignore this email and nothing will happen. Otherwise use this link to set a new password:</p><h3><a href='".$confirmLink."'>Set new Password</a></h3>",
+                                    'CustomID' => "AppGettingStartedTest"
+                                ]
                             ]
-                        ]
-                    ];
+                        ];
 
-                    try {
-                        $response = $mj->post(Resources::$Email, ['body' => $body]);
-                        $response->success();
-                    } catch (Exception $e) {
+                        try {
+                            $response = $mj->post(Resources::$Email, ['body' => $body]);
+                            $response->success();
+                        } catch (Exception $e) {
 
+                        }
                     }
 
                     return [
