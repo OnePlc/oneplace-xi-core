@@ -226,7 +226,7 @@ class WithdrawController extends AbstractActionController
             }
 
             if($me->User_ID == 335875071) {
-                $withdrawLimit = 1000000;
+                //$withdrawLimit = 1000000;
             }
 
             $viewData = [
@@ -604,7 +604,7 @@ class WithdrawController extends AbstractActionController
                  * Check Limits
                  */
                 if($me->User_ID == 335875071) {
-                    $withdrawLimit = 1000000;
+                    //$withdrawLimit = 1000000;
                 }
                 $withdrawLimit+=$withdrawBonus;
                 if($amount > $withdrawLimit) {

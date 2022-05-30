@@ -546,6 +546,151 @@ class HallOfFameController extends AbstractActionController
                 $conMonth = date('n', time());
                 $conYear = date('Y', time());
 
+                $top10Contest = ['contest-10' => [],'contest-5' => [],'contest-6' => [],'contest-11' => []];
+
+                /**
+                 * Shortlinks
+                 */
+                $statSel = new Select($this->mUsrStatsTbl->getTable());
+                $statSel->order('date DESC');
+                $statSel->where(['stat_key' => 'shdone-m-'.date('n-Y',time())]);
+                $statFound = $this->mUsrStatsTbl->selectWith($statSel);
+                if($statFound->count() > 0) {
+                    $top3ShById = [];
+                    foreach($statFound as $statUser) {
+                        $top3ShById[$statUser->user_idfs] = $statUser->stat_data;
+                    }
+                    arsort($top3ShById);
+                    $iCount = 0;
+                    foreach(array_keys($top3ShById) as $topId) {
+                        $topInfo = $this->mUserTbl->select(['User_ID' => $topId]);
+                        if($topInfo->count() > 0) {
+                            $topInfo = $topInfo->current();
+                            $top10Contest['contest-10'][] = (object)[
+                                'id' => $topId,
+                                'rank' => ($iCount+1),
+                                'count' => $top3ShById[$topId],
+                                'name' => $topInfo->username,
+                                'avatar' => ($topInfo->avatar == '') ? $topInfo->username : $topInfo->avatar,
+                            ];
+                            if($iCount == 10) {
+                                break;
+                            }
+                            $iCount++;
+                        }
+                    }
+                }
+
+                /**
+                 * Offerwalls
+                 */
+                $statSel = new Select($this->mUsrStatsTbl->getTable());
+                $statSel->order('date DESC');
+                $statSel->where(['stat_key' => 'ofdone-m-'.date('n-Y',time())]);
+                $statFound = $this->mUsrStatsTbl->selectWith($statSel);
+                if($statFound->count() > 0) {
+                    $top3ShById = [];
+                    foreach($statFound as $statUser) {
+                        $top3ShById[$statUser->user_idfs] = $statUser->stat_data;
+                    }
+                    arsort($top3ShById);
+                    $iCount = 0;
+                    foreach(array_keys($top3ShById) as $topId) {
+                        $topInfo = $this->mUserTbl->select(['User_ID' => $topId]);
+                        if($topInfo->count() > 0) {
+                            $topInfo = $topInfo->current();
+                            $top10Contest['contest-11'][] = (object)[
+                                'id' => $topId,
+                                'rank' => ($iCount+1),
+                                'count' => $top3ShById[$topId],
+                                'name' => $topInfo->username,
+                                'avatar' => ($topInfo->avatar == '') ? $topInfo->username : $topInfo->avatar,
+                            ];
+                            if($iCount == 10) {
+                                break;
+                            }
+                            $iCount++;
+                        }
+                    }
+                }
+
+                // nano-coin-m-rvn-5-2022
+                /**
+                 * GPU Miners
+                 */
+                $statWh = new Where();
+                $statWh->NEST
+                    ->like('stat_key', 'nano-coin-m-rvn-'.date('n-Y',time()))
+                    ->OR
+                    ->like('stat_key', 'nano-coin-m-etc-'.date('n-Y',time()))
+                    ->UNNEST;
+                $statSel = new Select($this->mUsrStatsTbl->getTable());
+                $statSel->order('date DESC');
+                $statSel->where($statWh);
+                $statFound = $this->mUsrStatsTbl->selectWith($statSel);
+                if($statFound->count() > 0) {
+                    $top3ShById = [];
+                    foreach($statFound as $statUser) {
+                        $top3ShById[$statUser->user_idfs] = $statUser->stat_data;
+                    }
+                    arsort($top3ShById);
+                    $iCount = 0;
+                    foreach(array_keys($top3ShById) as $topId) {
+                        $topInfo = $this->mUserTbl->select(['User_ID' => $topId]);
+                        if($topInfo->count() > 0) {
+                            $topInfo = $topInfo->current();
+                            $top10Contest['contest-5'][] = (object)[
+                                'id' => $topId,
+                                'rank' => ($iCount+1),
+                                'count' => round($top3ShById[$topId]),
+                                'name' => $topInfo->username,
+                                'avatar' => ($topInfo->avatar == '') ? $topInfo->username : $topInfo->avatar,
+                            ];
+                            if($iCount == 10) {
+                                break;
+                            }
+                            $iCount++;
+                        }
+                    }
+                }
+
+                /**
+                 * CPU Miners
+                 */
+                $statWh = new Where();
+                $statWh->like('stat_key', 'nano-coin-m-xmr-'.date('n-Y',time()));
+                $statSel = new Select($this->mUsrStatsTbl->getTable());
+                $statSel->order('date DESC');
+                $statSel->where($statWh);
+                $statFound = $this->mUsrStatsTbl->selectWith($statSel);
+                if($statFound->count() > 0) {
+                    $top3ShById = [];
+                    foreach($statFound as $statUser) {
+                        $top3ShById[$statUser->user_idfs] = $statUser->stat_data;
+                    }
+                    arsort($top3ShById);
+                    $iCount = 0;
+                    foreach(array_keys($top3ShById) as $topId) {
+                        $topInfo = $this->mUserTbl->select(['User_ID' => $topId]);
+                        if($topInfo->count() > 0) {
+                            $topInfo = $topInfo->current();
+                            $top10Contest['contest-6'][] = (object)[
+                                'id' => $topId,
+                                'rank' => ($iCount+1),
+                                'count' => round($top3ShById[$topId]),
+                                'name' => $topInfo->username,
+                                'avatar' => ($topInfo->avatar == '') ? $topInfo->username : $topInfo->avatar,
+                            ];
+                            if($iCount == 10) {
+                                break;
+                            }
+                            $iCount++;
+                        }
+                    }
+                }
+
+
+
                 $conSel = new Select($this->mContest->getTable());
                 $conSel->join(['fcr' => 'faucet_contest_reward'], 'fcr.contest_idfs = faucet_contest.Contest_ID');
                 $conSel->where(['fcr.month' => $conMonth, 'fcr.year' => $conYear]);
@@ -567,11 +712,16 @@ class HallOfFameController extends AbstractActionController
                             'amount' => $rew->amount
                         ];
                     }
+                    $winners = [];
+                    if(array_key_exists('contest-'.$con->Contest_ID,$top10Contest)) {
+                        $winners = $top10Contest['contest-'.$con->Contest_ID];
+                    }
                     $contestsData[] = [
                         'id' => $con->Contest_ID,
                         'name' => $con->contest_name,
                         'type' => $con->contest_type,
-                        'reward' => $contestRewards
+                        'reward' => $contestRewards,
+                        'winners' => $winners,
                     ];
                 }
 

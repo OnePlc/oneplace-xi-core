@@ -203,7 +203,7 @@ class BitlabsPBController extends AbstractActionController
                                 'transaction_id' => $txId,
                                 'amount' => $amount,
                                 'amount_usd' => $amountUsd,
-                                'offer_id' => $offerId,
+                                'offer_id' => $offerId.'-'.$oCheck->count(),
                                 'hash' => $hash,
                                 'label' => $offerName,
                                 'date_started' => '0000-00-00 00:00:00',
