@@ -98,6 +98,10 @@ class LoginController extends AbstractActionController
             $captchaKey = 'recaptcha-app-secretkey';
         }
 
+        if($captchaMode == 'app') {
+            return new ApiProblemResponse(new ApiProblem(403, 'The Android app is disabled. Please use our website swissfaucet.io in your browser, you can login with your existing user.'));
+        }
+
         # check captcha (google v2)
         $captchaSecret = $this->mSettingsTbl->select(['settings_key' => $captchaKey]);
         if(count($captchaSecret) > 0) {

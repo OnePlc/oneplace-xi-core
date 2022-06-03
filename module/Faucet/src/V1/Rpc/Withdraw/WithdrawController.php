@@ -229,6 +229,8 @@ class WithdrawController extends AbstractActionController
                 //$withdrawLimit = 1000000;
             }
 
+            $nextPay = $this->mSecTools->getCoreSetting('payment-next');
+
             $viewData = [
                 '_links' => [],
                 'wallet' => $wallets,
@@ -236,7 +238,8 @@ class WithdrawController extends AbstractActionController
                 'daily_limit_bonus' => $withdrawBonus,
                 'daily_limit' => $withdrawLimit+$withdrawBonus,
                 'token_val' => $tokenValue,
-                'daily_left' => (($withdrawLimit+$withdrawBonus) - $coinsWithdrawnToday)
+                'daily_left' => (($withdrawLimit+$withdrawBonus) - $coinsWithdrawnToday),
+                'next_payment' => $nextPay
             ];
 
             $hasMessage = $this->mSecTools->getCoreSetting('faucet-withdraw-msg-content');

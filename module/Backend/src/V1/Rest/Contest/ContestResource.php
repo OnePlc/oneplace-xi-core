@@ -7,6 +7,7 @@ use Laminas\ApiTools\ApiProblem\ApiProblem;
 use Laminas\ApiTools\ContentNegotiation\ViewModel;
 use Laminas\ApiTools\Rest\AbstractResourceListener;
 use Laminas\Db\Sql\Select;
+use Laminas\Db\Sql\Where;
 use Laminas\Db\TableGateway\TableGateway;
 
 class ContestResource extends AbstractResourceListener
@@ -163,6 +164,387 @@ class ContestResource extends AbstractResourceListener
         $winnerInfo = [];
         $skipList = [];
 
+        $contests = [];
+
+        $contestWinnersById = [];
+
+        $skipList = [
+            335880436 => true,
+            335875071 => true,
+            335874987 => true,
+            335902227 => true
+        ];
+
+        $date = strtotime(filter_var($data->date, FILTER_SANITIZE_STRING));
+
+        $maxRank = 10;
+
+        /**
+         * User XP Level Contest Data
+         */
+        $statSel = new Select($this->mUsrStatsTbl->getTable());
+        $statSel->order('date DESC');
+        $statSel->where(['stat_key' => 'user-xp-'.date('n-Y', $date)]);
+        $statFound = $this->mUsrStatsTbl->selectWith($statSel);
+
+        $top3Level = [];
+        $top3ShById = [];
+        foreach($statFound as $statUser) {
+            $top3ShById[$statUser->user_idfs] = $statUser->stat_data;
+        }
+        arsort($top3ShById);
+        $iCount = 0;
+        foreach(array_keys($top3ShById) as $topId) {
+            $topInfo = $this->mUserTbl->select(['User_ID' => $topId]);
+            if($topInfo->count() > 0) {
+                $topInfo = $topInfo->current();
+                $top3Level[] = (object)[
+                    'id' => $topId,
+                    'rank' => ($iCount+1),
+                    'count' => $top3ShById[$topId],
+                    'xp_level' => $top3ShById[$topId],
+                    //'xp_level' => $topInfo->xp_level,
+                    'name' => $topInfo->username,
+                ];
+                if($iCount == $maxRank) {
+                    break;
+                }
+                $iCount++;
+            }
+        }
+        //$contestWinnersById[2] = $top3Level;
+
+        /**
+         * Shortlinks Done Contest Data
+         */
+        $statSel = new Select($this->mUsrStatsTbl->getTable());
+        $statSel->order('date DESC');
+        $statSel->where(['stat_key' => 'shdone-m-'.date('n-Y', $date)]);
+        $statFound = $this->mUsrStatsTbl->selectWith($statSel);
+
+        $top3Level = [];
+        $top3ShById = [];
+        foreach($statFound as $statUser) {
+            $top3ShById[$statUser->user_idfs] = $statUser->stat_data;
+        }
+        arsort($top3ShById);
+        $iCount = 0;
+        foreach(array_keys($top3ShById) as $topId) {
+            $topInfo = $this->mUserTbl->select(['User_ID' => $topId]);
+            if($topInfo->count() > 0) {
+                $topInfo = $topInfo->current();
+                $top3Level[] = (object)[
+                    'id' => $topId,
+                    'rank' => ($iCount+1),
+                    'count' => $top3ShById[$topId],
+                    'xp_level' => $top3ShById[$topId],
+                    //'xp_level' => $topInfo->xp_level,
+                    'name' => $topInfo->username,
+                ];
+                if($iCount == $maxRank) {
+                    break;
+                }
+                $iCount++;
+            }
+        }
+        $contestWinnersById[10] = $top3Level;
+
+        /**
+         * Offerwalls Done Contest Data
+         */
+        $statSel = new Select($this->mUsrStatsTbl->getTable());
+        $statSel->order('date DESC');
+        $statSel->where(['stat_key' => 'user-offerbig-m-'.date('n-Y', $date)]);
+        $statFound = $this->mUsrStatsTbl->selectWith($statSel);
+
+        $top3Level = [];
+        $top3ShById = [];
+        foreach($statFound as $statUser) {
+            $top3ShById[$statUser->user_idfs] = $statUser->stat_data;
+        }
+        arsort($top3ShById);
+        $iCount = 0;
+        foreach(array_keys($top3ShById) as $topId) {
+            $topInfo = $this->mUserTbl->select(['User_ID' => $topId]);
+            if($topInfo->count() > 0) {
+                $topInfo = $topInfo->current();
+                $top3Level[] = (object)[
+                    'id' => $topId,
+                    'rank' => ($iCount+1),
+                    'count' => $top3ShById[$topId],
+                    'xp_level' => $top3ShById[$topId],
+                    //'xp_level' => $topInfo->xp_level,
+                    'name' => $topInfo->username,
+                ];
+                if($iCount == $maxRank) {
+                    break;
+                }
+                $iCount++;
+            }
+        }
+        $contestWinnersById[11] = $top3Level;
+
+        /**
+         * Offerwalls Done Contest Data
+         */
+        $statSel = new Select($this->mUsrStatsTbl->getTable());
+        $statSel->order('date DESC');
+        $statSel->where(['stat_key' => 'user-offersmall-m-'.date('n-Y', $date)]);
+        $statFound = $this->mUsrStatsTbl->selectWith($statSel);
+
+        $top3Level = [];
+        $top3ShById = [];
+        foreach($statFound as $statUser) {
+            $top3ShById[$statUser->user_idfs] = $statUser->stat_data;
+        }
+        arsort($top3ShById);
+        $iCount = 0;
+        foreach(array_keys($top3ShById) as $topId) {
+            $topInfo = $this->mUserTbl->select(['User_ID' => $topId]);
+            if($topInfo->count() > 0) {
+                $topInfo = $topInfo->current();
+                $top3Level[] = (object)[
+                    'id' => $topId,
+                    'rank' => ($iCount+1),
+                    'count' => $top3ShById[$topId],
+                    'xp_level' => $top3ShById[$topId],
+                    //'xp_level' => $topInfo->xp_level,
+                    'name' => $topInfo->username,
+                ];
+                if($iCount == $maxRank) {
+                    break;
+                }
+                $iCount++;
+            }
+        }
+        $contestWinnersById[12] = $top3Level;
+
+        /**
+         * Daily Tasks Contest Data
+         */
+        $statSel = new Select($this->mUsrStatsTbl->getTable());
+        $statSel->order('date DESC');
+        $statSel->where(['stat_key' => 'user-dailys-m-'.date('n-Y', $date)]);
+        $statFound = $this->mUsrStatsTbl->selectWith($statSel);
+
+        $top3Level = [];
+        $top3ShById = [];
+        foreach($statFound as $statUser) {
+            $top3ShById[$statUser->user_idfs] = $statUser->stat_data;
+        }
+        arsort($top3ShById);
+        $iCount = 0;
+        foreach(array_keys($top3ShById) as $topId) {
+            $topInfo = $this->mUserTbl->select(['User_ID' => $topId]);
+            if($topInfo->count() > 0) {
+                $topInfo = $topInfo->current();
+                $top3Level[] = (object)[
+                    'id' => $topId,
+                    'rank' => ($iCount+1),
+                    'count' => $top3ShById[$topId],
+                    'xp_level' => $top3ShById[$topId],
+                    //'xp_level' => $topInfo->xp_level,
+                    'name' => $topInfo->username,
+                ];
+                if($iCount == $maxRank) {
+                    break;
+                }
+                $iCount++;
+            }
+        }
+        $contestWinnersById[13] = $top3Level;
+
+        $statWh = new Where();
+        $statWh->like('stat_key', 'nano-coin-m-xmr-'.date('n-Y',$date));
+        $statSel = new Select($this->mUsrStatsTbl->getTable());
+        $statSel->order('date DESC');
+        $statSel->where($statWh);
+        $statFound = $this->mUsrStatsTbl->selectWith($statSel);
+        $top3ShById = [];
+        $contestWinnersById[5] = [];
+        if($statFound->count() > 0) {
+            foreach($statFound as $statUser) {
+                if(!array_key_exists($statUser->user_idfs, $top3ShById)) {
+                    $top3ShById[$statUser->user_idfs] = $statUser->stat_data;
+                } else {
+                    $top3ShById[$statUser->user_idfs] += $statUser->stat_data;
+                }
+            }
+            arsort($top3ShById);
+            $iCount = 0;
+            foreach(array_keys($top3ShById) as $topId) {
+                $topInfo = $this->mUserTbl->select(['User_ID' => $topId]);
+                if($topInfo->count() > 0) {
+                    $topInfo = $topInfo->current();
+                    $contestWinnersById[6][] = (object)[
+                        'id' => $topId,
+                        'rank' => ($iCount+1),
+                        'count' => round($top3ShById[$topId]),
+                        'name' => $topInfo->username,
+                        'avatar' => ($topInfo->avatar == '') ? $topInfo->username : $topInfo->avatar,
+                    ];
+                    if($iCount == 10) {
+                        break;
+                    }
+                    $iCount++;
+                }
+            }
+        }
+
+
+        $statWh = new Where();
+        $statWh->NEST
+            ->like('stat_key', 'nano-coin-m-rvn-'.date('n-Y',$date))
+            ->OR
+            ->like('stat_key', 'nano-coin-m-etc-'.date('n-Y',$date))
+            ->UNNEST;
+        $statSel = new Select($this->mUsrStatsTbl->getTable());
+        $statSel->order('date DESC');
+        $statSel->where($statWh);
+        $statFound = $this->mUsrStatsTbl->selectWith($statSel);
+        $top3ShById = [];
+        $contestWinnersById[5] = [];
+        if($statFound->count() > 0) {
+            foreach($statFound as $statUser) {
+                if(!array_key_exists($statUser->user_idfs, $top3ShById)) {
+                    $top3ShById[$statUser->user_idfs] = $statUser->stat_data;
+                } else {
+                    $top3ShById[$statUser->user_idfs] += $statUser->stat_data;
+                }
+            }
+            arsort($top3ShById);
+            $iCount = 0;
+            foreach(array_keys($top3ShById) as $topId) {
+                $topInfo = $this->mUserTbl->select(['User_ID' => $topId]);
+                if($topInfo->count() > 0) {
+                    $topInfo = $topInfo->current();
+                    $contestWinnersById[5][] = (object)[
+                        'id' => $topId,
+                        'rank' => ($iCount+1),
+                        'count' => round($top3ShById[$topId]),
+                        'name' => $topInfo->username,
+                        'avatar' => ($topInfo->avatar == '') ? $topInfo->username : $topInfo->avatar,
+                    ];
+                    if($iCount == 10) {
+                        break;
+                    }
+                    $iCount++;
+                }
+            }
+        }
+
+        /**
+        $top3Ref = [];
+        $statSel = new Select($this->mStatsTbl->getTable());
+        $statSel->order('date DESC');
+        $statSel->where(['stat-key' => 'conrefs-'.date('n-Y', $date)]);
+        $statSel->limit(1);
+        $statFound = $this->mStatsTbl->selectWith($statSel);
+        if($statFound->count() > 0) {
+        $statFound = (array)$statFound->current();
+        $topList = json_decode($statFound['stat-data']);
+        $iCount = 0;
+        foreach($topList as $top) {
+        if($iCount == 3) {
+        break;
+        }
+        if(array_key_exists($top->id,$skipList)) {
+        continue;
+        }
+        $topInfo = $this->mUserTbl->select(['User_ID' => $top->id]);
+        if($topInfo->count() > 0) {
+        $topInfo = $topInfo->current();
+        $top->name = $topInfo->username;
+        $top->count = $top->refs;
+        }
+        $top3Ref[] = $top;
+        $iCount++;
+        }
+        }
+
+        $contestWinnersById[7] = $top3Ref;
+         **/
+        $top3Guild = [];
+        $statSel = new Select($this->mStatsTbl->getTable());
+        $statSel->order('date DESC');
+        $statSel->where(['stat-key' => 'guild-top-'.date('m', $date)]);
+        $statSel->limit(1);
+        $statFound = $this->mStatsTbl->selectWith($statSel);
+        if($statFound->count() > 0) {
+            $statFound = (array)$statFound->current();
+            $topList = json_decode($statFound['stat-data']);
+            $iCount = 0;
+            foreach($topList as $top) {
+                if($iCount == 5) {
+                    break;
+                }
+                $top3Guild[] = $top;
+                $iCount++;
+            }
+        }
+
+        $contestWinnersById[1] = $top3Guild;
+
+        $conSel = new Select($this->mContestTbl->getTable());
+        $conSel->join(['fcr' => 'faucet_contest_reward'], 'fcr.contest_idfs = faucet_contest.Contest_ID');
+        if(isset($_REQUEST['date'])) {
+            $date = filter_var($_REQUEST['date'], FILTER_SANITIZE_STRING);
+            $conSel->where(['month' => date('n', strtotime($date)), 'year' => date('Y', strtotime($date))]);
+        }
+        $conSel->group('faucet_contest.Contest_ID');
+
+        $contestList = $this->mContestTbl->selectWith($conSel);
+        foreach($contestList as $contest) {
+            if(array_key_exists($contest->Contest_ID, $contestWinnersById)) {
+                $contests[] = [
+                    'id' => $contest->Contest_ID,
+                    'name' => $contest->contest_label,
+                    'winners' => $contestWinnersById[$contest->Contest_ID]
+                ];
+
+                $contestRewards = $this->mRewardTbl->select(['contest_idfs' => $contest->Contest_ID]);
+                if($contestRewards->count() < 3) {
+                    $skipList[] = $contest->id;
+                    continue;
+                }
+                $rewards = [];
+                foreach($contestRewards as $rew) {
+                    $rewards[$rew->rank] = $rew->amount;
+                }
+
+                if($contest->contest_type == 'guild') {
+                    foreach($contestWinnersById[$contest->Contest_ID] as $winner) {
+                        if(array_key_exists($winner->rank, $rewards)) {
+                            $this->mWinnerTbl->insert([
+                                'contest_idfs' => $contest->Contest_ID,
+                                'user_idfs' => $winner->id,
+                                'rank' => $winner->rank,
+                                'month' => $month,
+                                'year' => $year,
+                                'reward' => $rewards[$winner->rank],
+                                'amount' => $winner->count
+                            ]);
+                        }
+                    }
+                } else {
+                    foreach($contestWinnersById[$contest->Contest_ID] as $winner) {
+                        if(array_key_exists($winner->rank, $rewards)) {
+                            $this->mWinnerTbl->insert([
+                                'contest_idfs' => $contest->Contest_ID,
+                                'user_idfs' => $winner->id,
+                                'rank' => $winner->rank,
+                                'month' => $month,
+                                'year' => $year,
+                                'reward' => $rewards[$winner->rank],
+                                'amount' => $winner->count
+                            ]);
+                        }
+                    }
+                }
+            }
+        }
+
+        /**
         foreach($data->winners as $contest) {
             $contest = (object)$contest;
             $contestInfo = $this->mContestTbl->select(['Contest_ID' => $contest->id]);
@@ -257,6 +639,9 @@ class ContestResource extends AbstractResourceListener
                 ]);
             }
         }
+         *
+         * **/
+
         return [
             'winners' => $winnerInfo,
             'skipped' => $skipList
@@ -388,6 +773,8 @@ class ContestResource extends AbstractResourceListener
 
             $date = strtotime(filter_var($_REQUEST['date'], FILTER_SANITIZE_STRING));
 
+            $maxRank = 10;
+
             /**
              * User XP Level Contest Data
              */
@@ -415,7 +802,7 @@ class ContestResource extends AbstractResourceListener
                         //'xp_level' => $topInfo->xp_level,
                         'name' => $topInfo->username,
                     ];
-                    if($iCount == 3) {
+                    if($iCount == $maxRank) {
                         break;
                     }
                     $iCount++;
@@ -450,20 +837,20 @@ class ContestResource extends AbstractResourceListener
                         //'xp_level' => $topInfo->xp_level,
                         'name' => $topInfo->username,
                     ];
-                    if($iCount == 3) {
+                    if($iCount == $maxRank) {
                         break;
                     }
                     $iCount++;
                 }
             }
-            $contestWinnersById[3] = $top3Level;
+            $contestWinnersById[10] = $top3Level;
 
             /**
              * Offerwalls Done Contest Data
              */
             $statSel = new Select($this->mUsrStatsTbl->getTable());
             $statSel->order('date DESC');
-            $statSel->where(['stat_key' => 'ofdone-m-'.date('n-Y', $date)]);
+            $statSel->where(['stat_key' => 'user-offerbig-m-'.date('n-Y', $date)]);
             $statFound = $this->mUsrStatsTbl->selectWith($statSel);
 
             $top3Level = [];
@@ -485,78 +872,164 @@ class ContestResource extends AbstractResourceListener
                         //'xp_level' => $topInfo->xp_level,
                         'name' => $topInfo->username,
                     ];
-                    if($iCount == 3) {
+                    if($iCount == $maxRank) {
                         break;
                     }
                     $iCount++;
                 }
             }
-            $contestWinnersById[4] = $top3Level;
+            $contestWinnersById[11] = $top3Level;
 
             /**
-             * CPU Mining Done Contest Data
+             * Offerwalls Done Contest Data
              */
-            $top3Xmr = [];
-            $statSel = new Select($this->mStatsTbl->getTable());
+            $statSel = new Select($this->mUsrStatsTbl->getTable());
             $statSel->order('date DESC');
-            $statSel->where(['stat-key' => 'concpu-'.date('n-Y', $date)]);
-            $statSel->limit(1);
-            $statFound = $this->mStatsTbl->selectWith($statSel);
-            if($statFound->count() > 0) {
-                $statFound = (array)$statFound->current();
-                $topList = json_decode($statFound['stat-data']);
-                $iCount = 0;
-                foreach($topList as $top) {
-                    if($iCount == 3) {
+            $statSel->where(['stat_key' => 'user-offersmall-m-'.date('n-Y', $date)]);
+            $statFound = $this->mUsrStatsTbl->selectWith($statSel);
+
+            $top3Level = [];
+            $top3ShById = [];
+            foreach($statFound as $statUser) {
+                $top3ShById[$statUser->user_idfs] = $statUser->stat_data;
+            }
+            arsort($top3ShById);
+            $iCount = 0;
+            foreach(array_keys($top3ShById) as $topId) {
+                $topInfo = $this->mUserTbl->select(['User_ID' => $topId]);
+                if($topInfo->count() > 0) {
+                    $topInfo = $topInfo->current();
+                    $top3Level[] = (object)[
+                        'id' => $topId,
+                        'rank' => ($iCount+1),
+                        'count' => $top3ShById[$topId],
+                        'xp_level' => $top3ShById[$topId],
+                        //'xp_level' => $topInfo->xp_level,
+                        'name' => $topInfo->username,
+                    ];
+                    if($iCount == $maxRank) {
                         break;
                     }
-                    if(array_key_exists($top->id,$skipList)) {
-                        continue;
-                    }
-                    $topInfo = $this->mUserTbl->select(['User_ID' => $top->id]);
-                    if($topInfo->count() > 0) {
-                        $topInfo = $topInfo->current();
-                        $top->name = $topInfo->username;
-                        $top->count = $top->coins;
-                    }
-                    $top3Xmr[] = $top;
                     $iCount++;
                 }
             }
-            $contestWinnersById[6] = $top3Xmr;
+            $contestWinnersById[12] = $top3Level;
 
-
-            $top3Gpu = [];
-            $statSel = new Select($this->mStatsTbl->getTable());
+            /**
+             * Daily Tasks Contest Data
+             */
+            $statSel = new Select($this->mUsrStatsTbl->getTable());
             $statSel->order('date DESC');
-            $statSel->where(['stat-key' => 'congpu-'.date('n-Y', $date)]);
-            $statSel->limit(1);
-            $statFound = $this->mStatsTbl->selectWith($statSel);
-            if($statFound->count() > 0) {
-                $statFound = (array)$statFound->current();
-                $topList = json_decode($statFound['stat-data']);
-                $iCount = 0;
-                foreach($topList as $top) {
-                    if($iCount == 3) {
+            $statSel->where(['stat_key' => 'user-dailys-m-'.date('n-Y', $date)]);
+            $statFound = $this->mUsrStatsTbl->selectWith($statSel);
+
+            $top3Level = [];
+            $top3ShById = [];
+            foreach($statFound as $statUser) {
+                $top3ShById[$statUser->user_idfs] = $statUser->stat_data;
+            }
+            arsort($top3ShById);
+            $iCount = 0;
+            foreach(array_keys($top3ShById) as $topId) {
+                $topInfo = $this->mUserTbl->select(['User_ID' => $topId]);
+                if($topInfo->count() > 0) {
+                    $topInfo = $topInfo->current();
+                    $top3Level[] = (object)[
+                        'id' => $topId,
+                        'rank' => ($iCount+1),
+                        'count' => $top3ShById[$topId],
+                        'xp_level' => $top3ShById[$topId],
+                        //'xp_level' => $topInfo->xp_level,
+                        'name' => $topInfo->username,
+                    ];
+                    if($iCount == $maxRank) {
                         break;
                     }
-                    if(array_key_exists($top->id,$skipList)) {
-                        continue;
-                    }
-                    $topInfo = $this->mUserTbl->select(['User_ID' => $top->id]);
-                    if($topInfo->count() > 0) {
-                        $topInfo = $topInfo->current();
-                        $top->name = $topInfo->username;
-                        $top->count = $top->coins;
-                    }
-                    $top3Gpu[] = $top;
                     $iCount++;
                 }
             }
+            $contestWinnersById[13] = $top3Level;
 
-            $contestWinnersById[5] = $top3Gpu;
+            $statWh = new Where();
+            $statWh->like('stat_key', 'nano-coin-m-xmr-'.date('n-Y',$date));
+            $statSel = new Select($this->mUsrStatsTbl->getTable());
+            $statSel->order('date DESC');
+            $statSel->where($statWh);
+            $statFound = $this->mUsrStatsTbl->selectWith($statSel);
+            $top3ShById = [];
+            $contestWinnersById[5] = [];
+            if($statFound->count() > 0) {
+                foreach($statFound as $statUser) {
+                    if(!array_key_exists($statUser->user_idfs, $top3ShById)) {
+                        $top3ShById[$statUser->user_idfs] = $statUser->stat_data;
+                    } else {
+                        $top3ShById[$statUser->user_idfs] += $statUser->stat_data;
+                    }
+                }
+                arsort($top3ShById);
+                $iCount = 0;
+                foreach(array_keys($top3ShById) as $topId) {
+                    $topInfo = $this->mUserTbl->select(['User_ID' => $topId]);
+                    if($topInfo->count() > 0) {
+                        $topInfo = $topInfo->current();
+                        $contestWinnersById[6][] = (object)[
+                            'id' => $topId,
+                            'rank' => ($iCount+1),
+                            'count' => round($top3ShById[$topId]),
+                            'name' => $topInfo->username,
+                            'avatar' => ($topInfo->avatar == '') ? $topInfo->username : $topInfo->avatar,
+                        ];
+                        if($iCount == 10) {
+                            break;
+                        }
+                        $iCount++;
+                    }
+                }
+            }
 
 
+            $statWh = new Where();
+            $statWh->NEST
+                ->like('stat_key', 'nano-coin-m-rvn-'.date('n-Y',$date))
+                ->OR
+                ->like('stat_key', 'nano-coin-m-etc-'.date('n-Y',$date))
+                ->UNNEST;
+            $statSel = new Select($this->mUsrStatsTbl->getTable());
+            $statSel->order('date DESC');
+            $statSel->where($statWh);
+            $statFound = $this->mUsrStatsTbl->selectWith($statSel);
+            $top3ShById = [];
+            $contestWinnersById[5] = [];
+            if($statFound->count() > 0) {
+                foreach($statFound as $statUser) {
+                    if(!array_key_exists($statUser->user_idfs, $top3ShById)) {
+                        $top3ShById[$statUser->user_idfs] = $statUser->stat_data;
+                    } else {
+                        $top3ShById[$statUser->user_idfs] += $statUser->stat_data;
+                    }
+                }
+                arsort($top3ShById);
+                $iCount = 0;
+                foreach(array_keys($top3ShById) as $topId) {
+                    $topInfo = $this->mUserTbl->select(['User_ID' => $topId]);
+                    if($topInfo->count() > 0) {
+                        $topInfo = $topInfo->current();
+                        $contestWinnersById[5][] = (object)[
+                            'id' => $topId,
+                            'rank' => ($iCount+1),
+                            'count' => round($top3ShById[$topId]),
+                            'name' => $topInfo->username,
+                            'avatar' => ($topInfo->avatar == '') ? $topInfo->username : $topInfo->avatar,
+                        ];
+                        if($iCount == 10) {
+                            break;
+                        }
+                        $iCount++;
+                    }
+                }
+            }
+
+            /**
             $top3Ref = [];
             $statSel = new Select($this->mStatsTbl->getTable());
             $statSel->order('date DESC');
@@ -586,7 +1059,7 @@ class ContestResource extends AbstractResourceListener
             }
 
             $contestWinnersById[7] = $top3Ref;
-
+            **/
             $top3Guild = [];
             $statSel = new Select($this->mStatsTbl->getTable());
             $statSel->order('date DESC');
@@ -598,7 +1071,7 @@ class ContestResource extends AbstractResourceListener
                 $topList = json_decode($statFound['stat-data']);
                 $iCount = 0;
                 foreach($topList as $top) {
-                    if($iCount == 3) {
+                    if($iCount == 5) {
                         break;
                     }
                     $top3Guild[] = $top;
@@ -610,22 +1083,21 @@ class ContestResource extends AbstractResourceListener
 
         }
 
+        $conSel = new Select($this->mContestTbl->getTable());
+        $conSel->join(['fcr' => 'faucet_contest_reward'], 'fcr.contest_idfs = faucet_contest.Contest_ID');
+        if(isset($_REQUEST['date'])) {
+            $date = filter_var($_REQUEST['date'], FILTER_SANITIZE_STRING);
+            $conSel->where(['month' => date('n', strtotime($date)), 'year' => date('Y', strtotime($date))]);
+        }
+        $conSel->group('faucet_contest.Contest_ID');
 
-        $contestList = $this->mContestTbl->select();
+        $contestList = $this->mContestTbl->selectWith($conSel);
         foreach($contestList as $contest) {
             if(array_key_exists($contest->Contest_ID, $contestWinnersById)) {
                 $contests[] = [
                     'id' => $contest->Contest_ID,
                     'name' => $contest->contest_label,
-                    'winner' => $contestWinnersById[$contest->Contest_ID][0]->name,
-                    'winner_id' => $contestWinnersById[$contest->Contest_ID][0]->id,
-                    'winner_amount' => $contestWinnersById[$contest->Contest_ID][0]->count,
-                    'second' => $contestWinnersById[$contest->Contest_ID][1]->name,
-                    'second_id' => $contestWinnersById[$contest->Contest_ID][1]->id,
-                    'second_amount' => $contestWinnersById[$contest->Contest_ID][1]->count,
-                    'third' => $contestWinnersById[$contest->Contest_ID][2]->name,
-                    'third_id' => $contestWinnersById[$contest->Contest_ID][2]->id,
-                    'third_amount' => $contestWinnersById[$contest->Contest_ID][2]->count
+                    'winners' => $contestWinnersById[$contest->Contest_ID]
                 ];
             } else {
                 $contests[] = [

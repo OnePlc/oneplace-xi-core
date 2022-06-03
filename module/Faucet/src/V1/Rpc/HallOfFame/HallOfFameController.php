@@ -546,7 +546,7 @@ class HallOfFameController extends AbstractActionController
                 $conMonth = date('n', time());
                 $conYear = date('Y', time());
 
-                $top10Contest = ['contest-10' => [],'contest-5' => [],'contest-6' => [],'contest-11' => []];
+                $top10Contest = ['contest-10' => [],'contest-5' => [],'contest-6' => [],'contest-11' => [],'contest-12' => [],'contest-13' => [],'contest-1' => []];
 
                 /**
                  * Shortlinks
@@ -582,11 +582,44 @@ class HallOfFameController extends AbstractActionController
                 }
 
                 /**
-                 * Offerwalls
+                 * Daily Tasks
                  */
                 $statSel = new Select($this->mUsrStatsTbl->getTable());
                 $statSel->order('date DESC');
-                $statSel->where(['stat_key' => 'ofdone-m-'.date('n-Y',time())]);
+                $statSel->where(['stat_key' => 'user-dailys-m-'.date('n-Y',time())]);
+                $statFound = $this->mUsrStatsTbl->selectWith($statSel);
+                if($statFound->count() > 0) {
+                    $top3ShById = [];
+                    foreach($statFound as $statUser) {
+                        $top3ShById[$statUser->user_idfs] = $statUser->stat_data;
+                    }
+                    arsort($top3ShById);
+                    $iCount = 0;
+                    foreach(array_keys($top3ShById) as $topId) {
+                        $topInfo = $this->mUserTbl->select(['User_ID' => $topId]);
+                        if($topInfo->count() > 0) {
+                            $topInfo = $topInfo->current();
+                            $top10Contest['contest-13'][] = (object)[
+                                'id' => $topId,
+                                'rank' => ($iCount+1),
+                                'count' => $top3ShById[$topId],
+                                'name' => $topInfo->username,
+                                'avatar' => ($topInfo->avatar == '') ? $topInfo->username : $topInfo->avatar,
+                            ];
+                            if($iCount == 10) {
+                                break;
+                            }
+                            $iCount++;
+                        }
+                    }
+                }
+
+                /**
+                 * Offerwalls BIG
+                 */
+                $statSel = new Select($this->mUsrStatsTbl->getTable());
+                $statSel->order('date DESC');
+                $statSel->where(['stat_key' => 'user-offerbig-m-'.date('n-Y',time())]);
                 $statFound = $this->mUsrStatsTbl->selectWith($statSel);
                 if($statFound->count() > 0) {
                     $top3ShById = [];
@@ -600,6 +633,39 @@ class HallOfFameController extends AbstractActionController
                         if($topInfo->count() > 0) {
                             $topInfo = $topInfo->current();
                             $top10Contest['contest-11'][] = (object)[
+                                'id' => $topId,
+                                'rank' => ($iCount+1),
+                                'count' => $top3ShById[$topId],
+                                'name' => $topInfo->username,
+                                'avatar' => ($topInfo->avatar == '') ? $topInfo->username : $topInfo->avatar,
+                            ];
+                            if($iCount == 10) {
+                                break;
+                            }
+                            $iCount++;
+                        }
+                    }
+                }
+
+                /**
+                 * Offerwalls Small
+                 */
+                $statSel = new Select($this->mUsrStatsTbl->getTable());
+                $statSel->order('date DESC');
+                $statSel->where(['stat_key' => 'user-offersmall-m-'.date('n-Y',time())]);
+                $statFound = $this->mUsrStatsTbl->selectWith($statSel);
+                if($statFound->count() > 0) {
+                    $top3ShById = [];
+                    foreach($statFound as $statUser) {
+                        $top3ShById[$statUser->user_idfs] = $statUser->stat_data;
+                    }
+                    arsort($top3ShById);
+                    $iCount = 0;
+                    foreach(array_keys($top3ShById) as $topId) {
+                        $topInfo = $this->mUserTbl->select(['User_ID' => $topId]);
+                        if($topInfo->count() > 0) {
+                            $topInfo = $topInfo->current();
+                            $top10Contest['contest-12'][] = (object)[
                                 'id' => $topId,
                                 'rank' => ($iCount+1),
                                 'count' => $top3ShById[$topId],
@@ -631,7 +697,11 @@ class HallOfFameController extends AbstractActionController
                 if($statFound->count() > 0) {
                     $top3ShById = [];
                     foreach($statFound as $statUser) {
-                        $top3ShById[$statUser->user_idfs] = $statUser->stat_data;
+                        if(!array_key_exists($statUser->user_idfs, $top3ShById)) {
+                            $top3ShById[$statUser->user_idfs] = $statUser->stat_data;
+                        } else {
+                            $top3ShById[$statUser->user_idfs] += $statUser->stat_data;
+                        }
                     }
                     arsort($top3ShById);
                     $iCount = 0;
@@ -689,7 +759,37 @@ class HallOfFameController extends AbstractActionController
                     }
                 }
 
-
+                /**
+                 * Top Guilds
+                 */
+                $statSel = new Select($this->mStatsTbl->getTable());
+                $statSel->order('date DESC');
+                $statSel->where(['stat-key' => 'guild-top-'.date('m', time())]);
+                $statSel->limit(1);
+                $statFound = $this->mStatsTbl->selectWith($statSel);
+                if($statFound->count() > 0) {
+                    $statFound = (array)$statFound->current();
+                    $topList = json_decode($statFound['stat-data']);
+                    $iCount = 0;
+                    foreach($topList as $top) {
+                        if($iCount == 5) {
+                            break;
+                        }
+                        $gInfo = $this->mGuildTbl->select(['Guild_ID' => $top->id]);
+                        if($gInfo->count() > 0) {
+                            $gInfo = $gInfo->current();
+                            $top10Contest['contest-1'][] = (object)[
+                                'id' => $top->id,
+                                'rank' => ($iCount+1),
+                                'count' => round($top->count),
+                                'name' => $gInfo->label,
+                                'shield' => $gInfo->emblem_shield,
+                                'icon' => $gInfo->emblem_icon,
+                            ];
+                            $iCount++;
+                        }
+                    }
+                }
 
                 $conSel = new Select($this->mContest->getTable());
                 $conSel->join(['fcr' => 'faucet_contest_reward'], 'fcr.contest_idfs = faucet_contest.Contest_ID');
@@ -725,11 +825,35 @@ class HallOfFameController extends AbstractActionController
                     ];
                 }
 
-                return [
+                $viewData = [
                     'contest' => $contestsData,
                     'date' => date('Y-m-d H:i:s'),
                     'date_end' => date('Y-m-t', time()).' 23:59:59',
                 ];
+                
+                $hasMessage = $this->mSecTools->getCoreSetting('faucet-contest-msg-content');
+                if($hasMessage) {
+                    $message = $hasMessage;
+                    $messageType = $this->mSecTools->getCoreSetting('faucet-contest-msg-level');
+                    $xpReq = $this->mSecTools->getCoreSetting('faucet-contest-msg-xplevel');
+                    $addMsg = false;
+                    if($xpReq) {
+                        if($me->xp_level >= $xpReq) {
+                            $addMsg = true;
+                        }
+                    } else {
+                        $addMsg = true;
+                    }
+
+                    if($addMsg && strlen($message) > 0) {
+                        $viewData['message'] = [
+                            'type' => $messageType,
+                            'message' => $message
+                        ];
+                    }
+                }
+
+                return $viewData;
             }
 
             if($detail == 'contestdep') {
