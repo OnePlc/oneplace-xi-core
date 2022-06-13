@@ -79,6 +79,11 @@ class PTCResource extends AbstractResourceListener
             return $me;
         }
 
+        # Check if user is verified
+        if($me->email_verified == 0) {
+            return new ApiProblemResponse(new ApiProblem(400, 'Account is not verified. Please verify E-Mail before creating a PTC Ad.'));
+        }
+
         $secResult = $this->mSecTools->basicInputCheck([
             $data->title,
             $data->description,
@@ -121,6 +126,10 @@ class PTCResource extends AbstractResourceListener
             $nsfw = 1;
         } else {
             $nsfw = 0;
+        }
+
+        if($timer != 15 && $timer != 30 && $timer != 60 && $timer != 90) {
+            return new ApiProblemResponse(new ApiProblem(400, 'Invalid Timer'));
         }
 
         $price = 0;
