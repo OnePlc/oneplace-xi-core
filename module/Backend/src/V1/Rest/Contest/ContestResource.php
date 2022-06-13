@@ -101,6 +101,14 @@ class ContestResource extends AbstractResourceListener
     protected $mStatsTbl;
 
     /**
+     * User Buff Table
+     *
+     * @var TableGateway $mBuffTbl
+     * @since 1.0.0
+     */
+    protected $mBuffTbl;
+
+    /**
      * Constructor
      *
      * UserResource constructor.
@@ -121,6 +129,7 @@ class ContestResource extends AbstractResourceListener
 
         $this->mUsrStatsTbl = new TableGateway('user_faucet_stat', $mapper);
         $this->mStatsTbl = new TableGateway('faucet_statistic', $mapper);
+        $this->mBuffTbl = new TableGateway('user_buff', $mapper);
 
         $this->mSecTools = new SecurityTools($mapper);
         $this->mTransaction = new TransactionHelper($mapper);
@@ -1165,7 +1174,7 @@ class ContestResource extends AbstractResourceListener
                 $monthText = date('F', strtotime($op->year.'-'.$op->month.'-01'));
                 $contestInfo = $contestInfo->current();
                 if($contestInfo->contest_type == 'guild') {
-                    $this->mTransaction->executeGuildTransaction($op->reward, false, $op->user_idfs, $op->contest_idfs, 'contestwin',$op->rank.'. Place in the '.$contestInfo->contest_label.' of '.$monthText, 1);
+                    //$this->mTransaction->executeGuildTransaction($op->reward, false, $op->user_idfs, $op->contest_idfs, 'contestwin',$op->rank.'. Place in the '.$contestInfo->contest_label.' of '.$monthText, 1);
                 } else {
                     # create message to buyer inbox
                     $this->mInboxTbl->insert([
@@ -1178,12 +1187,18 @@ class ContestResource extends AbstractResourceListener
                         'is_read' => 0
                     ]);
                     $messageId = $this->mInboxTbl->lastInsertValue;
-                    $this->mInboxAttachTbl->insert([
-                        'mail_idfs' => $messageId,
-                        'item_idfs' => 43,
-                        'slot' => 0,
-                        'amount' => 1,
-                        'used' => 0
+
+                    $now = date('Y-m-d H:i:s', time());
+
+                    $bonusBuff = round($op->reward / 14);
+                    $this->mBuffTbl->insert([
+                        'source_idfs' => 44,
+                        'source_type' => 'item',
+                        'date' => $now,
+                        'expires' => date('Y-m-d H:i:s', time() + ((3600*24)*20)),
+                        'buff' => $bonusBuff,
+                        'buff_type' => 'daily-withdraw-buff',
+                        'user_idfs' => $op->user_idfs
                     ]);
                 }
 

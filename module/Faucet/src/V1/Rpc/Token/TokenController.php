@@ -236,6 +236,7 @@ class TokenController extends AbstractActionController
 
             $paySel = new Select($this->mTokenPayTbl->getTable());
             $paySel->order('week DESC');
+            $paySel->where(['year' => date('Y', time())]);
             $paySel->limit(1);
             $paymentInfo = $this->mTokenPayTbl->selectWith($paySel);
             $lastPayment = 0;
@@ -243,7 +244,7 @@ class TokenController extends AbstractActionController
             $linkedTokens = 0;
             if(count($paymentInfo) > 0) {
                 $paymentInfo = $paymentInfo->current();
-                $lastPayment = $paymentInfo->payment_total;
+                $lastPayment = $paymentInfo->payment_total + $paymentInfo->admin_bonus;
                 $tokenValue = $paymentInfo->coins_per_token;
                 $linkedTokens = $paymentInfo->tokens_circulating;
             }

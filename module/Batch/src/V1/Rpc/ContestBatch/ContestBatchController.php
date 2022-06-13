@@ -149,6 +149,8 @@ class ContestBatchController extends AbstractActionController
                             }
                         }
 
+                        $processed = $tasksDone->count();
+
                         $this->mSettingsTbl->update([
                             'settings_value' => date('Y-m-d H:i:s', time())
                         ],[
@@ -156,14 +158,14 @@ class ContestBatchController extends AbstractActionController
                         ]);
 
                         $this->mSettingsTbl->update([
-                            'settings_value' => $offset+$limit
+                            'settings_value' => $offset+$processed
                         ],[
                             'settings_key' => 'job_user_dailytask_offset'
                         ]);
 
                         return [
                             'state' => 'success',
-                            'processed' => $tasksDone->count()
+                            'processed' => $processed
                         ];
                     } else {
                         return [

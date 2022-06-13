@@ -264,6 +264,10 @@ class PollResource extends AbstractResourceListener
             return $user;
         }
 
+        if($user->is_employee != 1) {
+            return new ApiProblem(400, 'Polls are closed');
+        }
+
         $pollId = filter_var($id, FILTER_SANITIZE_NUMBER_INT);
         $vote = filter_var($data->vote, FILTER_SANITIZE_NUMBER_INT);
 
