@@ -88,6 +88,10 @@ class WithdrawController extends AbstractActionController
 
     protected $mGachaUserTbl;
 
+    protected $WthBuffTbl;
+
+    protected $mOfferwallTbl;
+
     /**
      * Constructor
      *
@@ -101,13 +105,16 @@ class WithdrawController extends AbstractActionController
         $this->mWalletTbl = new TableGateway('faucet_wallet', $mapper);
         $this->mUserSetTbl = new TableGateway('user_setting', $mapper);
         $this->mLinkAccTbl = new TableGateway('user_linked_account', $mapper);
-        $this->mTransaction = new TransactionHelper($mapper);
-        $this->mSecTools = new SecurityTools($mapper);
-        $this->mUserTools = new UserTools($mapper);
+        $this->WthBuffTbl = new TableGateway('faucet_withdraw_buff', $mapper);
+        $this->mOfferwallTbl = new TableGateway('offerwall', $mapper);
 
         $this->mGachaWalletTbl = new TableGateway('user_wallet', $gachaMapper);
         $this->mGachaDepositTbl = new TableGateway('user_wallet_deposit', $gachaMapper);
         $this->mGachaUserTbl = new TableGateway('user', $gachaMapper);
+
+        $this->mTransaction = new TransactionHelper($mapper);
+        $this->mSecTools = new SecurityTools($mapper);
+        $this->mUserTools = new UserTools($mapper);
     }
 
     public function withdrawAction()
@@ -185,11 +192,13 @@ class WithdrawController extends AbstractActionController
             $withdrawLimit = 1000 + (200 * ($me->xp_level - 1));
 
             $withdrawBonus = 0;
+            $myBuffs = [];
             # check for active withdrawal buffs
             $activeBuffs = $this->mUserTools->getUserActiveBuffs('daily-withdraw-buff', date('Y-m-d', time()), $me->User_ID);
             if(count($activeBuffs) > 0) {
                 foreach($activeBuffs as $buff) {
                     $withdrawBonus+=$buff->buff;
+                    $myBuffs[] = $buff;
                 }
             }
 
@@ -229,6 +238,43 @@ class WithdrawController extends AbstractActionController
                 //$withdrawLimit = 1000000;
             }
 
+            /**
+             * Buffs V2
+             */
+            $bWh = new Where();
+            $bWh->equalTo('user_idfs', $me->User_ID);
+            $bWh->greaterThanOrEqualTo('days_left', 1);
+            $activeWthBuffs = $this->WthBuffTbl->select($bWh);
+            $myWthBuffs = [];
+            $wthBuffTotal = 0;
+            if($activeWthBuffs->count() > 0) {
+                $offerwallNamesById = [];
+                $offerwalls = $this->mOfferwallTbl->select();
+                foreach($offerwalls as $of) {
+                    $offerwallNamesById[$of->Offerwall_ID] = $of->label;
+                }
+                foreach($activeWthBuffs as $wthBuff) {
+                    switch($wthBuff->ref_type) {
+                        case 'offerwall':
+                            if(array_key_exists($wthBuff->ref_idfs, $offerwallNamesById)) {
+                                $myWthBuffs[] = [
+                                    'id' => $wthBuff->Row_ID,
+                                    'name' => $offerwallNamesById[$wthBuff->ref_idfs].' : '.$wthBuff->label,
+                                    'type' => 'offerwall',
+                                    'amount' => $wthBuff->amount,
+                                    'days_left' => $wthBuff->days_left,
+                                    'days_total' => $wthBuff->days_total
+                                ];
+                                $wthBuffTotal += $wthBuff->amount;
+                            }
+                            break;
+                        default:
+                            break;
+                    }
+                }
+            }
+
+
             $nextPay = $this->mSecTools->getCoreSetting('payment-next');
 
             $viewData = [
@@ -239,7 +285,9 @@ class WithdrawController extends AbstractActionController
                 'daily_limit' => $withdrawLimit+$withdrawBonus,
                 'token_val' => $tokenValue,
                 'daily_left' => (($withdrawLimit+$withdrawBonus) - $coinsWithdrawnToday),
-                'next_payment' => $nextPay
+                'next_payment' => $nextPay,
+                'buffs' => $myWthBuffs,
+                'daily_buffs' => $wthBuffTotal
             ];
 
             $hasMessage = $this->mSecTools->getCoreSetting('faucet-withdraw-msg-content');
