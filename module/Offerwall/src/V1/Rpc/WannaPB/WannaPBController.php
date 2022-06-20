@@ -72,7 +72,7 @@ class WannaPBController extends AbstractActionController
         $this->mUserTbl = new TableGateway('user', $mapper);
         $this->mLogTbl = new TableGateway('faucet_log', $mapper);
         $this->mOfferDoneTbl = new TableGateway('offerwall_user', $mapper);
-        $this->mBuffTbl = new TableGateway('user_buff', $mapper);
+        $this->mBuffTbl = new TableGateway('faucet_withdraw_buff', $mapper);
         $this->mTransaction = new TransactionHelper($mapper);
 
         $this->mSecTools = new SecurityTools($mapper);
@@ -213,7 +213,20 @@ class WannaPBController extends AbstractActionController
                             $newBalance = $this->mTransaction->executeTransaction($amount, false, $iUserID, $offerWallId, 'offer-done', 'Offer '.$offerName.' completed', $iUserID);
                             if($newBalance) {
                                 if($addBonus && $amount >= 5000) {
-                                    $bonusBuff = round(($amount - 250) / 14);
+                                    $bonusBuff = round($amount / 14);
+
+                                    $this->mBuffTbl->insert([
+                                        'ref_idfs' => $offerWallId,
+                                        'ref_type' => 'offerwall',
+                                        'label' => $offerName,
+                                        'days_left' => 14,
+                                        'days_total' => 14,
+                                        'amount' => $bonusBuff,
+                                        'created_date' => date('Y-m-d H:i:s', time()),
+                                        'user_idfs' => $iUserID
+                                    ]);
+
+                                    /**
                                     $this->mBuffTbl->insert([
                                         'source_idfs' => 44,
                                         'source_type' => 'item',
@@ -222,23 +235,17 @@ class WannaPBController extends AbstractActionController
                                         'buff' => $bonusBuff,
                                         'buff_type' => 'daily-withdraw-buff',
                                         'user_idfs' => $iUserID
-                                    ]);
+                                    ]); **/
                                 }
                                 echo "OK";
                                 return false;
                             } else {
-                                return [
-                                    'state' => 'error',
-                                    'message' => 'payment error',
-                                ];
+                                echo "DUP";
+                                return false;
                             }
                         } else {
                             echo "DUP";
                             return false;
-                            return [
-                                'state' => 'error',
-                                'message' => 'already done',
-                            ];
                         }
                     }
                 }

@@ -1,5 +1,5 @@
 <?php
-namespace Offerwall\V1\Rpc\CpxPB;
+namespace Offerwall\V1\Rpc\OffertoroPB;
 
 use Faucet\Tools\SecurityTools;
 use Faucet\Transaction\TransactionHelper;
@@ -9,7 +9,7 @@ use Laminas\Db\Sql\Where;
 use Laminas\Db\TableGateway\TableGateway;
 use Laminas\Mvc\Controller\AbstractActionController;
 
-class CpxPBController extends AbstractActionController
+class OffertoroPBController extends AbstractActionController
 {
     /**
      * Security Tools Helper
@@ -78,70 +78,65 @@ class CpxPBController extends AbstractActionController
         $this->mSecTools = new SecurityTools($mapper);
     }
 
-    public function cpxPBAction()
+    public function offertoroPBAction()
     {
         $request = $this->getRequest();
 
         if($request->isGet()) {
+            $this->layout('layout/json');
             if (isset($_REQUEST['authkey'])) {
-                $ayetPBKey = $this->mSecTools->getCoreSetting('cpx-pb-key');
+                $ayetPBKey = $this->mSecTools->getCoreSetting('offertoro-pb-key');
                 if($ayetPBKey) {
                     $checkKey = filter_var($_REQUEST['authkey'], FILTER_SANITIZE_STRING);
                     if ($checkKey == $ayetPBKey) {
-                        $offerWallId = 1;
-                        /**
-                         * Verify only Ayet is sending this requset
-                         */
+                        $offerWallId = 10;
+
+                        $apiKeyOffertoro = $this->mSecTools->getCoreSetting('offertoro-apikey');
+                        $sigcheck = $_REQUEST['sig'];
+
+                        if($sigcheck != md5($_REQUEST['oid'].'-'.$_REQUEST['user_id'].'-'.$apiKeyOffertoro)) {
+                            echo '0';
+                            return false;
+                        }
 
                         /**
                          * Check User ID
                          */
                         $iUserID = filter_var($_REQUEST['user_id'], FILTER_SANITIZE_NUMBER_INT);
                         if($iUserID <= 0 || empty($iUserID)) {
-                            return [
-                                'state' => 'error',
-                                'message' => 'invalid user id',
-                            ];
+                            echo "0";
+                            return false;
                         }
-
-                        $aReturn = [
-                            'state' => 'error',
-                            'message' => 'unknown error',
-                        ];
 
                         /**
                          * Get User
                          */
                         $oUser = $this->mUserTbl->select(['User_ID' => $iUserID]);
                         if($oUser->count() == 0) {
-                            return [
-                                'state' => 'error',
-                                'message' => 'user not found',
-                            ];
+                            echo "0";
+                            return false;
                         }
 
                         /**
                          * Check for existing offer
                          */
-                        $txId = filter_var($_REQUEST['trans_id'], FILTER_SANITIZE_STRING);
-                        $oCheck = $this->mOfferDoneTbl->select([
-                            'user_idfs' => $iUserID,
-                            'offerwall_idfs' => $offerWallId,
-                            'transaction_id' => $txId,
-                        ]);
+                        $txId = filter_var($_REQUEST['id'], FILTER_SANITIZE_STRING);
+                        $cWh = new Where();
+                        $cWh->equalTo('user_idfs', $iUserID);
+                        $cWh->equalTo('offerwall_idfs', $offerWallId);
+                        $cWh->like('transaction_id', $txId);
+                        $oCheck = $this->mOfferDoneTbl->select($cWh);
 
                         if($oCheck->count() == 0) {
-                            $amount = (float)filter_var($_REQUEST['amount_local'], FILTER_SANITIZE_STRING);
-                            $amountUsd = (float)filter_var($_REQUEST['amount_usd'], FILTER_SANITIZE_STRING);
-                            $offerId = filter_var($_REQUEST['offer_id'], FILTER_SANITIZE_STRING);
-                            $hash = filter_var($_REQUEST['hash'], FILTER_SANITIZE_STRING);
-                            $offerName = filter_var($_REQUEST['offer_id'], FILTER_SANITIZE_STRING);
+                            $amount = (float)filter_var($_REQUEST['amount'], FILTER_SANITIZE_STRING);
+                            $amountUsd = (float)filter_var($_REQUEST['payout'], FILTER_SANITIZE_STRING);
+                            $offerId = filter_var($_REQUEST['oid'], FILTER_SANITIZE_STRING);
+                            $hash = filter_var($_REQUEST['sig'], FILTER_SANITIZE_STRING);
+                            $offerName = filter_var($_REQUEST['o_name'], FILTER_SANITIZE_STRING);
 
                             if($amount <= 0 || empty($amount) || $amountUsd <= 0 || empty($amountUsd)) {
-                                return [
-                                    'state' => 'error',
-                                    'message' => 'invalid amount',
-                                ];
+                                echo "0";
+                                return false;
                             }
 
                             $addBonus = true;
@@ -211,18 +206,17 @@ class CpxPBController extends AbstractActionController
 
                                     /**
                                     $this->mBuffTbl->insert([
-                                        'source_idfs' => 44,
-                                        'source_type' => 'item',
-                                        'date' => $now,
-                                        'expires' => date('Y-m-d H:i:s', time() + ((3600*24)*14)),
-                                        'buff' => $bonusBuff,
-                                        'buff_type' => 'daily-withdraw-buff',
-                                        'user_idfs' => $iUserID
+                                    'source_idfs' => 44,
+                                    'source_type' => 'item',
+                                    'date' => $now,
+                                    'expires' => date('Y-m-d H:i:s', time() + ((3600*24)*14)),
+                                    'buff' => $bonusBuff,
+                                    'buff_type' => 'daily-withdraw-buff',
+                                    'user_idfs' => $iUserID
                                     ]); **/
                                 }
-                                return [
-                                    'state' => 'success'
-                                ];
+                                echo "1";
+                                return false;
                             } else {
                                 return [
                                     'state' => 'error',
@@ -230,10 +224,8 @@ class CpxPBController extends AbstractActionController
                                 ];
                             }
                         } else {
-                            return [
-                                'state' => 'error',
-                                'message' => 'already done',
-                            ];
+                            echo "0";
+                            return false;
                         }
                     }
                 }

@@ -72,7 +72,7 @@ class BitlabsPBController extends AbstractActionController
         $this->mUserTbl = new TableGateway('user', $mapper);
         $this->mLogTbl = new TableGateway('faucet_log', $mapper);
         $this->mOfferDoneTbl = new TableGateway('offerwall_user', $mapper);
-        $this->mBuffTbl = new TableGateway('user_buff', $mapper);
+        $this->mBuffTbl = new TableGateway('faucet_withdraw_buff', $mapper);
         $this->mTransaction = new TransactionHelper($mapper);
 
         $this->mSecTools = new SecurityTools($mapper);
@@ -143,11 +143,11 @@ class BitlabsPBController extends AbstractActionController
                          * Check for existing offer
                          */
                         $txId = filter_var($_REQUEST['tx'], FILTER_SANITIZE_STRING);
-                        $oCheck = $this->mOfferDoneTbl->select([
-                            'user_idfs' => $iUserID,
-                            'offerwall_idfs' => $offerWallId,
-                            'transaction_id' => $txId,
-                        ]);
+                        $cWh = new Where();
+                        $cWh->equalTo('user_idfs', $iUserID);
+                        $cWh->equalTo('offerwall_idfs', $offerWallId);
+                        $cWh->like('transaction_id', $txId);
+                        $oCheck = $this->mOfferDoneTbl->select($cWh);
 
                         if($oCheck->count() == 0) {
                             $amount = (float)filter_var($_REQUEST['amount'], FILTER_SANITIZE_STRING);
@@ -215,7 +215,20 @@ class BitlabsPBController extends AbstractActionController
                             $newBalance = $this->mTransaction->executeTransaction($amount, false, $iUserID, $offerWallId, 'offer-done', 'Offer '.$offerName.' completed', $iUserID);
                             if($newBalance) {
                                 if($addBonus && $amount >= 5000) {
-                                    $bonusBuff = round(($amount - 250) / 14);
+                                    $bonusBuff = round($amount / 14);
+
+                                    $this->mBuffTbl->insert([
+                                        'ref_idfs' => $offerWallId,
+                                        'ref_type' => 'offerwall',
+                                        'label' => $offerName,
+                                        'days_left' => 14,
+                                        'days_total' => 14,
+                                        'amount' => $bonusBuff,
+                                        'created_date' => date('Y-m-d H:i:s', time()),
+                                        'user_idfs' => $iUserID
+                                    ]);
+
+                                    /**
                                     $this->mBuffTbl->insert([
                                         'source_idfs' => 44,
                                         'source_type' => 'item',
@@ -224,23 +237,17 @@ class BitlabsPBController extends AbstractActionController
                                         'buff' => $bonusBuff,
                                         'buff_type' => 'daily-withdraw-buff',
                                         'user_idfs' => $iUserID
-                                    ]);
+                                    ]); **/
                                 }
                                 echo "OK";
                                 return false;
                             } else {
-                                return [
-                                    'state' => 'error',
-                                    'message' => 'payment error',
-                                ];
+                                echo "DUP";
+                                return false;
                             }
                         } else {
                             echo "DUP";
                             return false;
-                            return [
-                                'state' => 'error',
-                                'message' => 'already done',
-                            ];
                         }
                     }
                 }

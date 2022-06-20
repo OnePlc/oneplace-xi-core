@@ -106,6 +106,46 @@ return [
                     ],
                 ],
             ],
+            'offerwall.rpc.offerdaddy-pb' => [
+                'type' => 'Segment',
+                'options' => [
+                    'route' => '/offerdaddy-pb',
+                    'defaults' => [
+                        'controller' => 'Offerwall\\V1\\Rpc\\OfferdaddyPB\\Controller',
+                        'action' => 'offerdaddyPB',
+                    ],
+                ],
+            ],
+            'offerwall.rpc.offertoro-pb' => [
+                'type' => 'Segment',
+                'options' => [
+                    'route' => '/offertoro-pb',
+                    'defaults' => [
+                        'controller' => 'Offerwall\\V1\\Rpc\\OffertoroPB\\Controller',
+                        'action' => 'offertoroPB',
+                    ],
+                ],
+            ],
+            'offerwall.rpc.monlix-pb' => [
+                'type' => 'Segment',
+                'options' => [
+                    'route' => '/monlix-pb',
+                    'defaults' => [
+                        'controller' => 'Offerwall\\V1\\Rpc\\MonlixPB\\Controller',
+                        'action' => 'monlixPB',
+                    ],
+                ],
+            ],
+            'offerwall.rpc.kiwi-pb' => [
+                'type' => 'Segment',
+                'options' => [
+                    'route' => '/kiwi-pb',
+                    'defaults' => [
+                        'controller' => 'Offerwall\\V1\\Rpc\\KiwiPB\\Controller',
+                        'action' => 'kiwiPB',
+                    ],
+                ],
+            ],
         ],
     ],
     'api-tools-versioning' => [
@@ -120,6 +160,10 @@ return [
             7 => 'offerwall.rpc.persona-pb',
             8 => 'offerwall.rpc.bitlabs-pb',
             9 => 'offerwall.rpc.lootably',
+            10 => 'offerwall.rpc.offerdaddy-pb',
+            11 => 'offerwall.rpc.offertoro-pb',
+            12 => 'offerwall.rpc.monlix-pb',
+            13 => 'offerwall.rpc.kiwi-pb',
         ],
     ],
     'api-tools-rest' => [
@@ -154,6 +198,10 @@ return [
             'Offerwall\\V1\\Rpc\\PersonaPB\\Controller' => 'Json',
             'Offerwall\\V1\\Rpc\\BitlabsPB\\Controller' => 'Json',
             'Offerwall\\V1\\Rpc\\Lootably\\Controller' => 'Json',
+            'Offerwall\\V1\\Rpc\\OfferdaddyPB\\Controller' => 'Json',
+            'Offerwall\\V1\\Rpc\\OffertoroPB\\Controller' => 'Json',
+            'Offerwall\\V1\\Rpc\\MonlixPB\\Controller' => 'Json',
+            'Offerwall\\V1\\Rpc\\KiwiPB\\Controller' => 'Json',
         ],
         'accept_whitelist' => [
             'Offerwall\\V1\\Rest\\Offerwall\\Controller' => [
@@ -206,6 +254,26 @@ return [
                 1 => 'application/json',
                 2 => 'application/*+json',
             ],
+            'Offerwall\\V1\\Rpc\\OfferdaddyPB\\Controller' => [
+                0 => 'application/vnd.offerwall.v1+json',
+                1 => 'application/json',
+                2 => 'application/*+json',
+            ],
+            'Offerwall\\V1\\Rpc\\OffertoroPB\\Controller' => [
+                0 => 'application/vnd.offerwall.v1+json',
+                1 => 'application/json',
+                2 => 'application/*+json',
+            ],
+            'Offerwall\\V1\\Rpc\\MonlixPB\\Controller' => [
+                0 => 'application/vnd.offerwall.v1+json',
+                1 => 'application/json',
+                2 => 'application/*+json',
+            ],
+            'Offerwall\\V1\\Rpc\\KiwiPB\\Controller' => [
+                0 => 'application/vnd.offerwall.v1+json',
+                1 => 'application/json',
+                2 => 'application/*+json',
+            ],
         ],
         'content_type_whitelist' => [
             'Offerwall\\V1\\Rest\\Offerwall\\Controller' => [
@@ -245,6 +313,22 @@ return [
                 1 => 'application/json',
             ],
             'Offerwall\\V1\\Rpc\\Lootably\\Controller' => [
+                0 => 'application/vnd.offerwall.v1+json',
+                1 => 'application/json',
+            ],
+            'Offerwall\\V1\\Rpc\\OfferdaddyPB\\Controller' => [
+                0 => 'application/vnd.offerwall.v1+json',
+                1 => 'application/json',
+            ],
+            'Offerwall\\V1\\Rpc\\OffertoroPB\\Controller' => [
+                0 => 'application/vnd.offerwall.v1+json',
+                1 => 'application/json',
+            ],
+            'Offerwall\\V1\\Rpc\\MonlixPB\\Controller' => [
+                0 => 'application/vnd.offerwall.v1+json',
+                1 => 'application/json',
+            ],
+            'Offerwall\\V1\\Rpc\\KiwiPB\\Controller' => [
                 0 => 'application/vnd.offerwall.v1+json',
                 1 => 'application/json',
             ],
@@ -363,6 +447,10 @@ return [
             'Offerwall\\V1\\Rpc\\PersonaPB\\Controller' => \Offerwall\V1\Rpc\PersonaPB\PersonaPBControllerFactory::class,
             'Offerwall\\V1\\Rpc\\BitlabsPB\\Controller' => \Offerwall\V1\Rpc\BitlabsPB\BitlabsPBControllerFactory::class,
             'Offerwall\\V1\\Rpc\\Lootably\\Controller' => \Offerwall\V1\Rpc\Lootably\LootablyControllerFactory::class,
+            'Offerwall\\V1\\Rpc\\OfferdaddyPB\\Controller' => \Offerwall\V1\Rpc\OfferdaddyPB\OfferdaddyPBControllerFactory::class,
+            'Offerwall\\V1\\Rpc\\OffertoroPB\\Controller' => \Offerwall\V1\Rpc\OffertoroPB\OffertoroPBControllerFactory::class,
+            'Offerwall\\V1\\Rpc\\MonlixPB\\Controller' => \Offerwall\V1\Rpc\MonlixPB\MonlixPBControllerFactory::class,
+            'Offerwall\\V1\\Rpc\\KiwiPB\\Controller' => \Offerwall\V1\Rpc\KiwiPB\KiwiPBControllerFactory::class,
         ],
     ],
     'api-tools-rpc' => [
@@ -431,6 +519,34 @@ return [
                 0 => 'GET',
             ],
             'route_name' => 'offerwall.rpc.lootably',
+        ],
+        'Offerwall\\V1\\Rpc\\OfferdaddyPB\\Controller' => [
+            'service_name' => 'OfferdaddyPB',
+            'http_methods' => [
+                0 => 'GET',
+            ],
+            'route_name' => 'offerwall.rpc.offerdaddy-pb',
+        ],
+        'Offerwall\\V1\\Rpc\\OffertoroPB\\Controller' => [
+            'service_name' => 'OffertoroPB',
+            'http_methods' => [
+                0 => 'GET',
+            ],
+            'route_name' => 'offerwall.rpc.offertoro-pb',
+        ],
+        'Offerwall\\V1\\Rpc\\MonlixPB\\Controller' => [
+            'service_name' => 'MonlixPB',
+            'http_methods' => [
+                0 => 'GET',
+            ],
+            'route_name' => 'offerwall.rpc.monlix-pb',
+        ],
+        'Offerwall\\V1\\Rpc\\KiwiPB\\Controller' => [
+            'service_name' => 'KiwiPB',
+            'http_methods' => [
+                0 => 'GET',
+            ],
+            'route_name' => 'offerwall.rpc.kiwi-pb',
         ],
     ],
 ];
