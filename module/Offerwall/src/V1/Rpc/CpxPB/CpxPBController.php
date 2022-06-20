@@ -124,11 +124,11 @@ class CpxPBController extends AbstractActionController
                          * Check for existing offer
                          */
                         $txId = filter_var($_REQUEST['trans_id'], FILTER_SANITIZE_STRING);
-                        $oCheck = $this->mOfferDoneTbl->select([
-                            'user_idfs' => $iUserID,
-                            'offerwall_idfs' => $offerWallId,
-                            'transaction_id' => $txId,
-                        ]);
+                        $cWh = new Where();
+                        $cWh->equalTo('user_idfs', $iUserID);
+                        $cWh->equalTo('offerwall_idfs', $offerWallId);
+                        $cWh->like('transaction_id', $txId);
+                        $oCheck = $this->mOfferDoneTbl->select($cWh);
 
                         if($oCheck->count() == 0) {
                             $amount = (float)filter_var($_REQUEST['amount_local'], FILTER_SANITIZE_STRING);

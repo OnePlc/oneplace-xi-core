@@ -52,7 +52,7 @@ class MinerPaymentsController extends AbstractActionController
     public function __construct($mapper)
     {
         $this->mSharesTbl = new TableGateway('faucet_miner_shares', $mapper);
-        $this->mBuffTbl = new TableGateway('user_buff', $mapper);
+        $this->mBuffTbl = new TableGateway('faucet_withdraw_buff', $mapper);
 
         $this->mTransaction = new TransactionHelper($mapper);
         $this->mSecTools = new SecurityTools($mapper);
@@ -78,6 +78,18 @@ class MinerPaymentsController extends AbstractActionController
                                 $this->mSharesTbl->update(['state' => 'paid', 'amount_coin' => $pay->amount_approx],['id' => $pay->id]);
 
                                 $this->mBuffTbl->insert([
+                                    'ref_idfs' => 0,
+                                    'ref_type' => 'mining',
+                                    'label' => $pay->coin.' Mining',
+                                    'days_left' => 1,
+                                    'days_total' => 1,
+                                    'amount' => $pay->amount_approx,
+                                    'created_date' => date('Y-m-d H:i:s', time()),
+                                    'user_idfs' => $pay->user_idfs
+                                ]);
+
+                                /**
+                                $this->mBuffTbl->insert([
                                     'source_idfs' => 44,
                                     'source_type' => 'item',
                                     'date' => date('Y-m-d H:i:s', time()),
@@ -85,7 +97,7 @@ class MinerPaymentsController extends AbstractActionController
                                     'buff' => $pay->amount_approx,
                                     'buff_type' => 'daily-withdraw-buff',
                                     'user_idfs' => $pay->user_idfs
-                                ]);
+                                ]); **/
                             }
                         }
                         return [

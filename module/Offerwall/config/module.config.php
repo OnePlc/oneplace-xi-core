@@ -146,6 +146,16 @@ return [
                     ],
                 ],
             ],
+            'offerwall.rpc.hang-pb' => [
+                'type' => 'Segment',
+                'options' => [
+                    'route' => '/hangmy-pb',
+                    'defaults' => [
+                        'controller' => 'Offerwall\\V1\\Rpc\\HangPB\\Controller',
+                        'action' => 'hangPB',
+                    ],
+                ],
+            ],
         ],
     ],
     'api-tools-versioning' => [
@@ -164,6 +174,7 @@ return [
             11 => 'offerwall.rpc.offertoro-pb',
             12 => 'offerwall.rpc.monlix-pb',
             13 => 'offerwall.rpc.kiwi-pb',
+            14 => 'offerwall.rpc.hang-pb',
         ],
     ],
     'api-tools-rest' => [
@@ -202,6 +213,7 @@ return [
             'Offerwall\\V1\\Rpc\\OffertoroPB\\Controller' => 'Json',
             'Offerwall\\V1\\Rpc\\MonlixPB\\Controller' => 'Json',
             'Offerwall\\V1\\Rpc\\KiwiPB\\Controller' => 'Json',
+            'Offerwall\\V1\\Rpc\\HangPB\\Controller' => 'Json',
         ],
         'accept_whitelist' => [
             'Offerwall\\V1\\Rest\\Offerwall\\Controller' => [
@@ -274,6 +286,11 @@ return [
                 1 => 'application/json',
                 2 => 'application/*+json',
             ],
+            'Offerwall\\V1\\Rpc\\HangPB\\Controller' => [
+                0 => 'application/vnd.offerwall.v1+json',
+                1 => 'application/json',
+                2 => 'application/*+json',
+            ],
         ],
         'content_type_whitelist' => [
             'Offerwall\\V1\\Rest\\Offerwall\\Controller' => [
@@ -329,6 +346,10 @@ return [
                 1 => 'application/json',
             ],
             'Offerwall\\V1\\Rpc\\KiwiPB\\Controller' => [
+                0 => 'application/vnd.offerwall.v1+json',
+                1 => 'application/json',
+            ],
+            'Offerwall\\V1\\Rpc\\HangPB\\Controller' => [
                 0 => 'application/vnd.offerwall.v1+json',
                 1 => 'application/json',
             ],
@@ -451,6 +472,7 @@ return [
             'Offerwall\\V1\\Rpc\\OffertoroPB\\Controller' => \Offerwall\V1\Rpc\OffertoroPB\OffertoroPBControllerFactory::class,
             'Offerwall\\V1\\Rpc\\MonlixPB\\Controller' => \Offerwall\V1\Rpc\MonlixPB\MonlixPBControllerFactory::class,
             'Offerwall\\V1\\Rpc\\KiwiPB\\Controller' => \Offerwall\V1\Rpc\KiwiPB\KiwiPBControllerFactory::class,
+            'Offerwall\\V1\\Rpc\\HangPB\\Controller' => \Offerwall\V1\Rpc\HangPB\HangPBControllerFactory::class,
         ],
     ],
     'api-tools-rpc' => [
@@ -547,6 +569,13 @@ return [
                 0 => 'GET',
             ],
             'route_name' => 'offerwall.rpc.kiwi-pb',
+        ],
+        'Offerwall\\V1\\Rpc\\HangPB\\Controller' => [
+            'service_name' => 'HangPB',
+            'http_methods' => [
+                0 => 'GET',
+            ],
+            'route_name' => 'offerwall.rpc.hang-pb',
         ],
     ],
 ];

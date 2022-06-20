@@ -8,6 +8,7 @@ return [
             'Batch\\V1\\Rpc\\BatchChecker\\Controller' => \Batch\V1\Rpc\BatchChecker\BatchCheckerControllerFactory::class,
             'Batch\\V1\\Rpc\\ContestBatch\\Controller' => \Batch\V1\Rpc\ContestBatch\ContestBatchControllerFactory::class,
             'Batch\\V1\\Rpc\\OfferwallStats\\Controller' => \Batch\V1\Rpc\OfferwallStats\OfferwallStatsControllerFactory::class,
+            'Batch\\V1\\Rpc\\Migrate\\Controller' => \Batch\V1\Rpc\Migrate\MigrateControllerFactory::class,
         ],
     ],
     'view_manager' => [
@@ -78,6 +79,16 @@ return [
                     ],
                 ],
             ],
+            'batch.rpc.migrate' => [
+                'type' => 'Segment',
+                'options' => [
+                    'route' => '/batch/migrate',
+                    'defaults' => [
+                        'controller' => 'Batch\\V1\\Rpc\\Migrate\\Controller',
+                        'action' => 'migrate',
+                    ],
+                ],
+            ],
         ],
     ],
     'api-tools-versioning' => [
@@ -88,6 +99,7 @@ return [
             3 => 'batch.rpc.batch-checker',
             4 => 'batch.rpc.contest-batch',
             5 => 'batch.rpc.offerwall-stats',
+            6 => 'batch.rpc.migrate',
         ],
     ],
     'api-tools-rpc' => [
@@ -133,6 +145,13 @@ return [
             ],
             'route_name' => 'batch.rpc.offerwall-stats',
         ],
+        'Batch\\V1\\Rpc\\Migrate\\Controller' => [
+            'service_name' => 'Migrate',
+            'http_methods' => [
+                0 => 'GET',
+            ],
+            'route_name' => 'batch.rpc.migrate',
+        ],
     ],
     'api-tools-content-negotiation' => [
         'controllers' => [
@@ -142,6 +161,7 @@ return [
             'Batch\\V1\\Rpc\\BatchChecker\\Controller' => 'Json',
             'Batch\\V1\\Rpc\\ContestBatch\\Controller' => 'Json',
             'Batch\\V1\\Rpc\\OfferwallStats\\Controller' => 'Json',
+            'Batch\\V1\\Rpc\\Migrate\\Controller' => 'Json',
         ],
         'accept_whitelist' => [
             'Batch\\V1\\Rpc\\Refstats\\Controller' => [
@@ -174,6 +194,11 @@ return [
                 1 => 'application/json',
                 2 => 'application/*+json',
             ],
+            'Batch\\V1\\Rpc\\Migrate\\Controller' => [
+                0 => 'application/vnd.batch.v1+json',
+                1 => 'application/json',
+                2 => 'application/*+json',
+            ],
         ],
         'content_type_whitelist' => [
             'Batch\\V1\\Rpc\\Refstats\\Controller' => [
@@ -197,6 +222,10 @@ return [
                 1 => 'application/json',
             ],
             'Batch\\V1\\Rpc\\OfferwallStats\\Controller' => [
+                0 => 'application/vnd.batch.v1+json',
+                1 => 'application/json',
+            ],
+            'Batch\\V1\\Rpc\\Migrate\\Controller' => [
                 0 => 'application/vnd.batch.v1+json',
                 1 => 'application/json',
             ],

@@ -190,8 +190,13 @@ class WithdrawController extends AbstractActionController
             }
 
             $withdrawLimit = 1000 + (200 * ($me->xp_level - 1));
+            // double base limit for users lvl 20+
+            if($me->xp_level >= 20) {
+                $withdrawLimit = $withdrawLimit*2;
+            }
 
             $withdrawBonus = 0;
+            /**
             $myBuffs = [];
             # check for active withdrawal buffs
             $activeBuffs = $this->mUserTools->getUserActiveBuffs('daily-withdraw-buff', date('Y-m-d', time()), $me->User_ID);
@@ -200,7 +205,7 @@ class WithdrawController extends AbstractActionController
                     $withdrawBonus+=$buff->buff;
                     $myBuffs[] = $buff;
                 }
-            }
+            } **/
 
             $gachaLink = false;
             $links = $this->mLinkAccTbl->select(['user_idfs' => $me->User_ID]);
@@ -234,10 +239,6 @@ class WithdrawController extends AbstractActionController
                 ];
             }
 
-            if($me->User_ID == 335875071) {
-                //$withdrawLimit = 1000000;
-            }
-
             /**
              * Buffs V2
              */
@@ -268,12 +269,39 @@ class WithdrawController extends AbstractActionController
                                 $wthBuffTotal += $wthBuff->amount;
                             }
                             break;
+                        case 'mining':
+                            $myWthBuffs[] = [
+                                'id' => $wthBuff->Row_ID,
+                                'name' => $wthBuff->label,
+                                'type' => 'mining',
+                                'amount' => $wthBuff->amount,
+                                'days_left' => $wthBuff->days_left,
+                                'days_total' => $wthBuff->days_total
+                            ];
+                            $wthBuffTotal += $wthBuff->amount;
+                            break;
+                        case 'oldbuff':
+                            $myWthBuffs[] = [
+                                'id' => $wthBuff->Row_ID,
+                                'name' => $wthBuff->label,
+                                'type' => 'daily-old',
+                                'amount' => $wthBuff->amount,
+                                'days_left' => $wthBuff->days_left,
+                                'days_total' => $wthBuff->days_total
+                            ];
+                            $wthBuffTotal += $wthBuff->amount;
+                            break;
                         default:
                             break;
                     }
                 }
             }
 
+            // dont show negative daily left
+            $dailyLeft = (($withdrawLimit+$wthBuffTotal) - $coinsWithdrawnToday);
+            if($dailyLeft < 0) {
+                $dailyLeft = 0;
+            }
 
             $nextPay = $this->mSecTools->getCoreSetting('payment-next');
 
@@ -282,9 +310,9 @@ class WithdrawController extends AbstractActionController
                 'wallet' => $wallets,
                 'daily_limit_base' => $withdrawLimit,
                 'daily_limit_bonus' => $withdrawBonus,
-                'daily_limit' => $withdrawLimit+$withdrawBonus,
+                'daily_limit' => $withdrawLimit+$wthBuffTotal,
                 'token_val' => $tokenValue,
-                'daily_left' => (($withdrawLimit+$withdrawBonus) - $coinsWithdrawnToday),
+                'daily_left' => $dailyLeft,
                 'next_payment' => $nextPay,
                 'buffs' => $myWthBuffs,
                 'daily_buffs' => $wthBuffTotal
@@ -638,16 +666,46 @@ class WithdrawController extends AbstractActionController
                  */
                 $amount = filter_var($json->amount, FILTER_SANITIZE_NUMBER_INT);
                 $withdrawLimit = 1000 + (200 * ($me->xp_level - 1));
+                // double base limit for users lvl 20+
+                if($me->xp_level >= 20) {
+                    $withdrawLimit = $withdrawLimit*2;
+                }
 
                 /**
                  * Add Buffs to Limit
                  */
+                /**
                 $withdrawBonus = 0;
                 # check for active withdrawal buffs
                 $activeBuffs = $this->mUserTools->getUserActiveBuffs('daily-withdraw-buff', date('Y-m-d', time()), $me->User_ID);
                 if(count($activeBuffs) > 0) {
                     foreach($activeBuffs as $buff) {
                         $withdrawBonus+=$buff->buff;
+                    }
+                }
+                **/
+
+                /**
+                 * Buffs V2
+                 */
+                $bWh = new Where();
+                $bWh->equalTo('user_idfs', $me->User_ID);
+                $bWh->greaterThanOrEqualTo('days_left', 1);
+                $activeWthBuffs = $this->WthBuffTbl->select($bWh);
+                $wthBuffTotal = 0;
+                $wthActiveBuffs = [];
+                if($activeWthBuffs->count() > 0) {
+                    foreach($activeWthBuffs as $wthBuff) {
+                        switch($wthBuff->ref_type) {
+                            case 'offerwall':
+                            case 'mining':
+                            case 'oldbuff':
+                            $wthActiveBuffs[] = (object)['id' => $wthBuff->Row_ID, 'days' => $wthBuff->days_left];
+                            $wthBuffTotal += $wthBuff->amount;
+                                break;
+                            default:
+                                break;
+                        }
                     }
                 }
 
@@ -657,7 +715,7 @@ class WithdrawController extends AbstractActionController
                 if($me->User_ID == 335875071) {
                     //$withdrawLimit = 1000000;
                 }
-                $withdrawLimit+=$withdrawBonus;
+                $withdrawLimit+=$wthBuffTotal;
                 if($amount > $withdrawLimit) {
                     return new ApiProblemResponse(new ApiProblem(409, 'Amount is bigger than daily withdrawal limit'));
                 }
@@ -719,6 +777,13 @@ class WithdrawController extends AbstractActionController
                             if(count($userWithdrawals) > 0) {
                                 foreach($userWithdrawals as $wth) {
                                     $withdrawals[$wth->state][] = $wth;
+                                }
+                            }
+
+                            # substract one day from active buffs
+                            if(count($wthActiveBuffs) > 0) {
+                                foreach($wthActiveBuffs as $updBuff) {
+                                    $this->WthBuffTbl->update(['days_left' => $updBuff->days-1],['Row_ID' => $updBuff->id]);
                                 }
                             }
 
