@@ -2,6 +2,7 @@
 namespace Guild\V1\Rest\Rank;
 
 use Faucet\Tools\SecurityTools;
+use Faucet\Transaction\TransactionHelper;
 use Laminas\ApiTools\ApiProblem\ApiProblem;
 use Laminas\ApiTools\Rest\AbstractResourceListener;
 use Laminas\Db\Sql\Where;
@@ -54,6 +55,14 @@ class RankResource extends AbstractResourceListener
     protected $mSecTools;
 
     /**
+     * Transaction Helper
+     *
+     * @var TransactionHelper $mTransaction
+     * @since 1.0.0
+     */
+    protected $mTransaction;
+
+    /**
      * Constructor
      *
      * AchievementResource constructor.
@@ -69,6 +78,7 @@ class RankResource extends AbstractResourceListener
         $this->mRankPermTbl = new TableGateway('faucet_guild_rank_permission', $mapper);
 
         $this->mSecTools = new SecurityTools($mapper);
+        $this->mTransaction = new TransactionHelper($mapper);
     }
     /**
      * Create a resource
@@ -78,7 +88,84 @@ class RankResource extends AbstractResourceListener
      */
     public function create($data)
     {
-        return new ApiProblem(405, 'The POST method has not been defined');
+        # Prevent 500 error
+        if(!$this->getIdentity()) {
+            return new ApiProblem(401, 'Not logged in');
+        }
+        $me = $this->mSecTools->getSecuredUserSession($this->getIdentity()->getName());
+        if(get_class($me) == 'Laminas\\ApiTools\\ApiProblem\\ApiProblem') {
+            return $me;
+        }
+
+        # check if user already has joined or created a guild
+        $checkWh = new Where();
+        $checkWh->equalTo('user_idfs', $me->User_ID);
+        $checkWh->notLike('date_joined', '0000-00-00 00:00:00');
+        $userHasGuild = $this->mGuildUserTbl->select($checkWh);
+
+        if(count($userHasGuild) == 0) {
+            return new ApiProblem(404, 'User is not part of any guild.');
+        } else {
+            # only guildmaster is allowed to see this info
+            $userGuildInfo = $userHasGuild->current();
+            $guildId = $userGuildInfo->guild_idfs;
+            if ($userGuildInfo->rank == 0) {
+                # get rank info
+                $ranks = $this->mGuildRankTbl->select(['guild_idfs' => $guildId]);
+                if ($ranks->count() < 10) {
+                    $renamePrice = 1000;
+                    if($this->mTransaction->checkGuildBalance($renamePrice, $guildId)) {
+                        $rankName = filter_var($data->rank_name, FILTER_SANITIZE_STRING);
+
+                        $newBalance = $this->mTransaction->executeGuildTransaction($renamePrice, true,
+                            $guildId, $guildId, 'rank-create', 'Created New Rank ' . $rankName, $me->User_ID);
+
+                        $rankLevels = [1, 2, 3, 4, 5, 6, 7, 8, 9];
+                        foreach($ranks as $r) {
+                            if(array_key_exists($r->level, $rankLevels)) {
+                                unset($rankLevels[$r->level]);
+                            }
+                        }
+
+                        $rankLevel = 1;
+                        foreach($rankLevels as $rankId) {
+                            $rankLevel = $rankId;
+                            break;
+                        }
+
+                        $this->mGuildRankTbl->insert([
+                            'guild_idfs' => $guildId,
+                            'level' => $rankLevel,
+                            'label' => $rankName,
+                            'daily_withdraw' => 0
+                        ]);
+
+                        $ranks = [];
+                        $guildRanks = $this->mGuildRankTbl->select(['guild_idfs' => $guildId]);
+                        if(count($guildRanks) > 0) {
+                            foreach($guildRanks as $rank) {
+                                $ranks[] = (object)[
+                                    'id' => $rank->level,
+                                    'name' => $rank->label,
+                                ];
+                            }
+                        }
+
+                        return [
+                            'state' => 'done',
+                            'token_balance' => $newBalance,
+                            'ranks' => $ranks
+                        ];
+                    } else {
+                        return new ApiProblem(403, 'Your Guild Token Balance is too low to create a new rank. You need '.$renamePrice.' Coins to create a new rank');
+                    }
+                } else {
+                    return new ApiProblem(403, 'Guilds cannot have more than 10 Ranks.');
+                }
+            } else {
+                return new ApiProblem(403, 'You must be a guildmaster to create ranks.');
+            }
+        }
     }
 
     /**

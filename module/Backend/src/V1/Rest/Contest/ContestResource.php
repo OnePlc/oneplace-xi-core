@@ -786,7 +786,10 @@ class ContestResource extends AbstractResourceListener
 
             /**
              * User XP Level Contest Data
+             *
+             * not active at the moment
              */
+            /**
             $statSel = new Select($this->mUsrStatsTbl->getTable());
             $statSel->order('date DESC');
             $statSel->where(['stat_key' => 'user-xp-'.date('n-Y', $date)]);
@@ -818,6 +821,7 @@ class ContestResource extends AbstractResourceListener
                 }
             }
             $contestWinnersById[2] = $top3Level;
+             * **/
 
             /**
              * Shortlinks Done Contest Data
@@ -1103,11 +1107,15 @@ class ContestResource extends AbstractResourceListener
         $contestList = $this->mContestTbl->selectWith($conSel);
         foreach($contestList as $contest) {
             if(array_key_exists($contest->Contest_ID, $contestWinnersById)) {
-                $contests[] = [
+                $conData = [
                     'id' => $contest->Contest_ID,
                     'name' => $contest->contest_label,
                     'winners' => $contestWinnersById[$contest->Contest_ID]
                 ];
+                if(array_key_exists($contest->Contest_ID, $myContestStats)) {
+                    $conData['me'] = $myContestStats[$contest->Contest_ID];
+                }
+                $contests[] = $conData;
             } else {
                 $contests[] = [
                     'id' => $contest->Contest_ID,

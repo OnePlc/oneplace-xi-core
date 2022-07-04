@@ -546,6 +546,7 @@ class HallOfFameController extends AbstractActionController
                 $conMonth = date('n', time());
                 $conYear = date('Y', time());
 
+                $myContestStats = [];
                 $top10Contest = ['contest-10' => [],'contest-5' => [],'contest-6' => [],'contest-11' => [],'contest-12' => [],'contest-13' => [],'contest-1' => []];
 
                 /**
@@ -581,6 +582,15 @@ class HallOfFameController extends AbstractActionController
                     }
                 }
 
+                $myStatSel = new Select($this->mUsrStatsTbl->getTable());
+                $myStatSel->where(['stat_key' => 'shdone-m-'.date('n-Y', $date), 'user_idfs' => $me->User_ID]);
+                $myStat = $this->mUsrStatsTbl->selectWith($myStatSel);
+                if($myStat->count() > 0) {
+                    $myContestStats[10] = $myStat->current()->stat_data;
+                } else {
+                    $myContestStats[10] = 0;
+                }
+
                 /**
                  * Daily Tasks
                  */
@@ -612,6 +622,15 @@ class HallOfFameController extends AbstractActionController
                             $iCount++;
                         }
                     }
+                }
+
+                $myStatSel = new Select($this->mUsrStatsTbl->getTable());
+                $myStatSel->where(['stat_key' => 'user-dailys-m-'.date('n-Y', $date), 'user_idfs' => $me->User_ID]);
+                $myStat = $this->mUsrStatsTbl->selectWith($myStatSel);
+                if($myStat->count() > 0) {
+                    $myContestStats[13] = $myStat->current()->stat_data;
+                } else {
+                    $myContestStats[13] = 0;
                 }
 
                 /**
@@ -647,6 +666,15 @@ class HallOfFameController extends AbstractActionController
                     }
                 }
 
+                $myStatSel = new Select($this->mUsrStatsTbl->getTable());
+                $myStatSel->where(['stat_key' => 'user-offerbig-m-'.date('n-Y', $date), 'user_idfs' => $me->User_ID]);
+                $myStat = $this->mUsrStatsTbl->selectWith($myStatSel);
+                if($myStat->count() > 0) {
+                    $myContestStats[11] = $myStat->current()->stat_data;
+                } else {
+                    $myContestStats[11] = 0;
+                }
+
                 /**
                  * Offerwalls Small
                  */
@@ -678,6 +706,15 @@ class HallOfFameController extends AbstractActionController
                             $iCount++;
                         }
                     }
+                }
+
+                $myStatSel = new Select($this->mUsrStatsTbl->getTable());
+                $myStatSel->where(['stat_key' => 'user-offersmall-m-'.date('n-Y', $date), 'user_idfs' => $me->User_ID]);
+                $myStat = $this->mUsrStatsTbl->selectWith($myStatSel);
+                if($myStat->count() > 0) {
+                    $myContestStats[12] = $myStat->current()->stat_data;
+                } else {
+                    $myContestStats[12] = 0;
                 }
 
                 // nano-coin-m-rvn-5-2022
@@ -723,6 +760,26 @@ class HallOfFameController extends AbstractActionController
                         }
                     }
                 }
+                $statWh = new Where();
+                $statWh->NEST
+                    ->like('stat_key', 'nano-coin-m-rvn-'.date('n-Y',$date))
+                    ->OR
+                    ->like('stat_key', 'nano-coin-m-etc-'.date('n-Y',$date))
+                    ->UNNEST;
+                $statWh->equalTo('user_idfs', $me->User_ID);
+                $myStatSel = new Select($this->mUsrStatsTbl->getTable());
+                $myStatSel->where($statWh);
+                $myStat = $this->mUsrStatsTbl->selectWith($myStatSel);
+                if($myStat->count() > 0) {
+                    $total = 0;
+                    foreach($myStat as $ms) {
+                        $total += (int)$ms->stat_data;
+                    }
+                    $myContestStats[5] = $total;
+                } else {
+                    $myContestStats[5] = 0;
+                }
+
 
                 /**
                  * CPU Miners
@@ -757,6 +814,15 @@ class HallOfFameController extends AbstractActionController
                             $iCount++;
                         }
                     }
+                }
+
+                $myStatSel = new Select($this->mUsrStatsTbl->getTable());
+                $myStatSel->where(['stat_key' => 'nano-coin-m-'.date('n-Y', $date), 'user_idfs' => $me->User_ID]);
+                $myStat = $this->mUsrStatsTbl->selectWith($myStatSel);
+                if($myStat->count() > 0) {
+                    $myContestStats[6] = $myStat->current()->stat_data;
+                } else {
+                    $myContestStats[6] = 0;
                 }
 
                 /**
@@ -816,12 +882,17 @@ class HallOfFameController extends AbstractActionController
                     if(array_key_exists('contest-'.$con->Contest_ID,$top10Contest)) {
                         $winners = $top10Contest['contest-'.$con->Contest_ID];
                     }
+                    $me = 0;
+                    if(array_key_exists($con->Contest_ID,$myContestStats)) {
+                        $me = $myContestStats[$con->Contest_ID];
+                    }
                     $contestsData[] = [
                         'id' => $con->Contest_ID,
                         'name' => $con->contest_name,
                         'type' => $con->contest_type,
                         'reward' => $contestRewards,
                         'winners' => $winners,
+                        'me' => $me
                     ];
                 }
 

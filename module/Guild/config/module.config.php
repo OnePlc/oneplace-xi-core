@@ -4,6 +4,7 @@ return [
         'factories' => [
             \Guild\V1\Rest\Guild\GuildResource::class => \Guild\V1\Rest\Guild\GuildResourceFactory::class,
             \Guild\V1\Rest\Rank\RankResource::class => \Guild\V1\Rest\Rank\RankResourceFactory::class,
+            \Guild\V1\Rest\News\NewsResource::class => \Guild\V1\Rest\News\NewsResourceFactory::class,
         ],
     ],
     'router' => [
@@ -66,6 +67,15 @@ return [
                     ],
                 ],
             ],
+            'guild.rest.news' => [
+                'type' => 'Segment',
+                'options' => [
+                    'route' => '/guildnews[/:news_id]',
+                    'defaults' => [
+                        'controller' => 'Guild\\V1\\Rest\\News\\Controller',
+                    ],
+                ],
+            ],
         ],
     ],
     'api-tools-versioning' => [
@@ -76,6 +86,7 @@ return [
             3 => 'guild.rpc.chat',
             4 => 'guild.rest.rank',
             5 => 'guild.rpc.statistics',
+            6 => 'guild.rest.news',
         ],
     ],
     'api-tools-rest' => [
@@ -123,6 +134,28 @@ return [
             'collection_class' => \Guild\V1\Rest\Rank\RankCollection::class,
             'service_name' => 'Rank',
         ],
+        'Guild\\V1\\Rest\\News\\Controller' => [
+            'listener' => \Guild\V1\Rest\News\NewsResource::class,
+            'route_name' => 'guild.rest.news',
+            'route_identifier_name' => 'news_id',
+            'collection_name' => 'news',
+            'entity_http_methods' => [
+                0 => 'GET',
+                1 => 'PATCH',
+                2 => 'PUT',
+                3 => 'DELETE',
+            ],
+            'collection_http_methods' => [
+                0 => 'GET',
+                1 => 'POST',
+            ],
+            'collection_query_whitelist' => [],
+            'page_size' => 25,
+            'page_size_param' => null,
+            'entity_class' => \Guild\V1\Rest\News\NewsEntity::class,
+            'collection_class' => \Guild\V1\Rest\News\NewsCollection::class,
+            'service_name' => 'News',
+        ],
     ],
     'api-tools-content-negotiation' => [
         'controllers' => [
@@ -132,6 +165,7 @@ return [
             'Guild\\V1\\Rpc\\Chat\\Controller' => 'Json',
             'Guild\\V1\\Rest\\Rank\\Controller' => 'HalJson',
             'Guild\\V1\\Rpc\\Statistics\\Controller' => 'Json',
+            'Guild\\V1\\Rest\\News\\Controller' => 'HalJson',
         ],
         'accept_whitelist' => [
             'Guild\\V1\\Rest\\Guild\\Controller' => [
@@ -164,6 +198,11 @@ return [
                 1 => 'application/json',
                 2 => 'application/*+json',
             ],
+            'Guild\\V1\\Rest\\News\\Controller' => [
+                0 => 'application/vnd.guild.v1+json',
+                1 => 'application/hal+json',
+                2 => 'application/json',
+            ],
         ],
         'content_type_whitelist' => [
             'Guild\\V1\\Rest\\Guild\\Controller' => [
@@ -187,6 +226,10 @@ return [
                 1 => 'application/json',
             ],
             'Guild\\V1\\Rpc\\Statistics\\Controller' => [
+                0 => 'application/vnd.guild.v1+json',
+                1 => 'application/json',
+            ],
+            'Guild\\V1\\Rest\\News\\Controller' => [
                 0 => 'application/vnd.guild.v1+json',
                 1 => 'application/json',
             ],
@@ -216,6 +259,18 @@ return [
                 'entity_identifier_name' => 'id',
                 'route_name' => 'guild.rest.rank',
                 'route_identifier_name' => 'rank_id',
+                'is_collection' => true,
+            ],
+            \Guild\V1\Rest\News\NewsEntity::class => [
+                'entity_identifier_name' => 'id',
+                'route_name' => 'guild.rest.news',
+                'route_identifier_name' => 'news_id',
+                'hydrator' => \Laminas\Hydrator\ObjectPropertyHydrator::class,
+            ],
+            \Guild\V1\Rest\News\NewsCollection::class => [
+                'entity_identifier_name' => 'id',
+                'route_name' => 'guild.rest.news',
+                'route_identifier_name' => 'news_id',
                 'is_collection' => true,
             ],
         ],
@@ -393,6 +448,22 @@ return [
                         'PATCH' => false,
                         'DELETE' => false,
                     ],
+                ],
+            ],
+            'Guild\\V1\\Rest\\News\\Controller' => [
+                'collection' => [
+                    'GET' => true,
+                    'POST' => true,
+                    'PUT' => false,
+                    'PATCH' => false,
+                    'DELETE' => false,
+                ],
+                'entity' => [
+                    'GET' => true,
+                    'POST' => false,
+                    'PUT' => true,
+                    'PATCH' => true,
+                    'DELETE' => true,
                 ],
             ],
         ],
