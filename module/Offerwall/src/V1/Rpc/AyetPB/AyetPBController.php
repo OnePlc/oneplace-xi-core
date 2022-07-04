@@ -2,6 +2,7 @@
 namespace Offerwall\V1\Rpc\AyetPB;
 
 use Faucet\Tools\SecurityTools;
+use Faucet\Tools\UserTools;
 use Faucet\Transaction\TransactionHelper;
 use Laminas\ApiTools\ApiProblem\ApiProblem;
 use Laminas\ApiTools\ApiProblem\ApiProblemResponse;
@@ -60,6 +61,14 @@ class AyetPBController extends AbstractActionController
     protected $mBuffTbl;
 
     /**
+     * User Tools Helper
+     *
+     * @var UserTools $mUserTools
+     * @since 1.0.0
+     */
+    protected $mUserTools;
+
+    /**
      * Constructor
      *
      * AyetstudiosController constructor.
@@ -76,6 +85,7 @@ class AyetPBController extends AbstractActionController
         $this->mTransaction = new TransactionHelper($mapper);
 
         $this->mSecTools = new SecurityTools($mapper);
+        $this->mUserTools = new UserTools($mapper);
     }
 
     public function ayetPBAction()
@@ -211,6 +221,8 @@ class AyetPBController extends AbstractActionController
                             $newBalance = $this->mTransaction->executeTransaction($amount, false, $iUserID, $offerWallId, 'offer-done', 'Offer '.$offerName.' completed', $iUserID);
                             if($newBalance) {
                                 if($addBonus && $amount >= 5000) {
+                                    $this->mUserTools->addXP('cpx-claim', $iUserID);
+
                                     $bonusBuff = round($amount / 14);
 
                                     $this->mBuffTbl->insert([
@@ -234,6 +246,8 @@ class AyetPBController extends AbstractActionController
                                         'buff_type' => 'daily-withdraw-buff',
                                         'user_idfs' => $iUserID
                                     ]); **/
+                                } else {
+                                    $this->mUserTools->addXP('cpx-claim-small', $iUserID);
                                 }
                                 return [
                                     'state' => 'success'

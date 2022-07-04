@@ -74,7 +74,7 @@ class BatchCheckerController extends AbstractActionController
                             if(strtotime($batch->settings_value) < $today-(3600*24)) {
                                 $notRun[] = $batch->settings_key;
                             } else {
-                                $run[] = $batch;
+                                //$run[] = $batch;
                                 $runCount++;
                             }
                         }

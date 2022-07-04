@@ -599,6 +599,7 @@ class WithdrawController extends AbstractActionController
                 switch($coinInfo->coin_sign) {
                     case 'BCH':
                         $addrCheck = str_replace(['bitcoincash:'],[''],$wallet);
+                        /**
                         if(strlen($addrCheck) < 42) {
                             if(substr($addrCheck,0,1) == 1) {
                                 if(strlen($addrCheck) < 34) {
@@ -611,10 +612,23 @@ class WithdrawController extends AbstractActionController
                                     return new ApiProblemResponse(new ApiProblem(400, 'Invalid Bitcoin Cash Address. Make sure you have no typing errors and choose the correct currency'));
                                 }
                             }
+                        } **/
+                        if(strlen($addrCheck) < 34) {
+                            return new ApiProblemResponse(new ApiProblem(400, 'Invalid Bitcoin Cash Address. Make sure you have no typing errors and choose the correct currency'));
                         }
                         $firstLetter = strtolower(substr($addrCheck,0,1));
-                        if($firstLetter != 'p' && $firstLetter != 'q') {
+                        if($firstLetter != 'p' && $firstLetter != 'q' && $firstLetter != '1') {
                             return new ApiProblemResponse(new ApiProblem(400, 'Invalid Bitcoin Cash Address. Make sure you have no typing errors and choose the correct currency'));
+                        }
+                        break;
+                    case 'RVN':
+                        $addrCheck = str_replace(['ravencoin:'],[''],$wallet);
+                        if(strlen($addrCheck) < 34) {
+                            return new ApiProblemResponse(new ApiProblem(400, 'Invalid Ravencoin Address. Make sure you have no typing errors and choose the correct currency'));
+                        }
+                        $firstLetter = strtolower(substr($addrCheck,0,1));
+                        if($firstLetter != 'r') {
+                            return new ApiProblemResponse(new ApiProblem(400, 'Invalid Ravencoin Address. Make sure you have no typing errors and choose the correct currency'));
                         }
                         break;
                     case 'LTC':
@@ -697,13 +711,9 @@ class WithdrawController extends AbstractActionController
                 if($activeWthBuffs->count() > 0) {
                     foreach($activeWthBuffs as $wthBuff) {
                         switch($wthBuff->ref_type) {
-                            case 'offerwall':
-                            case 'mining':
-                            case 'oldbuff':
-                            $wthActiveBuffs[] = (object)['id' => $wthBuff->Row_ID, 'days' => $wthBuff->days_left];
-                            $wthBuffTotal += $wthBuff->amount;
-                                break;
                             default:
+                                $wthActiveBuffs[] = (object)['id' => $wthBuff->Row_ID, 'days' => $wthBuff->days_left];
+                                $wthBuffTotal += $wthBuff->amount;
                                 break;
                         }
                     }
@@ -715,7 +725,7 @@ class WithdrawController extends AbstractActionController
                 if($me->User_ID == 335875071) {
                     //$withdrawLimit = 1000000;
                 }
-                $withdrawLimit+=$wthBuffTotal;
+                $withdrawLimit = $withdrawLimit + $wthBuffTotal;
                 if($amount > $withdrawLimit) {
                     return new ApiProblemResponse(new ApiProblem(409, 'Amount is bigger than daily withdrawal limit'));
                 }

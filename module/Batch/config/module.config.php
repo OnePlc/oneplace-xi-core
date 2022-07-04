@@ -14,7 +14,7 @@ return [
     'view_manager' => [
         'display_exceptions' => false,
         'template_path_stack' => [
-            'batch' => 'C:\\Users\\Praesidiarius\\PhpstormProjects\\oneplace-xi-core\\module\\Batch\\config/../view',
+            'batch' => __DIR__ . '/../view',
         ],
     ],
     'router' => [

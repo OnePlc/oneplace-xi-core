@@ -547,10 +547,14 @@ class TokenController extends AbstractActionController
                      */
                     if($newBalance !== false) {
                         $me->token_balance = $newBalance;
+                        /**
+                         * just burn that shit
+                         *
                         $adminUserIds = explode(',',$this->mSecTools->getCoreSetting('admin-user-ids'));
                         foreach($adminUserIds as $adminid) {
                             $newBalanceAdmin = $this->mTransaction->executeTransaction((($amount * $tokenPrice)/count($adminUserIds)), false, $adminid, $amount, 'token-buy', 'User Bought '.$amount.' Tokens with COINS');
                         }
+                         * **/
                     }
                     $walletReceive = $me->User_ID;
                     break;

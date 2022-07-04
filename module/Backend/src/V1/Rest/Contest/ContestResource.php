@@ -129,7 +129,7 @@ class ContestResource extends AbstractResourceListener
 
         $this->mUsrStatsTbl = new TableGateway('user_faucet_stat', $mapper);
         $this->mStatsTbl = new TableGateway('faucet_statistic', $mapper);
-        $this->mBuffTbl = new TableGateway('user_buff', $mapper);
+        $this->mBuffTbl = new TableGateway('faucet_withdraw_buff', $mapper);
 
         $this->mSecTools = new SecurityTools($mapper);
         $this->mTransaction = new TransactionHelper($mapper);
@@ -1189,15 +1189,15 @@ class ContestResource extends AbstractResourceListener
                     $messageId = $this->mInboxTbl->lastInsertValue;
 
                     $now = date('Y-m-d H:i:s', time());
-
-                    $bonusBuff = round($op->reward / 14);
+                    $bonusBuff = round($op->reward / 10);
                     $this->mBuffTbl->insert([
-                        'source_idfs' => 44,
-                        'source_type' => 'item',
-                        'date' => $now,
-                        'expires' => date('Y-m-d H:i:s', time() + ((3600*24)*20)),
-                        'buff' => $bonusBuff,
-                        'buff_type' => 'daily-withdraw-buff',
+                        'ref_idfs' => $op->contest_idfs,
+                        'ref_type' => 'contest',
+                        'label' => 'Rank '.$op->rank.' '.$contestInfo->contest_label.' Contest '.$monthText,
+                        'days_left' => 10,
+                        'days_total' => 10,
+                        'amount' => $bonusBuff,
+                        'created_date' => $now,
                         'user_idfs' => $op->user_idfs
                     ]);
                 }
