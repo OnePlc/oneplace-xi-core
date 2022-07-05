@@ -402,13 +402,17 @@ class ShortlinkResource extends AbstractResourceListener
                     $totalLinksDone24h++;
                 }
             }
+            $linkRew = $sh->reward;
+            if($me->xp_level >= 20) {
+                $linkRew=$linkRew*1.5;
+            }
             $sh->linksDone = $linksDone;
-            $totalReward+=($sh->linksTotal-$sh->linksDone)*$sh->reward;
+            $totalReward+=($sh->linksTotal-$sh->linksDone)*$linkRew;
 
             $shortlinks[] = (object)[
                 'id' => $sh->Shortlink_ID,
                 'name' => $sh->label,
-                'reward' => $sh->reward,
+                'reward' => $linkRew,
                 'url' => $sh->url,
                 'hidden' => $hidden,
                 'rating' => $sh->rating,

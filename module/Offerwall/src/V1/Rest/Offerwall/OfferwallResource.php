@@ -148,7 +148,11 @@ class OfferwallResource extends AbstractResourceListener
         # Compile list of all offerwall providers
         $offerwalls = [];
         $offerwallsById = [];
-        $offerwallsDB = $this->mOfferwallTbl->select(['active' => 1]);
+        $ofWh = ['active' => 1];
+        if($me->User_ID == 335874987) {
+            //$ofWh = [];
+        }
+        $offerwallsDB = $this->mOfferwallTbl->select($ofWh);
         foreach($offerwallsDB as $offerwall) {
             $offerwalls[] = (object)[
                 'id' => $offerwall->Offerwall_ID,

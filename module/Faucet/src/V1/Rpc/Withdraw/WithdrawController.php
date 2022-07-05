@@ -280,6 +280,17 @@ class WithdrawController extends AbstractActionController
                             ];
                             $wthBuffTotal += $wthBuff->amount;
                             break;
+                        case 'contest':
+                            $myWthBuffs[] = [
+                                'id' => $wthBuff->Row_ID,
+                                'name' => $wthBuff->label,
+                                'type' => 'contest',
+                                'amount' => $wthBuff->amount,
+                                'days_left' => $wthBuff->days_left,
+                                'days_total' => $wthBuff->days_total
+                            ];
+                            $wthBuffTotal += $wthBuff->amount;
+                            break;
                         case 'oldbuff':
                             $myWthBuffs[] = [
                                 'id' => $wthBuff->Row_ID,

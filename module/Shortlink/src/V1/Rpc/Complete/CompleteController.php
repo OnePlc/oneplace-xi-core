@@ -184,11 +184,24 @@ class CompleteController extends AbstractActionController
                             'date_completed' => '0000-00-00 00:00:00'
                         ]);
 
+                        $userInfo = $this->mUserTbl->select(['User_ID' => $shFound->user_idfs]);
+                        if($userInfo->count() == 0) {
+                            echo 'User not found';
+                            return false;
+                        }
+                        $userInfo = $userInfo->current();
+
+                        # higher reward for lvl20+ users
+                        $reward = $linkInfo->reward;
+                        if($userInfo->xp_level >= 20) {
+                            $reward=$reward*1.5;
+                        }
+
                         $newBalance = $this->mTransaction->executeTransaction($linkInfo->reward, false, $shFound->user_idfs, $shFound->shortlink_idfs, 'shortlink-complete', 'Shortlink '.$shFound->link_id.' completed');
                         if($newBalance !== false) {
                             $xpInfo = $this->mUserTools->addXP('shortlink-claim', $shFound->user_idfs);
 
-                            $itemDrop = $this->mUserTools->getItemDropChance('shortlink-claim', $shFound->user_idfs);
+                            //$itemDrop = $this->mUserTools->getItemDropChance('shortlink-claim', $shFound->user_idfs);
 
                             # check for achievement completetion
                             $currentLinksDone = $this->mShortDoneTbl->select(['user_idfs' => $shFound->user_idfs])->count();

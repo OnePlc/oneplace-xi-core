@@ -156,6 +156,36 @@ return [
                     ],
                 ],
             ],
+            'offerwall.rpc.timewall-pb' => [
+                'type' => 'Segment',
+                'options' => [
+                    'route' => '/timewall-pb',
+                    'defaults' => [
+                        'controller' => 'Offerwall\\V1\\Rpc\\TimewallPB\\Controller',
+                        'action' => 'timewallPB',
+                    ],
+                ],
+            ],
+            'offerwall.rpc.notik-pb' => [
+                'type' => 'Segment',
+                'options' => [
+                    'route' => '/notik-pb',
+                    'defaults' => [
+                        'controller' => 'Offerwall\\V1\\Rpc\\NotikPB\\Controller',
+                        'action' => 'notikPB',
+                    ],
+                ],
+            ],
+            'offerwall.rpc.adgate-pb' => [
+                'type' => 'Segment',
+                'options' => [
+                    'route' => '/adgate-pb',
+                    'defaults' => [
+                        'controller' => 'Offerwall\\V1\\Rpc\\AdgatePB\\Controller',
+                        'action' => 'adgatePB',
+                    ],
+                ],
+            ],
         ],
     ],
     'api-tools-versioning' => [
@@ -175,6 +205,9 @@ return [
             12 => 'offerwall.rpc.monlix-pb',
             13 => 'offerwall.rpc.kiwi-pb',
             14 => 'offerwall.rpc.hang-pb',
+            15 => 'offerwall.rpc.timewall-pb',
+            16 => 'offerwall.rpc.notik-pb',
+            17 => 'offerwall.rpc.adgate-pb',
         ],
     ],
     'api-tools-rest' => [
@@ -214,6 +247,9 @@ return [
             'Offerwall\\V1\\Rpc\\MonlixPB\\Controller' => 'Json',
             'Offerwall\\V1\\Rpc\\KiwiPB\\Controller' => 'Json',
             'Offerwall\\V1\\Rpc\\HangPB\\Controller' => 'Json',
+            'Offerwall\\V1\\Rpc\\TimewallPB\\Controller' => 'Json',
+            'Offerwall\\V1\\Rpc\\NotikPB\\Controller' => 'Json',
+            'Offerwall\\V1\\Rpc\\AdgatePB\\Controller' => 'Json',
         ],
         'accept_whitelist' => [
             'Offerwall\\V1\\Rest\\Offerwall\\Controller' => [
@@ -291,6 +327,21 @@ return [
                 1 => 'application/json',
                 2 => 'application/*+json',
             ],
+            'Offerwall\\V1\\Rpc\\TimewallPB\\Controller' => [
+                0 => 'application/vnd.offerwall.v1+json',
+                1 => 'application/json',
+                2 => 'application/*+json',
+            ],
+            'Offerwall\\V1\\Rpc\\NotikPB\\Controller' => [
+                0 => 'application/vnd.offerwall.v1+json',
+                1 => 'application/json',
+                2 => 'application/*+json',
+            ],
+            'Offerwall\\V1\\Rpc\\AdgatePB\\Controller' => [
+                0 => 'application/vnd.offerwall.v1+json',
+                1 => 'application/json',
+                2 => 'application/*+json',
+            ],
         ],
         'content_type_whitelist' => [
             'Offerwall\\V1\\Rest\\Offerwall\\Controller' => [
@@ -350,6 +401,18 @@ return [
                 1 => 'application/json',
             ],
             'Offerwall\\V1\\Rpc\\HangPB\\Controller' => [
+                0 => 'application/vnd.offerwall.v1+json',
+                1 => 'application/json',
+            ],
+            'Offerwall\\V1\\Rpc\\TimewallPB\\Controller' => [
+                0 => 'application/vnd.offerwall.v1+json',
+                1 => 'application/json',
+            ],
+            'Offerwall\\V1\\Rpc\\NotikPB\\Controller' => [
+                0 => 'application/vnd.offerwall.v1+json',
+                1 => 'application/json',
+            ],
+            'Offerwall\\V1\\Rpc\\AdgatePB\\Controller' => [
                 0 => 'application/vnd.offerwall.v1+json',
                 1 => 'application/json',
             ],
@@ -473,6 +536,9 @@ return [
             'Offerwall\\V1\\Rpc\\MonlixPB\\Controller' => \Offerwall\V1\Rpc\MonlixPB\MonlixPBControllerFactory::class,
             'Offerwall\\V1\\Rpc\\KiwiPB\\Controller' => \Offerwall\V1\Rpc\KiwiPB\KiwiPBControllerFactory::class,
             'Offerwall\\V1\\Rpc\\HangPB\\Controller' => \Offerwall\V1\Rpc\HangPB\HangPBControllerFactory::class,
+            'Offerwall\\V1\\Rpc\\TimewallPB\\Controller' => \Offerwall\V1\Rpc\TimewallPB\TimewallPBControllerFactory::class,
+            'Offerwall\\V1\\Rpc\\NotikPB\\Controller' => \Offerwall\V1\Rpc\NotikPB\NotikPBControllerFactory::class,
+            'Offerwall\\V1\\Rpc\\AdgatePB\\Controller' => \Offerwall\V1\Rpc\AdgatePB\AdgatePBControllerFactory::class,
         ],
     ],
     'api-tools-rpc' => [
@@ -576,6 +642,27 @@ return [
                 0 => 'GET',
             ],
             'route_name' => 'offerwall.rpc.hang-pb',
+        ],
+        'Offerwall\\V1\\Rpc\\TimewallPB\\Controller' => [
+            'service_name' => 'TimewallPB',
+            'http_methods' => [
+                0 => 'GET',
+            ],
+            'route_name' => 'offerwall.rpc.timewall-pb',
+        ],
+        'Offerwall\\V1\\Rpc\\NotikPB\\Controller' => [
+            'service_name' => 'NotikPB',
+            'http_methods' => [
+                0 => 'GET',
+            ],
+            'route_name' => 'offerwall.rpc.notik-pb',
+        ],
+        'Offerwall\\V1\\Rpc\\AdgatePB\\Controller' => [
+            'service_name' => 'AdgatePB',
+            'http_methods' => [
+                0 => 'GET',
+            ],
+            'route_name' => 'offerwall.rpc.adgate-pb',
         ],
     ],
 ];
