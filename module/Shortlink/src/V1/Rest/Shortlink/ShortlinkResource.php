@@ -229,10 +229,8 @@ class ShortlinkResource extends AbstractResourceListener
             $linksDoneByUser = $this->mShortDoneTbl->select($oWhDone);
             $linksDone = $linksDoneByUser->count();
             $finLink = "#";
-            $dev = $linksDone.'<'.$linkCount;
 
             if($linksDone < $linkCount) {
-                $dev = 2;
                 if($provider->url_api != "") {
                     $time = date('Y-m-d H:i:s', time());
                     $destHash = hash('sha256', $provider->url_api.$me->User_ID.$time);
@@ -304,7 +302,6 @@ class ShortlinkResource extends AbstractResourceListener
                     }
                 }
             } else {
-                $dev = 3;
                 foreach($linksDoneByUser as $lnkDone) {
                     if($lnkDone->date_completed == '0000-00-00 00:00:00') {
                         $finLink = $lnkDone->link_url;
@@ -323,7 +320,7 @@ class ShortlinkResource extends AbstractResourceListener
                 'link' =>$link,
                 'id' => $provider->Shortlink_ID,
                 'name' => $provider->label,
-                'dev' => $dev,
+                'reward' => $provider->reward
             ];
         }
     }
@@ -467,12 +464,19 @@ class ShortlinkResource extends AbstractResourceListener
         $totalDoneWh->equalTo('user_idfs', $me->User_ID);
         $totalLinksDone = $this->mShortDoneTbl->select($totalDoneWh)->count();
 **/
+
+        $linksPercent = 0;
+        if ($totalLinksDone24h != 0) {
+            $linksPercent = round((100 / ($totalLinks / $totalLinksDone24h)), 2);
+        }
+
         $totalLinksDone = 0;
         $return = (object)[
             'provider' => $shortlinks,
             'total_reward' => $totalReward,
             'total_links' => $totalLinks,
             'links_done' => $totalLinksDone24h,
+            'links_percent' => $linksPercent,
             'history' => [
                 'items' => $history,
                 'total_items' => $totalLinksDone,

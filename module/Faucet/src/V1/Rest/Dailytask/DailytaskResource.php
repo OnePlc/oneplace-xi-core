@@ -271,6 +271,7 @@ class DailytaskResource extends AbstractResourceListener
             'total_items' => count($achievements),
             'user_task' => [],
             'task' => $achievements,
+            'server_time' => date('H:i', time()),
         ]);
     }
 

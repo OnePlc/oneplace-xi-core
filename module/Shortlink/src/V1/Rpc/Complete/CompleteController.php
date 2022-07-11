@@ -197,7 +197,7 @@ class CompleteController extends AbstractActionController
                             $reward=$reward*1.5;
                         }
 
-                        $newBalance = $this->mTransaction->executeTransaction($linkInfo->reward, false, $shFound->user_idfs, $shFound->shortlink_idfs, 'shortlink-complete', 'Shortlink '.$shFound->link_id.' completed');
+                        $newBalance = $this->mTransaction->executeTransaction($reward, false, $shFound->user_idfs, $shFound->shortlink_idfs, 'shortlink-complete', 'Shortlink '.$shFound->link_id.' completed');
                         if($newBalance !== false) {
                             $xpInfo = $this->mUserTools->addXP('shortlink-claim', $shFound->user_idfs);
 

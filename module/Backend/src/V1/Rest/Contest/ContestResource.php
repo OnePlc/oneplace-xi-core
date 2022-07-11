@@ -1112,9 +1112,6 @@ class ContestResource extends AbstractResourceListener
                     'name' => $contest->contest_label,
                     'winners' => $contestWinnersById[$contest->Contest_ID]
                 ];
-                if(array_key_exists($contest->Contest_ID, $myContestStats)) {
-                    $conData['me'] = $myContestStats[$contest->Contest_ID];
-                }
                 $contests[] = $conData;
             } else {
                 $contests[] = [
@@ -1182,8 +1179,9 @@ class ContestResource extends AbstractResourceListener
                 $monthText = date('F', strtotime($op->year.'-'.$op->month.'-01'));
                 $contestInfo = $contestInfo->current();
                 if($contestInfo->contest_type == 'guild') {
-                    //$this->mTransaction->executeGuildTransaction($op->reward, false, $op->user_idfs, $op->contest_idfs, 'contestwin',$op->rank.'. Place in the '.$contestInfo->contest_label.' of '.$monthText, 1);
+                    $this->mTransaction->executeGuildTransaction($op->reward, false, $op->user_idfs, $op->contest_idfs, 'contestwin',$op->rank.'. Place in the '.$contestInfo->contest_label.' of '.$monthText, 1);
                 } else {
+
                     # create message to buyer inbox
                     $this->mInboxTbl->insert([
                         'label' => $contestInfo->contest_label.' Contest '.$monthText,

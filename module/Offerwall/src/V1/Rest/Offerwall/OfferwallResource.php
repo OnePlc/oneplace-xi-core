@@ -208,6 +208,13 @@ class OfferwallResource extends AbstractResourceListener
             ]
         ];
 
+        // Special Handling for SkyppyAds... omg...
+        /**
+        $skippySecret = $this->mSecTools->getCoreSetting('skippy-secret');
+        $skippyKey = md5($me->User_ID.$skippySecret);
+        $viewData['_embedded']['skippy_key'] = $skippyKey;
+         * **/
+
         $hasMessage = $this->mSecTools->getCoreSetting('faucet-offers-msg-content');
         if($hasMessage) {
             $message = $hasMessage;

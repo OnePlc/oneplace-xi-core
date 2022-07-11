@@ -127,6 +127,11 @@ class ClaimController extends AbstractActionController
             return new ApiProblemResponse(new ApiProblem(400, 'invalid platform'));
         }
 
+        $claimAmount = 10;
+        if($me->xp_level >= 20 && time() <= strtotime('2022-05-20')) {
+            $claimAmount = 30;
+        }
+
         # Set Timer for next claim
         $sTime = 0;
         $timeCheck = '-1 hour';
@@ -165,8 +170,8 @@ class ClaimController extends AbstractActionController
 
             $viewData = [
                 'status' => 'wait',
-                'numbers' => [15,20,25],
                 'next_claim' => $sTime,
+                'amount' => $claimAmount,
                 'quote' => $quote,
             ];
 
@@ -226,21 +231,6 @@ class ClaimController extends AbstractActionController
             $device = filter_var($json->device, FILTER_SANITIZE_STRING);
             $ad_id = filter_var($json->ad_id, FILTER_SANITIZE_STRING);
             $advertiser = filter_var($json->advertiser, FILTER_SANITIZE_STRING);
-
-            # Default Claim
-            switch($platform) {
-                case 'android':
-                    $claimAmount = rand(0,2);
-                    $numbers = [15,20,25];
-                    $claimAmount = $numbers[$claimAmount];
-                    break;
-                default:
-                    $claimAmount = 10;
-                    if($me->xp_level >= 20 && time() <= strtotime('2022-05-20')) {
-                        $claimAmount = 30;
-                    }
-                    break;
-            }
 
             $nextTimer = 3600;
             if($platform == 'android' && $me->User_ID == 335874988) {

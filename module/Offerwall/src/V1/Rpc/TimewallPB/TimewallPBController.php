@@ -109,7 +109,6 @@ class TimewallPBController extends AbstractActionController
                         $iUserID = filter_var($_REQUEST['user_id'], FILTER_SANITIZE_NUMBER_INT);
                         if($iUserID <= 0 || empty($iUserID)) {
                             return new ApiProblemResponse(new ApiProblem(400, 'Invalid userid'));
-
                         }
 
                         $revenueCheck = filter_var($_REQUEST['payout'], FILTER_SANITIZE_STRING);
@@ -124,7 +123,6 @@ class TimewallPBController extends AbstractActionController
                         $oUser = $this->mUserTbl->select(['User_ID' => $iUserID]);
                         if($oUser->count() == 0) {
                             return new ApiProblemResponse(new ApiProblem(400, 'User not found'));
-
                         }
 
                         /**

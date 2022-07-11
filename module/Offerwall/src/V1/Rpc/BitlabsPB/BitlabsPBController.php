@@ -152,11 +152,12 @@ class BitlabsPBController extends AbstractActionController
                         /**
                          * Check for existing offer
                          */
+                        $hcheck = filter_var($_REQUEST['hash'], FILTER_SANITIZE_STRING);
                         $txId = filter_var($_REQUEST['tx'], FILTER_SANITIZE_STRING);
                         $cWh = new Where();
                         $cWh->equalTo('user_idfs', $iUserID);
                         $cWh->equalTo('offerwall_idfs', $offerWallId);
-                        $cWh->like('transaction_id', $txId);
+                        $cWh->like('hash', $hcheck);
                         $oCheck = $this->mOfferDoneTbl->select($cWh);
 
                         if($oCheck->count() == 0) {
