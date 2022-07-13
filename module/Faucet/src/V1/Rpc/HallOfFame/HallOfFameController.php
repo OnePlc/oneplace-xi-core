@@ -150,6 +150,7 @@ class HallOfFameController extends AbstractActionController
             return new ApiProblemResponse($me);
         }
 
+        /**
         $employees = [];
         $employeesDB = $this->mUserTbl->select(['is_employee' => 1]);
         foreach($employeesDB as $emp) {
@@ -204,7 +205,7 @@ class HallOfFameController extends AbstractActionController
                 ];
                 $rank++;
             }
-        }
+        } **/
 
         $topGuilds = [];
         $statSel = new Select($this->mGuildTbl->getTable());
@@ -255,11 +256,11 @@ class HallOfFameController extends AbstractActionController
             # Show Stats
             return new ViewModel([
                 'date' => date('Y-m-d H:i:s'),
-                'employees' => $employees,
+                //'employees' => $employees,
                 'top_guilds' => $topGuilds,
-                'top_earners' => $topEarners,
-                'top_players' => $topPlayers,
-                'top_winners' => $topEarners,
+                //'top_earners' => $topEarners,
+                //'top_players' => $topPlayers,
+                //'top_winners' => $topEarners,
             ]);
         } else {
             if($detail == 'loyalty') {
@@ -356,7 +357,7 @@ class HallOfFameController extends AbstractActionController
                                 'avatar' => ($userInfo->avatar != '') ? $userInfo->avatar : $userInfo->username,
                                 'id' => $userInfo->User_ID,
                                 'rank' => $rank,
-                                'links' => (int)$shortsByUser[$claimUser],
+                                'xp' => (int)$shortsByUser[$claimUser],
                             ];
                         }
 
@@ -371,7 +372,7 @@ class HallOfFameController extends AbstractActionController
                         'month' => $topShorters,
                         'all' => $topPlayers,
                     ],
-                    'me_month' => ['xp_total' => $myShorts,'rank' => $myRank],
+                    'me_month' => ['xp' => $myShorts,'rank' => $myRank],
                     'me_all' => ['xp_level' => (int)$me->xp_level,'rank' => $rankMe]
                 ]);
             }
@@ -583,7 +584,7 @@ class HallOfFameController extends AbstractActionController
                 }
 
                 $myStatSel = new Select($this->mUsrStatsTbl->getTable());
-                $myStatSel->where(['stat_key' => 'shdone-m-'.date('n-Y', $date), 'user_idfs' => $me->User_ID]);
+                $myStatSel->where(['stat_key' => 'shdone-m-'.date('n-Y', time()), 'user_idfs' => $me->User_ID]);
                 $myStat = $this->mUsrStatsTbl->selectWith($myStatSel);
                 if($myStat->count() > 0) {
                     $myContestStats[10] = $myStat->current()->stat_data;
@@ -625,7 +626,7 @@ class HallOfFameController extends AbstractActionController
                 }
 
                 $myStatSel = new Select($this->mUsrStatsTbl->getTable());
-                $myStatSel->where(['stat_key' => 'user-dailys-m-'.date('n-Y', $date), 'user_idfs' => $me->User_ID]);
+                $myStatSel->where(['stat_key' => 'user-dailys-m-'.date('n-Y', time()), 'user_idfs' => $me->User_ID]);
                 $myStat = $this->mUsrStatsTbl->selectWith($myStatSel);
                 if($myStat->count() > 0) {
                     $myContestStats[13] = $myStat->current()->stat_data;
@@ -667,7 +668,7 @@ class HallOfFameController extends AbstractActionController
                 }
 
                 $myStatSel = new Select($this->mUsrStatsTbl->getTable());
-                $myStatSel->where(['stat_key' => 'user-offerbig-m-'.date('n-Y', $date), 'user_idfs' => $me->User_ID]);
+                $myStatSel->where(['stat_key' => 'user-offerbig-m-'.date('n-Y', time()), 'user_idfs' => $me->User_ID]);
                 $myStat = $this->mUsrStatsTbl->selectWith($myStatSel);
                 if($myStat->count() > 0) {
                     $myContestStats[11] = $myStat->current()->stat_data;
@@ -709,7 +710,7 @@ class HallOfFameController extends AbstractActionController
                 }
 
                 $myStatSel = new Select($this->mUsrStatsTbl->getTable());
-                $myStatSel->where(['stat_key' => 'user-offersmall-m-'.date('n-Y', $date), 'user_idfs' => $me->User_ID]);
+                $myStatSel->where(['stat_key' => 'user-offersmall-m-'.date('n-Y', time()), 'user_idfs' => $me->User_ID]);
                 $myStat = $this->mUsrStatsTbl->selectWith($myStatSel);
                 if($myStat->count() > 0) {
                     $myContestStats[12] = $myStat->current()->stat_data;
@@ -762,9 +763,9 @@ class HallOfFameController extends AbstractActionController
                 }
                 $statWh = new Where();
                 $statWh->NEST
-                    ->like('stat_key', 'nano-coin-m-rvn-'.date('n-Y',$date))
+                    ->like('stat_key', 'nano-coin-m-rvn-'.date('n-Y',time()))
                     ->OR
-                    ->like('stat_key', 'nano-coin-m-etc-'.date('n-Y',$date))
+                    ->like('stat_key', 'nano-coin-m-etc-'.date('n-Y',time()))
                     ->UNNEST;
                 $statWh->equalTo('user_idfs', $me->User_ID);
                 $myStatSel = new Select($this->mUsrStatsTbl->getTable());
@@ -817,7 +818,7 @@ class HallOfFameController extends AbstractActionController
                 }
 
                 $myStatSel = new Select($this->mUsrStatsTbl->getTable());
-                $myStatSel->where(['stat_key' => 'nano-coin-m-'.date('n-Y', $date), 'user_idfs' => $me->User_ID]);
+                $myStatSel->where(['stat_key' => 'nano-coin-m-'.date('n-Y', time()), 'user_idfs' => $me->User_ID]);
                 $myStat = $this->mUsrStatsTbl->selectWith($myStatSel);
                 if($myStat->count() > 0) {
                     $myContestStats[6] = $myStat->current()->stat_data;
@@ -925,268 +926,6 @@ class HallOfFameController extends AbstractActionController
                 }
 
                 return $viewData;
-            }
-
-            if($detail == 'contestdep') {
-                $skipList = [
-                    335880436 => true,
-                    335875071 => true,
-                    335874987 => true,
-                    335902227 => true
-                ];
-                $top3Level = [];
-                $statSel = new Select($this->mUsrStatsTbl->getTable());
-                $statSel->order('date DESC');
-                $statSel->where(['stat_key' => 'user-xp-'.date('n-Y', time())]);
-                $statFound = $this->mUsrStatsTbl->selectWith($statSel);
-                if($statFound->count() > 0) {
-                    $top3ShById = [];
-                    foreach($statFound as $statUser) {
-                        $top3ShById[$statUser->user_idfs] = $statUser->stat_data;
-                    }
-                    arsort($top3ShById);
-                    $iCount = 0;
-                    foreach(array_keys($top3ShById) as $topId) {
-                        $topInfo = $this->mUserTbl->select(['User_ID' => $topId]);
-                        if($topInfo->count() > 0) {
-                            $topInfo = $topInfo->current();
-                            $top3Level[] = (object)[
-                                'id' => $topId,
-                                'rank' => ($iCount+1),
-                                'count' => $top3ShById[$topId],
-                                'xp_level' => $top3ShById[$topId],
-                                //'xp_level' => $topInfo->xp_level,
-                                'name' => $topInfo->username,
-                                'avatar' => ($topInfo->avatar == '') ? $topInfo->username : $topInfo->avatar,
-                            ];
-                            if($iCount == 3) {
-                                break;
-                            }
-                            $iCount++;
-                        }
-                    }
-                }
-
-                $top3Sh = [];
-                $statSel = new Select($this->mUsrStatsTbl->getTable());
-                $statSel->order('date DESC');
-                $statSel->where(['stat_key' => 'shdone-m-'.date('n-Y',time())]);
-                $statFound = $this->mUsrStatsTbl->selectWith($statSel);
-                if($statFound->count() > 0) {
-                    $top3ShById = [];
-                    foreach($statFound as $statUser) {
-                        $top3ShById[$statUser->user_idfs] = $statUser->stat_data;
-                    }
-                    arsort($top3ShById);
-                    $iCount = 0;
-                    foreach(array_keys($top3ShById) as $topId) {
-                        $topInfo = $this->mUserTbl->select(['User_ID' => $topId]);
-                        if($topInfo->count() > 0) {
-                            $topInfo = $topInfo->current();
-                            $top3Sh[] = (object)[
-                                'id' => $topId,
-                                'rank' => ($iCount+1),
-                                'count' => $top3ShById[$topId],
-                                'name' => $topInfo->username,
-                                'avatar' => ($topInfo->avatar == '') ? $topInfo->username : $topInfo->avatar,
-                            ];
-                            if($iCount == 3) {
-                                break;
-                            }
-                            $iCount++;
-                        }
-                    }
-                }
-
-                $top3SOf = [];
-                $statSel = new Select($this->mUsrStatsTbl->getTable());
-                $statSel->order('date DESC');
-                $statSel->where(['stat_key' => 'ofdone-m-'.date('n-Y',time())]);
-                $statFound = $this->mUsrStatsTbl->selectWith($statSel);
-                if($statFound->count() > 0) {
-                    $top3ShById = [];
-                    foreach($statFound as $statUser) {
-                        $top3ShById[$statUser->user_idfs] = $statUser->stat_data;
-                    }
-                    arsort($top3ShById);
-                    $iCount = 0;
-                    foreach(array_keys($top3ShById) as $topId) {
-                        $topInfo = $this->mUserTbl->select(['User_ID' => $topId]);
-                        if($topInfo->count() > 0) {
-                            $topInfo = $topInfo->current();
-                            $top3SOf[] = (object)[
-                                'id' => $topId,
-                                'rank' => ($iCount+1),
-                                'count' => $top3ShById[$topId],
-                                'name' => $topInfo->username,
-                                'avatar' => ($topInfo->avatar == '') ? $topInfo->username : $topInfo->avatar,
-                            ];
-                            if($iCount == 3) {
-                                break;
-                            }
-                            $iCount++;
-                        }
-                    }
-                }
-
-                $top3Xmr = [];
-                $statSel = new Select($this->mStatsTbl->getTable());
-                $statSel->order('date DESC');
-                $statSel->where(['stat-key' => 'concpu-'.date('n-Y', time())]);
-                $statSel->limit(1);
-                $statFound = $this->mStatsTbl->selectWith($statSel);
-                if($statFound->count() > 0) {
-                    $statFound = (array)$statFound->current();
-                    $topList = json_decode($statFound['stat-data']);
-                    $iCount = 0;
-                    foreach($topList as $top) {
-                        if($iCount == 3) {
-                            break;
-                        }
-                        if(array_key_exists($top->id,$skipList)) {
-                            continue;
-                        }
-                        $topInfo = $this->mUserTbl->select(['User_ID' => $top->id]);
-                        if($topInfo->count() > 0) {
-                            $topInfo = $topInfo->current();
-                            $top->name = $topInfo->username;
-                            $top->count = $top->coins;
-                        }
-                        $top3Xmr[] = $top;
-                        $iCount++;
-                    }
-                }
-
-                $top3Gpu = [];
-                $statSel = new Select($this->mStatsTbl->getTable());
-                $statSel->order('date DESC');
-                $statSel->where(['stat-key' => 'congpu-'.date('n-Y', time())]);
-                $statSel->limit(1);
-                $statFound = $this->mStatsTbl->selectWith($statSel);
-                if($statFound->count() > 0) {
-                    $statFound = (array)$statFound->current();
-                    $topList = json_decode($statFound['stat-data']);
-                    $iCount = 0;
-                    foreach($topList as $top) {
-                        if($iCount == 3) {
-                            break;
-                        }
-                        if(array_key_exists($top->id,$skipList)) {
-                            continue;
-                        }
-                        $topInfo = $this->mUserTbl->select(['User_ID' => $top->id]);
-                        if($topInfo->count() > 0) {
-                            $topInfo = $topInfo->current();
-                            $top->name = $topInfo->username;
-                            $top->count = $top->coins;
-                        }
-                        $top3Gpu[] = $top;
-                        $iCount++;
-                    }
-                }
-
-                $top3Ref = [];
-                $statSel = new Select($this->mStatsTbl->getTable());
-                $statSel->order('date DESC');
-                $statSel->where(['stat-key' => 'conrefs-'.date('n-Y', time())]);
-                $statSel->limit(1);
-                $statFound = $this->mStatsTbl->selectWith($statSel);
-                if($statFound->count() > 0) {
-                    $statFound = (array)$statFound->current();
-                    $topList = json_decode($statFound['stat-data']);
-                    $iCount = 0;
-                    foreach($topList as $top) {
-                        if($iCount == 3) {
-                            break;
-                        }
-                        if(array_key_exists($top->id,$skipList)) {
-                            continue;
-                        }
-                        $topInfo = $this->mUserTbl->select(['User_ID' => $top->id]);
-                        if($topInfo->count() > 0) {
-                            $topInfo = $topInfo->current();
-                            $top->name = $topInfo->username;
-                            $top->count = $top->refs;
-                        }
-                        $top3Ref[] = $top;
-                        $iCount++;
-                    }
-                }
-
-                $top3Guild = [];
-                $statSel = new Select($this->mStatsTbl->getTable());
-                $statSel->order('date DESC');
-                $statSel->where(['stat-key' => 'guild-top-'.date('m', time())]);
-                $statSel->limit(1);
-                $statFound = $this->mStatsTbl->selectWith($statSel);
-                if($statFound->count() > 0) {
-                    $statFound = (array)$statFound->current();
-                    $topList = json_decode($statFound['stat-data']);
-                    $iCount = 0;
-                    foreach($topList as $top) {
-                        if($iCount == 3) {
-                            break;
-                        }
-                        $top3Guild[] = $top;
-                        $iCount++;
-                    }
-                }
-
-                $top3Vets = [];
-                $loyalSel = new Select($this->mUserTbl->getTable());
-                $loyalSel->order('created_date ASC');
-                $loyalWh = new Where();
-                $loyalWh->equalTo('is_employee', 0);
-                $loyalWh->greaterThan('last_action', date('Y-m-d H:i:s', time()-((24*3600)*14)));
-                $loyalSel->where($loyalWh);
-                $loyalSel->limit(50);
-
-                $allTimeLoyal = $this->mUserTbl->selectWith($loyalSel);
-                foreach($allTimeLoyal as $top) {
-                    $top3Vets[] = (object)[
-                        'name' => $top->username,
-                        'id' => $top->User_ID,
-                        'count' => date('Y-m-d', strtotime($top->created_date)),
-                    ];
-                }
-
-                $viewData = [
-                    'date' => date('Y-m-d H:i:s'),
-                    'date_end' => date('Y-m-t', time()).' 23:59:59',
-                    'player_level' => $top3Level,
-                    'player_shortlink' => $top3Sh,
-                    'player_offerwall' => $top3SOf,
-                    'player_cpushares' => $top3Xmr,
-                    'player_gpushares' => $top3Gpu,
-                    'player_referral' => $top3Ref,
-                    'player_veteran' => $top3Vets,
-                    'guild_toplist' => $top3Guild
-                ];
-
-                $hasMessage = $this->mSecTools->getCoreSetting('faucet-contest-msg-content');
-                if($hasMessage) {
-                    $message = $hasMessage;
-                    $messageType = $this->mSecTools->getCoreSetting('faucet-contest-msg-level');
-                    $xpReq = $this->mSecTools->getCoreSetting('faucet-contest-msg-xplevel');
-                    $addMsg = false;
-                    if($xpReq) {
-                        if($me->xp_level >= $xpReq) {
-                            $addMsg = true;
-                        }
-                    } else {
-                        $addMsg = true;
-                    }
-
-                    if($addMsg && strlen($message) > 0) {
-                        $viewData['message'] = [
-                            'type' => $messageType,
-                            'message' => $message
-                        ];
-                    }
-                }
-
-                # Show Stats
-                return new ViewModel($viewData);
             }
 
             if($detail == 'achievement') {

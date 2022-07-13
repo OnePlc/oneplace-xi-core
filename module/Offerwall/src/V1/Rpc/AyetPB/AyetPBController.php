@@ -200,7 +200,7 @@ class AyetPBController extends AbstractActionController
                                 ]);
 
                                 // dont give withdrawal bonus yet
-                                $addBonus = false;
+                                //$addBonus = false;
                             }
 
                             $this->mOfferDoneTbl->insert([
