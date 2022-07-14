@@ -167,7 +167,13 @@ class InboxResource extends AbstractResourceListener
         }
 
         $messageId = filter_var($id, FILTER_SANITIZE_NUMBER_INT);
-        $message = $this->mInboxTbl->select(['Mail_ID' => $messageId]);
+        if(empty($messageId) || $messageId <= 0) {
+            return new ApiProblem(404, 'Invalid message id');
+        }
+        $msgSel = new Select($this->mInboxTbl->getTable());
+        $msgSel->join(['u' => 'user'],'u.User_ID = user_inbox.from_idfs', ['username']);
+        $msgSel->where(['Mail_ID' => $messageId]);
+        $message = $this->mInboxTbl->selectWith($msgSel);
         if(count($message) == 0) {
             return new ApiProblem(404, 'Message not found');
         }
@@ -176,8 +182,11 @@ class InboxResource extends AbstractResourceListener
         if($message->to_idfs != $user->User_ID) {
             return new ApiProblem(404, 'Message not found');
         }
-        $from = (object)['id' => 0, 'name' => 'Store'];
+        $from = (object)['id' => $message->from_idfs, 'name' => $message->username];
 
+        // attachments disabled as there are no more items
+        $attachments = [];
+        /**
         $attachments = [];
         $msgAttachments = $this->mInboxAttachTbl->select(['mail_idfs' => $message->Mail_ID,'used' => 0]);
         if(count($msgAttachments) > 0) {
@@ -195,7 +204,7 @@ class InboxResource extends AbstractResourceListener
                     ];
                 }
             }
-        }
+        } **/
 
         return [
             'message' => [
@@ -231,11 +240,12 @@ class InboxResource extends AbstractResourceListener
 
         $inbox = [];
         $msgSel = new Select($this->mInboxTbl->getTable());
+        $msgSel->join(['u' => 'user'],'u.User_ID = user_inbox.from_idfs', ['username']);
         $msgSel->where(['to_idfs' => $user->User_ID, 'is_read' => 0]);
         $msgSel->order('date DESC');
         $unreadMessages = $this->mInboxTbl->selectWith($msgSel);
         foreach($unreadMessages as $msg) {
-            $from = (object)['id' => 0, 'name' => 'Store'];
+            $from = (object)['id' => $msg->from_idfs, 'name' => $msg->username];
             $attachment = false;
             $msgAttachments = $this->mInboxAttachTbl->select(['mail_idfs' => $msg->Mail_ID]);
             if(count($msgAttachments) > 0) {
@@ -332,10 +342,31 @@ class InboxResource extends AbstractResourceListener
         }
 
         if($attachmentId == 0 && $credits == 1) {
-            $this->mTransaction->executeTransaction($message->credits, 0, $user->User_ID, $messageId, 'msg-credit', 'Received Coins from Message '.$message->label);
+            $newBalance = $this->mTransaction->executeTransaction($message->credits, 0, $user->User_ID, $messageId, 'msg-credit', 'Received Coins from Message '.$message->label);
             $this->mInboxTbl->update(['credits' => 0],['Mail_ID' => $messageId]);
 
-            return true;
+            $msgSel = new Select($this->mInboxTbl->getTable());
+            $msgSel->join(['u' => 'user'],'u.User_ID = user_inbox.from_idfs', ['username']);
+            $msgSel->where(['Mail_ID' => $messageId]);
+            $message = $this->mInboxTbl->selectWith($msgSel);
+            if($message->count() == 0) {
+                return new ApiProblem(404, 'message not found');
+            }
+            $message = $message->current();
+            $from = (object)['id' => $message->from_idfs, 'name' => $message->username];
+
+            return [
+                'message' => [
+                    'id' => $message->Mail_ID,
+                    'subject' => $message->label,
+                    'message' => $message->message,
+                    'credits' => $message->credits,
+                    'date' => $message->date,
+                    'is_read' => $message->is_read,
+                    'from' => $from,
+                ],
+                'token_balance' => $newBalance
+            ];
         } else {
             $attachment = $this->mInboxAttachTbl->select(['mail_idfs' => $message->Mail_ID, 'used' => 0, 'slot' => $attachmentId]);
             if ($attachment->count() == 0) {
