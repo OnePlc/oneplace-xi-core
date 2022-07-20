@@ -24,6 +24,7 @@ use Laminas\ApiTools\ApiProblem\ApiProblemResponse;
 use Laminas\Db\Sql\Select;
 use Laminas\Db\TableGateway\TableGateway;
 use Laminas\Db\Sql\Where;
+use Laminas\Http\ClientStatic;
 use Laminas\Mvc\Controller\AbstractActionController;
 use Laminas\Http\Client;
 use Laminas\Paginator\Adapter\DbSelect;
@@ -144,7 +145,7 @@ class TokenController extends AbstractActionController
             }
 
             # get all pending tokens for user
-            $pendingTokenDB = $this->mTokenBuyTbl->select(['user_idfs' => $me->User_ID, 'sent' => 0]);
+            $pendingTokenDB = $this->mTokenBuyTbl->select(['user_idfs' => $me->User_ID, 'sent' => 0, 'cancelled' => 0]);
             $pendingToken = 0;
             if(count($pendingTokenDB) > 0) {
                 foreach($pendingTokenDB as $tok) {
@@ -201,7 +202,42 @@ class TokenController extends AbstractActionController
                 'LTC' => $walletLTC,
             ];
 
+            $page = (isset($_REQUEST['page'])) ? filter_var($_REQUEST['page'], FILTER_SANITIZE_NUMBER_INT) : 1;
+            $pageSize = 10;
+
             # user token history
+            $tokenHistory = [];
+            $buyHistorySel = new Select($this->mTokenBuyTbl->getTable());
+            $buyHistorySel->where(['user_idfs' => $me->User_ID]);
+            $buyHistorySel->order(['date DESC']);
+
+            # Create a new pagination adapter object
+            $oPaginatorAdapterBuy = new DbSelect(
+            # our configured select object
+                $buyHistorySel,
+                # the adapter to run it against
+                $this->mTokenBuyTbl->getAdapter()
+            );
+            # Create Paginator with Adapter
+            $buyPaginated = new Paginator($oPaginatorAdapterBuy);
+            $buyPaginated->setCurrentPageNumber($page);
+            $buyPaginated->setItemCountPerPage($pageSize);
+            foreach($buyPaginated as $tk) {
+                $tokenHistory[] = (object)[
+                    'id' => $tk->Buy_ID,
+                    'date' => $tk->date,
+                    'coin' => $tk->coin,
+                    'wallet' => $tk->wallet,
+                    'amount' => $tk->amount,
+                    'price' => $tk->price,
+                    'wallet_pay' => ($tk->wallet_receive == null) ? $payWallets[$tk->coin] : $tk->wallet_receive,
+                    'sent' => ($tk->sent == 1) ? true : false,
+                    'cancelled' => ($tk->cancelled == 1) ? true : false,
+                    'received' => ($tk->received == 1) ? true : false,
+                ];
+            }
+
+            /**
             $tokenHistory = [];
             $myTokenTrans = $this->mTokenBuyTbl->select(['user_idfs' => $me->User_ID]);
             if(count($myTokenTrans) > 0) {
@@ -220,6 +256,9 @@ class TokenController extends AbstractActionController
                     ];
                 }
             }
+             * **/
+            $totalBuyHistory = $this->mTokenBuyTbl->select(['user_idfs' => $me->User_ID])->count();
+
 
             # daily limit
             $todayWh = new Where();
@@ -250,9 +289,6 @@ class TokenController extends AbstractActionController
             }
 
             # Compile history
-            $page = (isset($_REQUEST['page'])) ? filter_var($_REQUEST['page'], FILTER_SANITIZE_NUMBER_INT) : 1;
-            $pageSize = 10;
-
             $stakingHistory = [];
             $historySel = new Select($this->mTokenPayHistoryTbl->getTable());
             $historySel->where(['user_idfs' => $me->User_ID]);
@@ -363,6 +399,7 @@ class TokenController extends AbstractActionController
                         'total' => (int)$totalToken,
                         'pending' => (int)$pendingToken,
                         'history' => $tokenHistory,
+                        'page_count' => (round($totalBuyHistory/$pageSize) > 0) ? round($totalBuyHistory/$pageSize) : 1,
                         'today_left' => $tokenLeft,
                     ],
                     'token' => [
@@ -440,8 +477,8 @@ class TokenController extends AbstractActionController
             }
 
             $coin = filter_var($json->coin, FILTER_SANITIZE_STRING);
-            if($coin != 'COINS' && $coin != 'BCH' && $coin != 'LTC' && $coin != 'ZEN' && $coin != 'DOGE') {
-                return new ApiProblemResponse(new ApiProblem(400, 'Invalid Coin'));
+            if($coin != 'COINS' && $coin != 'USD') {
+                return new ApiProblemResponse(new ApiProblem(400, 'Invalid Payment Method'));
             }
 
             $todayWh = new Where();
@@ -468,6 +505,7 @@ class TokenController extends AbstractActionController
             $price = 0;
 
             switch(strtolower($coin)) {
+                /**
                 case 'doge':
                     $sBCHNodeUrl = $this->mSecTools->getCoreSetting('dogenode-rpcurl');
                     if($sBCHNodeUrl) {
@@ -538,6 +576,45 @@ class TokenController extends AbstractActionController
                         $price = number_format($amountCrypto/$coinInfoZEN->dollar_val,8,'.','');
                     } else {
                         $price = number_format($amountCrypto*$coinInfoZEN->dollar_val,8,'.','');
+                    }
+                    break;
+                 **/
+                case 'usd':
+                    $cWh = new Where();
+                    $cWh->equalTo('user_idfs', $me->User_ID);
+                    $cWh->like('coin', $coin);
+                    $cWh->greaterThanOrEqualTo('date', date('Y-m-d H:i:s', strtotime('-24 hours')));
+                    $check = $this->mTokenBuyTbl->select($cWh);
+                    if($check->count() > 0) {
+                        return new ApiProblemResponse(new ApiProblem(400, 'You can buy tokens with crypto only once every 24 hours'));
+                    }
+                    $merchKey = $this->mSecTools->getCoreSetting('cu-merchant-key');
+                    $secKey = $this->mSecTools->getCoreSetting('cu-secret-key');
+
+                    $response = ClientStatic::post(
+                        'https://cryptounifier.io/api/v1/merchant/create-invoice', [
+                        'cryptocurrencies' => json_encode(["bch", "ltc", "doge", "zen"]),
+                        'currency' => 'usd',
+                        'target_value' => $amount * 0.1,
+                        'title' => 'Buy Swissfaucet Token',
+                        'description' => 'Purchase of '.$amount.' Swissfaucet Token'
+                    ], [
+                        'X-Merchant-Key' => $merchKey,
+                        'X-Secret-Key' => $secKey
+                    ]);
+                    $status = $response->getStatusCode();
+                    if($status == 200) {
+                        $responseBody = $response->getBody();
+
+                        $responseJson = json_decode($responseBody);
+                        if(isset($responseJson->message->hash)) {
+                            $hash = $responseJson->message->hash;
+                            $walletReceive = $hash;
+                        } else {
+                            return new ApiProblemResponse(new ApiProblem(400, 'Could not generate Invoice (2). Please try again later'));
+                        }
+                    } else {
+                        return new ApiProblemResponse(new ApiProblem(400, 'Could not generate Invoice. Please try again later'));
                     }
                     break;
                 case 'coins':

@@ -170,6 +170,16 @@ class WithdrawController extends AbstractActionController
                     $balanceEst = $balanceEst*$wall->dollar_val;
                 }
 
+                $networks = [
+                    (object)['key' => 'onchain', 'name' => $wall->coin_sign.' Onchain Transaction']
+                ];
+                if($wall->coin_sign == 'BNB') {
+                    $networks = [
+                        (object)['key' => 'onchain', 'name' => 'BNB - Binance Chain (BEP2)'],
+                        (object)['key' => 'bepchain', 'name' => 'BSC - Binance Smart Chain (BEP20)'],
+                    ];
+                }
+
                 $wallets[] = (object)[
                     'id' => $wall->Wallet_ID,
                     'name' => $wall->coin_label,
@@ -179,6 +189,7 @@ class WithdrawController extends AbstractActionController
                     'withdraw_min' => $wall->withdraw_min,
                     'dollar_val' => $wall->dollar_val,
                     'change_24h' => $wall->change_24h,
+                    'networks' => $networks,
                     'status' => $wall->status,
                     'bgcolor' => $wall->bgcolor,
                     'textcolor' => $wall->textcolor,
@@ -212,7 +223,7 @@ class WithdrawController extends AbstractActionController
             if($links->count() > 0) {
                 foreach ($links as $link) {
                     if($link->account == 'gachaminer') {
-                        $gachaLink = true;
+                        $gachaLink = $link->email;
                     }
                 }
             }
@@ -226,9 +237,13 @@ class WithdrawController extends AbstractActionController
                     'sign' => 'GAT',
                     'url' => '',
                     'fee' => 0,
+                    'gacha_account' => $gachaLink,
                     'withdraw_min' => 25000,
                     'dollar_val' => 1,
                     'change_24h' => 0,
+                    'networks' => [
+                        (object)['key' => 'onchain', 'name' => 'Direct Transfer to Gachaminer Account'],
+                    ],
                     'status' => 'open',
                     'bgcolor' => '#ffcc00',
                     'textcolor' => '#000',
@@ -412,7 +427,7 @@ class WithdrawController extends AbstractActionController
                     'total_withdrawn' => $total,
                     'page' => $page,
                     'page_size' => $pageSize,
-                    'page_count' => (round($totalItems/$pageSize) > 0) ? round($totalItems/$pageSize) : 1,
+                    'page_count' => (round($totalItems/$pageSize) > 0) ? ceil($totalItems/$pageSize) : 1,
                 ],
                 'next_payment' => $nextPay
             ];

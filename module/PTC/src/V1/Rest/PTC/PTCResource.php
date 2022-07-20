@@ -195,7 +195,36 @@ class PTCResource extends AbstractResourceListener
      */
     public function delete($id)
     {
-        return new ApiProblem(405, 'The DELETE method has not been defined for individual resources');
+        # Prevent 500 error
+        if(!$this->getIdentity()) {
+            return new ApiProblem(401, 'Not logged in');
+        }
+        $me = $this->mSecTools->getSecuredUserSession($this->getIdentity()->getName());
+        if(get_class($me) == 'Laminas\\ApiTools\\ApiProblem\\ApiProblem') {
+            return $me;
+        }
+
+        if($id <= 0 || empty($id)) {
+            return new ApiProblem(400, 'Invalid PTC Id');
+        }
+
+        $ptcFound = $this->mPTCTbl->select(['PTC_ID' => $id]);
+        if(count($ptcFound) == 0) {
+            return new ApiProblem(404, 'PTC Ad not found');
+        }
+        $ptcInfo = $ptcFound->current();
+
+        if($ptcInfo->created_by != $me->User_ID) {
+            return new ApiProblem(400, 'PTC is not available at the moment');
+        }
+
+        if($ptcInfo->view_balance > 0) {
+            return new ApiProblem(400, 'You cannot delete PTC with views. Wait until views are used before you delete the Ad');
+        }
+
+        $this->mPTCTbl->delete(['PTC_ID' => $id]);
+
+        return true;
     }
 
     /**
@@ -334,6 +363,9 @@ class PTCResource extends AbstractResourceListener
                 $coinsEarnedData[] = $viewsDelivered;
             }
 
+            $totalInfo = $this->getPTCViewsDelivered($ptcInfo->PTC_ID, false);
+            $totalViews=$totalInfo['views'];
+
             // get ptc view stats
             $ptcData['chart'] = [
                 'views_delivered_30day' => [
@@ -341,6 +373,7 @@ class PTCResource extends AbstractResourceListener
                     'data' => $coinsEarnedData,
                     'max' => $coinsMax,
                 ],
+                'views_total' => $totalViews
             ];
         }
 
@@ -575,7 +608,11 @@ class PTCResource extends AbstractResourceListener
     {
         $totalViews = 0;
         $viewWh = new Where();
-        $viewWh->like('date_completed', date('Y-m-d', strtotime($date)).'%');
+        if($date) {
+            $viewWh->like('date_completed', date('Y-m-d', strtotime($date)).'%');
+        } else {
+            $viewWh->isNotNull('date_completed');
+        }
         $viewWh->equalTo('ptc_idfs', $ptcId);
         $ptcViews = $this->mPTCViewTbl->select($viewWh)->count();
         $totalViews+=$ptcViews;

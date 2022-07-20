@@ -528,6 +528,7 @@ class GuildResource extends AbstractResourceListener
                 'name' => $guildMember->username,
                 'avatar' => ($guildMember->avatar != '') ? $guildMember->avatar : $guildMember->username,
                 'xp_level' => $guildMember->xp_level,
+                'last_action' => $guildMember->last_action,
                 'rank' => (object)[
                     'id' => $guildMember->rank,
                     'name'=> $guildRanks[$guildMember->rank]
@@ -833,7 +834,7 @@ class GuildResource extends AbstractResourceListener
             $guildWh->like('main_language', $langFilter);
         }
         $guildSel->where($guildWh);
-        $guildSel->order(['is_vip DESC','description DESC', 'token_balance DESC' ]);
+        $guildSel->order(['token_balance DESC', 'emblem_shield DESC','description DESC' ]);
         # Create a new pagination adapter object
         $oPaginatorAdapter = new DbSelect(
         # our configured select object

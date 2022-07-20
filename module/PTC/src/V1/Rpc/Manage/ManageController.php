@@ -152,6 +152,9 @@ class ManageController extends AbstractActionController
                 return new ApiProblemResponse(new ApiProblem(400, 'Invalid action'));
             }
             $value = filter_var($json->value, FILTER_SANITIZE_NUMBER_INT);
+            if($value < 100 || empty($value) || !is_numeric($value)) {
+                return new ApiProblemResponse(new ApiProblem(400, 'You need to add at least 100 Views'));
+            }
 
             $ptcCost = 0;
             switch($ptc->timer) {

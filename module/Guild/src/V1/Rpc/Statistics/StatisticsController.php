@@ -78,6 +78,24 @@ class StatisticsController extends AbstractActionController
                 return new ApiProblemResponse($me);
             }
 
+            $mode = 'month';
+            if(isset($_REQUEST['mode'])) {
+                $modeSet = filter_var($_REQUEST['mode'], FILTER_SANITIZE_STRING);
+                switch($modeSet) {
+                    case 'month':
+                        $mode = 'month';
+                        break;
+                    case 'week':
+                        $mode = 'week';
+                        break;
+                    case 'total':
+                        $mode = 'total';
+                        break;
+                    default:
+                        break;
+                }
+            }
+
             # check if user already has joined or created a guild
             $checkWh = new Where();
             $checkWh->equalTo('user_idfs', $me->User_ID);
@@ -91,20 +109,28 @@ class StatisticsController extends AbstractActionController
             $gWh = new Where();
             $gWh->notLike('date_joined', '0000-00-00 00:00:00');
             $gWh->equalTo('guild_idfs', $guildId);
-            $gWh->like('ufs.stat_key', 'shdone-m-'.date('n-Y', time()));
+            if($mode == 'month') {
+                $gWh->like('ufs.stat_key', 'shdone-m-'.date('n-Y', time()));
+            }
+            if($mode == 'week') {
+                $gWh->like('ufs.stat_key', 'shdone-w-'.date('W-Y', time()));
+            }
+            if($mode == 'total') {
+                $gWh->like('ufs.stat_key', 'shdone-total');
+            }
 
             /**
              * Get Top 10 Shortlinks
              */
             $gSel = new Select($this->mGuildUserTbl->getTable());
-            $gSel->join(['u' => 'user'],'faucet_guild_user.user_idfs = u.User_ID',['username']);
+            $gSel->join(['u' => 'user'],'faucet_guild_user.user_idfs = u.User_ID',['username','avatar']);
             $gSel->join(['ufs' => 'user_faucet_stat'],'ufs.user_idfs = faucet_guild_user.user_idfs',['stat_data']);
             $gSel->where($gWh);
             $shortStats = $this->mGuildUserTbl->selectWith($gSel);
 
             $shortsByUserId = [];
             foreach($shortStats as $sh) {
-                $shortsByUserId[$sh->user_idfs] = ['amount' => $sh->stat_data,'id' => $sh->user_idfs, 'name' => $sh->username];
+                $shortsByUserId[$sh->user_idfs] = ['amount' => $sh->stat_data,'id' => $sh->user_idfs, 'name' => $sh->username, 'avatar' => $sh->avatar];
             }
             arsort($shortsByUserId);
 
@@ -124,17 +150,26 @@ class StatisticsController extends AbstractActionController
             $gWh = new Where();
             $gWh->notLike('date_joined', '0000-00-00 00:00:00');
             $gWh->equalTo('guild_idfs', $guildId);
-            $gWh->like('ufs.stat_key', 'ofdone-m-'.date('n-Y', time()));
+            if($mode == 'month') {
+                $gWh->like('ufs.stat_key', 'user-offerbig-m-'.date('n-Y', time()));
+            }
+            if($mode == 'week') {
+                $gWh->like('ufs.stat_key', 'user-offerbig-w-'.date('W-Y', time()));
+            }
+            if($mode == 'total') {
+                $gWh->like('ufs.stat_key', 'user-offerbig-total');
+            }
+            //$gWh->like('ufs.stat_key', 'ofdone-m-'.date('n-Y', time()));
 
             $gSel = new Select($this->mGuildUserTbl->getTable());
-            $gSel->join(['u' => 'user'],'faucet_guild_user.user_idfs = u.User_ID',['username']);
+            $gSel->join(['u' => 'user'],'faucet_guild_user.user_idfs = u.User_ID',['username','avatar']);
             $gSel->join(['ufs' => 'user_faucet_stat'],'ufs.user_idfs = faucet_guild_user.user_idfs',['stat_data']);
             $gSel->where($gWh);
             $shortStats = $this->mGuildUserTbl->selectWith($gSel);
 
             $offersByUserId = [];
             foreach($shortStats as $sh) {
-                $offersByUserId[$sh->user_idfs] = ['amount' => $sh->stat_data,'id' => $sh->user_idfs, 'name' => $sh->username];
+                $offersByUserId[$sh->user_idfs] = ['amount' => $sh->stat_data,'id' => $sh->user_idfs, 'name' => $sh->username, 'avatar' => $sh->avatar];
             }
             arsort($offersByUserId);
 
@@ -154,17 +189,26 @@ class StatisticsController extends AbstractActionController
             $gWh = new Where();
             $gWh->notLike('date_joined', '0000-00-00 00:00:00');
             $gWh->equalTo('guild_idfs', $guildId);
-            $gWh->like('ufs.stat_key', 'fclaim-m-web-'.date('n-Y', time()));
+            //$gWh->like('ufs.stat_key', 'fclaim-m-web-'.date('n-Y', time()));
+            if($mode == 'month') {
+                $gWh->like('ufs.stat_key', 'fclaim-m-web-'.date('n-Y', time()));
+            }
+            if($mode == 'week') {
+                $gWh->like('ufs.stat_key', 'fclaim-w-web-'.date('W-Y', time()));
+            }
+            if($mode == 'total') {
+                $gWh->like('ufs.stat_key', 'fclaim-web-total');
+            }
 
             $gSel = new Select($this->mGuildUserTbl->getTable());
-            $gSel->join(['u' => 'user'],'faucet_guild_user.user_idfs = u.User_ID',['username']);
+            $gSel->join(['u' => 'user'],'faucet_guild_user.user_idfs = u.User_ID',['username','avatar']);
             $gSel->join(['ufs' => 'user_faucet_stat'],'ufs.user_idfs = faucet_guild_user.user_idfs',['stat_data']);
             $gSel->where($gWh);
             $shortStats = $this->mGuildUserTbl->selectWith($gSel);
 
             $claimsByUserId = [];
             foreach($shortStats as $sh) {
-                $claimsByUserId[$sh->user_idfs] = ['amount' => $sh->stat_data,'id' => $sh->user_idfs, 'name' => $sh->username];
+                $claimsByUserId[$sh->user_idfs] = ['amount' => $sh->stat_data,'id' => $sh->user_idfs, 'name' => $sh->username, 'avatar' => $sh->avatar];
             }
             arsort($claimsByUserId);
 
