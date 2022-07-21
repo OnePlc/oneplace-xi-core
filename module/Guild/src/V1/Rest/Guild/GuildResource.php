@@ -1328,13 +1328,13 @@ class GuildResource extends AbstractResourceListener
                 }
 
                 # check if description should be updated
-                if(isset($data->focus_faucet)) {
+                if(isset($data->focus)) {
                     $secResult = $this->mSecTools->basicInputCheck([
-                        $data->focus_faucet,
-                        $data->focus_shortlinks,
-                        $data->focus_offerwalls,
-                        $data->focus_lottery,
-                        $data->focus_mining
+                        $data->focus['focus_faucet'],
+                        $data->focus['focus_shortlinks'],
+                        $data->focus['focus_offerwalls'],
+                        $data->focus['focus_lottery'],
+                        $data->focus['focus_mining']
                     ]);
                     if($secResult !== 'ok') {
                         # ban user and force logout on client
@@ -1345,22 +1345,24 @@ class GuildResource extends AbstractResourceListener
                         ]);
                         return new ApiProblem(418, 'Potential '.$secResult.' Attack - Goodbye');
                     }
-                    $fFaucet = filter_var($data->focus_faucet, FILTER_SANITIZE_STRING);
-                    $fSH = filter_var($data->focus_shortlinks, FILTER_SANITIZE_STRING);
-                    $fOF = filter_var($data->focus_offerwalls, FILTER_SANITIZE_STRING);
-                    $fLot = filter_var($data->focus_lottery, FILTER_SANITIZE_STRING);
-                    $fMin = filter_var($data->focus_mining, FILTER_SANITIZE_STRING);
-                    $fProf = filter_var($data->focus_professions, FILTER_SANITIZE_STRING);
+                    $fFaucet = filter_var($data->focus['focus_faucet'], FILTER_SANITIZE_NUMBER_INT);
+                    $fSH = filter_var($data->focus['focus_shortlinks'], FILTER_SANITIZE_NUMBER_INT);
+                    $fOF = filter_var($data->focus['focus_offerwalls'], FILTER_SANITIZE_NUMBER_INT);
+                    $fLot = filter_var($data->focus['focus_lottery'], FILTER_SANITIZE_NUMBER_INT);
+                    $fMin = filter_var($data->focus['focus_mining'], FILTER_SANITIZE_NUMBER_INT);
 
+                    // enforce 1 and 0
                     $focus = [
-                        'f' => (!empty($fFaucet)) ? 1 : 0,
-                        'sl' => (!empty($fSH)) ? 1 : 0,
-                        'of' => (!empty($fOF)) ? 1 : 0,
-                        'lt' => (!empty($fLot)) ? 1 : 0,
-                        'm' => (!empty($fMin)) ? 1 : 0,
-                        'p' => (!empty($fProf)) ? 1 : 0,
+                        'f' => ($fFaucet == 1) ? 1 : 0,
+                        'sl' => ($fSH == 1) ? 1 : 0,
+                        'of' => ($fOF == 1) ? 1 : 0,
+                        'lt' => ($fLot == 1) ? 1 : 0,
+                        'm' => ($fMin == 1) ? 1 : 0,
                     ];
 
+                    if($userGuildRole->guild_idfs != 0) {
+                        $this->mGuildTbl->update(['focus' => json_encode($focus)], ['Guild_ID' => $userGuildRole->guild_idfs]);
+                    }
                     if($userGuildRole->guild_idfs != 0) {
                         $this->mGuildFocusTbl->delete(['guild_idfs' => $userGuildRole->guild_idfs]);
                     }
@@ -1392,12 +1394,6 @@ class GuildResource extends AbstractResourceListener
                         $this->mGuildFocusTbl->insert([
                             'guild_idfs' => $userGuildRole->guild_idfs,
                             'focus_idfs' => 5
-                        ]);
-                    }
-                    if($focus['p'] == 1) {
-                        $this->mGuildFocusTbl->insert([
-                            'guild_idfs' => $userGuildRole->guild_idfs,
-                            'focus_idfs' => 6
                         ]);
                     }
                 }

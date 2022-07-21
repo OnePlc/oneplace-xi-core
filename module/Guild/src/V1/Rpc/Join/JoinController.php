@@ -364,7 +364,9 @@ class JoinController extends AbstractActionController
                     $guildMembers[] = (object)[
                         'id' => $member->User_ID,
                         'name' => $member->username,
+                        'avatar' => ($member->avatar != '') ? $member->avatar : $member->username,
                         'xp_level' => $member->xp_level,
+                        'last_action' => $member->last_action,
                         'rank' => (object)[
                             'id' => $guildMember->rank,
                             'name'=> $guildRanks[$guildMember->rank]
@@ -390,6 +392,9 @@ class JoinController extends AbstractActionController
             }
 
             $userId = filter_var($_REQUEST['user_id'], FILTER_SANITIZE_NUMBER_INT);
+            if($userId == $me->User_ID) {
+                return new ApiProblemResponse(new ApiProblem(400, 'You cannot remove yourself from the guild'));
+            }
 
             $gCheck = $this->mGuildUserTbl->select([
                 'user_idfs' => $userId,

@@ -94,8 +94,20 @@ class NewsResource extends AbstractResourceListener
             $userGuildInfo = $userHasGuild->current();
             $guildId = $userGuildInfo->guild_idfs;
             if ($userGuildInfo->rank == 0) {
+                $secResult = $this->mSecTools->basicInputCheck([$data->news_title, $data->news_content]);
+                if($secResult !== 'ok') {
+                    return new ApiProblem(418, 'Potential '.$secResult.' Attack - Goodbye');
+                }
+
                 $newsTitle = filter_var($data->news_title, FILTER_SANITIZE_STRING);
                 $newsContent = filter_var($data->news_content, FILTER_SANITIZE_STRING);
+
+                if($newsTitle == '' || empty($newsTitle)) {
+                    return new ApiProblem(400, 'Title cannot be empty');
+                }
+                if($newsContent == '' || empty($newsContent)) {
+                    return new ApiProblem(400, 'Content cannot be empty');
+                }
 
                 $checkWh = new Where();
                 $checkWh->greaterThanOrEqualTo('date', date('Y-m-d H:i:s', strtotime('-24 hours')));
@@ -131,7 +143,54 @@ class NewsResource extends AbstractResourceListener
      */
     public function delete($id)
     {
-        return new ApiProblem(405, 'The DELETE method has not been defined for individual resources');
+        # Prevent 500 error
+        if(!$this->getIdentity()) {
+            return new ApiProblem(401, 'Not logged in');
+        }
+        $me = $this->mSecTools->getSecuredUserSession($this->getIdentity()->getName());
+        if(get_class($me) == 'Laminas\\ApiTools\\ApiProblem\\ApiProblem') {
+            return $me;
+        }
+
+        # check if user already has joined or created a guild
+        $checkWh = new Where();
+        $checkWh->equalTo('user_idfs', $me->User_ID);
+        $checkWh->notLike('date_joined', '0000-00-00 00:00:00');
+        $userHasGuild = $this->mGuildUserTbl->select($checkWh);
+
+        if(count($userHasGuild) == 0) {
+            return new ApiProblem(404, 'User is not part of any guild.');
+        } else {
+            # only guildmaster is allowed to see this info
+            $userGuildInfo = $userHasGuild->current();
+            $guildId = $userGuildInfo->guild_idfs;
+            if ($userGuildInfo->rank == 0) {
+                $secResult = $this->mSecTools->basicInputCheck([$id]);
+                if($secResult !== 'ok') {
+                    return new ApiProblem(418, 'Potential '.$secResult.' Attack - Goodbye');
+                }
+
+                // Always the same error message, dont give potential attackers too much information
+                $newsId = filter_var($id, FILTER_SANITIZE_STRING);
+                if($newsId <= 0 || empty($newsId)) {
+                    return new ApiProblem(403, 'Invalid News Id');
+                }
+                $newsCheck = $this->mGuildNewsTbl->select(['News_ID' => $newsId]);
+                if($newsCheck->count() == 0) {
+                    return new ApiProblem(403, 'Invalid News Id');
+                }
+                $newsCheck = $newsCheck->current();
+                if($newsCheck->guild_idfs != $guildId) {
+                    return new ApiProblem(403, 'Invalid News Id');
+                }
+
+                $this->mGuildNewsTbl->delete(['News_ID' => $newsId]);
+
+                return true;
+            } else {
+                return new ApiProblem(403, 'You must be a guildmaster to remove news.');
+            }
+        }
     }
 
     /**
@@ -153,7 +212,55 @@ class NewsResource extends AbstractResourceListener
      */
     public function fetch($id)
     {
-        return new ApiProblem(405, 'The GET method has not been defined for individual resources');
+        # Prevent 500 error
+        if(!$this->getIdentity()) {
+            return new ApiProblem(401, 'Not logged in');
+        }
+        $me = $this->mSecTools->getSecuredUserSession($this->getIdentity()->getName());
+        if(get_class($me) == 'Laminas\\ApiTools\\ApiProblem\\ApiProblem') {
+            return $me;
+        }
+
+        # check if user already has joined or created a guild
+        $checkWh = new Where();
+        $checkWh->equalTo('user_idfs', $me->User_ID);
+        $checkWh->notLike('date_joined', '0000-00-00 00:00:00');
+        $userHasGuild = $this->mGuildUserTbl->select($checkWh);
+
+        if(count($userHasGuild) == 0) {
+            return new ApiProblem(404, 'User is not part of any guild.');
+        } else {
+            # only guildmaster is allowed to see this info
+            $userGuildInfo = $userHasGuild->current();
+            $guildId = $userGuildInfo->guild_idfs;
+            if ($userGuildInfo->rank == 0) {
+                $secResult = $this->mSecTools->basicInputCheck([$id]);
+                if ($secResult !== 'ok') {
+                    return new ApiProblem(418, 'Potential ' . $secResult . ' Attack - Goodbye');
+                }
+
+                // Always the same error message, dont give potential attackers too much information
+                $newsId = filter_var($id, FILTER_SANITIZE_STRING);
+                if ($newsId <= 0 || empty($newsId)) {
+                    return new ApiProblem(403, 'Invalid News Id');
+                }
+                $newsCheck = $this->mGuildNewsTbl->select(['News_ID' => $newsId]);
+                if ($newsCheck->count() == 0) {
+                    return new ApiProblem(403, 'Invalid News Id');
+                }
+                $newsCheck = $newsCheck->current();
+                if ($newsCheck->guild_idfs != $guildId) {
+                    return new ApiProblem(403, 'Looks like you try to edit news from another guild - be aware that abuse of our system can lead to a permanent account ban');
+                }
+
+                return [
+                    'title' => $newsCheck->title,
+                    'content' => $newsCheck->content
+                ];
+            } else {
+                return new ApiProblem(403, 'You must be a guildmaster to edit news.');
+            }
+        }
     }
 
     /**
@@ -202,7 +309,8 @@ class NewsResource extends AbstractResourceListener
                         'author' => $new->username,
                         'title' => $new->title,
                         'content' => $new->content,
-                        'date' => $new->date
+                        'date' => $new->date,
+                        'edited' => $new->date_edited
                     ];
                 }
             }
@@ -256,6 +364,60 @@ class NewsResource extends AbstractResourceListener
      */
     public function update($id, $data)
     {
-        return new ApiProblem(405, 'The PUT method has not been defined for individual resources');
+        # Prevent 500 error
+        if(!$this->getIdentity()) {
+            return new ApiProblem(401, 'Not logged in');
+        }
+        $me = $this->mSecTools->getSecuredUserSession($this->getIdentity()->getName());
+        if(get_class($me) == 'Laminas\\ApiTools\\ApiProblem\\ApiProblem') {
+            return $me;
+        }
+
+        # check if user already has joined or created a guild
+        $checkWh = new Where();
+        $checkWh->equalTo('user_idfs', $me->User_ID);
+        $checkWh->notLike('date_joined', '0000-00-00 00:00:00');
+        $userHasGuild = $this->mGuildUserTbl->select($checkWh);
+
+        if(count($userHasGuild) == 0) {
+            return new ApiProblem(404, 'User is not part of any guild.');
+        } else {
+            # only guildmaster is allowed to see this info
+            $userGuildInfo = $userHasGuild->current();
+            $guildId = $userGuildInfo->guild_idfs;
+            if ($userGuildInfo->rank == 0) {
+                $secResult = $this->mSecTools->basicInputCheck([$id, $data->news_title, $data->news_content]);
+                if ($secResult !== 'ok') {
+                    return new ApiProblem(418, 'Potential ' . $secResult . ' Attack - Goodbye');
+                }
+
+                // Always the same error message, dont give potential attackers too much information
+                $newsId = filter_var($id, FILTER_SANITIZE_STRING);
+                if ($newsId <= 0 || empty($newsId)) {
+                    return new ApiProblem(403, 'Invalid News Id');
+                }
+                $newsCheck = $this->mGuildNewsTbl->select(['News_ID' => $newsId]);
+                if ($newsCheck->count() == 0) {
+                    return new ApiProblem(403, 'Invalid News Id');
+                }
+                $newsCheck = $newsCheck->current();
+                if ($newsCheck->guild_idfs != $guildId) {
+                    return new ApiProblem(403, 'Looks like you try to edit news from another guild - be aware that abuse of our system can lead to a permanent account ban');
+                }
+
+                $newTitle = filter_var($data->news_title, FILTER_SANITIZE_STRING);
+                $newContent = filter_var($data->news_content, FILTER_SANITIZE_STRING);
+
+                $this->mGuildNewsTbl->update([
+                    'title' => $newTitle,
+                    'content' => $newContent,
+                    'date_edited' => date('Y-m-d H:i:s', time())
+                ],['News_ID' => $newsId]);
+
+                return true;
+            } else {
+                return new ApiProblem(403, 'You must be a guildmaster to edit news.');
+            }
+        }
     }
 }
