@@ -491,10 +491,18 @@ class GuildResource extends AbstractResourceListener
             $guild = $guild->current();
         }
 
+        /**
+         * Get Guild Ranks
+         */
+        $ranks = [];
         $guildRanks = [];
-        $guildRanksDB = $this->mGuildRankTbl->select(['guild_idfs' => $guildId]);
+        $guildRanksDB = $this->mGuildRankTbl->select(['guild_idfs' => $guild->Guild_ID]);
         if(count($guildRanksDB) > 0) {
             foreach($guildRanksDB as $rank) {
+                $ranks[] = (object)[
+                    'id' => $rank->level,
+                    'name' => $rank->label,
+                ];
                 $guildRanks[$rank->level] = $rank->label;
             }
         }
@@ -642,20 +650,6 @@ class GuildResource extends AbstractResourceListener
         $checkWh->like('date_joined', '0000-00-00 00:00:00');
         $checkWh->like('date_declined', '0000-00-00 00:00:00');
         $totalRequests = $this->mGuildUserTbl->select($checkWh)->count();
-
-        /**
-         * Get Guild Ranks
-         */
-        $ranks = [];
-        $guildRanks = $this->mGuildRankTbl->select(['guild_idfs' => $guild->Guild_ID]);
-        if(count($guildRanks) > 0) {
-            foreach($guildRanks as $rank) {
-                $ranks[] = (object)[
-                    'id' => $rank->level,
-                    'name' => $rank->label,
-                ];
-            }
-        }
 
         /**
          * Check if user is part of guild

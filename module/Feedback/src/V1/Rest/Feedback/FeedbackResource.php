@@ -100,8 +100,8 @@ class FeedbackResource extends AbstractResourceListener
         $this->mFeedbackTagTbl = new TableGateway('feedback_tag_feedback', $mapper);
         $this->mTokenTbl = new TableGateway('faucet_tokenbuy', $mapper);
 
-        $this->mTokenVoteComment = 5;
-        $this->mTokenCreate = 25;
+        $this->mTokenVoteComment = 1;
+        $this->mTokenCreate = 1;
 
         $this->mSecTools = new SecurityTools($mapper);
         $this->mApiTools = new ApiTools($mapper);
@@ -283,7 +283,7 @@ class FeedbackResource extends AbstractResourceListener
             $comments[] = [
                 'id' => $comment->Comment_ID,
                 'author' => $comment->username,
-                'comment' => filter_var($comment->comment, FILTER_SANITIZE_STRING),
+                'comment' => utf8_decode($comment->comment),
                 'date' => $comment->date
             ];
             $totalComments++;
@@ -548,7 +548,7 @@ class FeedbackResource extends AbstractResourceListener
                 $this->mFeedbackCommentTbl->insert([
                     'user_idfs' => $me->User_ID,
                     'feedback_idfs' => $feedbackId,
-                    'comment' => $comment,
+                    'comment' => utf8_encode($comment),
                     'date' => date('Y-m-d H:i:s', time())
                 ]);
 

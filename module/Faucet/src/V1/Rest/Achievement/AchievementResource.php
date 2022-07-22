@@ -275,6 +275,10 @@ class AchievementResource extends AbstractResourceListener
                 default:
                     break;
             }
+            $percent = 0;
+            if($progress > 0 && $achiev->goal > 0) {
+                $percent = round((100 / ($achiev->goal / $progress)));
+            }
             return (object)[
                 'id' => $achiev->Achievement_ID,
                 'name' => $achiev->label,
@@ -283,7 +287,8 @@ class AchievementResource extends AbstractResourceListener
                 'goal' => $achiev->goal,
                 'reward' => $achiev->reward,
                 'mode' => $achiev->mode,
-                'progress' => $progress
+                'progress' => $progress,
+                'percent' => $percent
             ];
         }
 
@@ -573,6 +578,10 @@ class AchievementResource extends AbstractResourceListener
                     default:
                         break;
                 }
+                $percent = 0;
+                if($progress > 0 && $achiev->goal > 0) {
+                    $percent = round((100 / ($achiev->goal / $progress)));
+                }
                 $achievementCategories[$achiev->category_idfs]->achievements[] = (object)[
                     'id' => $achiev->Achievement_ID,
                     'name' => $achiev->label,
@@ -581,7 +590,8 @@ class AchievementResource extends AbstractResourceListener
                     'goal' => $achiev->goal,
                     'reward' => $achiev->reward,
                     'mode' => $achiev->mode,
-                    'progress' => $progress
+                    'progress' => $progress,
+                    'percent' => $percent
                 ];
             }
 
@@ -589,6 +599,12 @@ class AchievementResource extends AbstractResourceListener
 
         $categoriesExport = [];
         foreach(array_keys($achievementCategories) as $categoryExportID) {
+            $exportPre = $achievementCategories[$categoryExportID];
+            if($exportPre->progress > 0 && $exportPre->target > 0) {
+                $exportPre->percent = round((100 / ($exportPre->target / $exportPre->progress)));
+            }  else {
+                $exportPre->percent = 0;
+            }
             $categoriesExport[] = $achievementCategories[$categoryExportID];
         }
 

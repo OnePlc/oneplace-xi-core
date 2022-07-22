@@ -120,10 +120,20 @@ class RankResource extends AbstractResourceListener
                         $newBalance = $this->mTransaction->executeGuildTransaction($renamePrice, true,
                             $guildId, $guildId, 'rank-create', 'Created New Rank ' . $rankName, $me->User_ID);
 
-                        $rankLevels = [1, 2, 3, 4, 5, 6, 7, 8, 9];
+                        $rankLevels = [
+                            'rank-1' => 1,
+                            'rank-2' => 2,
+                            'rank-3' => 3,
+                            'rank-4' => 4,
+                            'rank-5' => 5,
+                            'rank-6' => 6,
+                            'rank-7' => 7,
+                            'rank-8' => 8,
+                            'rank-9' => 9];
+
                         foreach($ranks as $r) {
-                            if(array_key_exists($r->level, $rankLevels)) {
-                                unset($rankLevels[$r->level]);
+                            if(array_key_exists('rank-'.$r->level, $rankLevels)) {
+                                unset($rankLevels['rank-'.$r->level]);
                             }
                         }
 
@@ -176,7 +186,55 @@ class RankResource extends AbstractResourceListener
      */
     public function delete($id)
     {
-        return new ApiProblem(405, 'The DELETE method has not been defined for individual resources');
+        $rankId = filter_var($id, FILTER_SANITIZE_NUMBER_INT);
+
+        if($rankId < 0 || empty($rankId)) {
+            return new ApiProblem(400, 'Invalid rank');
+        }
+        if($rankId == 0) {
+            return new ApiProblem(400, 'You cannot delete guild master rank');
+        }
+
+        # Prevent 500 error
+        if(!$this->getIdentity()) {
+            return new ApiProblem(401, 'Not logged in');
+        }
+        $me = $this->mSecTools->getSecuredUserSession($this->getIdentity()->getName());
+        if(get_class($me) == 'Laminas\\ApiTools\\ApiProblem\\ApiProblem') {
+            return $me;
+        }
+
+        # check if user already has joined or created a guild
+        $checkWh = new Where();
+        $checkWh->equalTo('user_idfs', $me->User_ID);
+        $checkWh->notLike('date_joined', '0000-00-00 00:00:00');
+        $userHasGuild = $this->mGuildUserTbl->select($checkWh);
+
+        if(count($userHasGuild) == 0) {
+            return new ApiProblem(404, 'User is not part of any guild.');
+        } else {
+            # only guildmaster is allowed to see this info
+            $userGuildInfo = $userHasGuild->current();
+            if ($userGuildInfo->rank == 0) {
+                # get rank info
+                $rank = $this->mGuildRankTbl->select(['level' => $rankId, 'guild_idfs' => $userGuildInfo->guild_idfs]);
+                if ($rank->count() > 0) {
+                    $rankMembers = $this->mGuildUserTbl->select(['rank' => $rankId, 'guild_idfs' => $userGuildInfo->guild_idfs]);
+                    $memberCount = $rankMembers->count();
+                    if($memberCount == 0) {
+                        $this->mGuildRankTbl->delete(['level' => $rankId, 'guild_idfs' => $userGuildInfo->guild_idfs]);
+
+                        return true;
+                    } else {
+                        return new ApiProblem(404, 'You have '.$memberCount. ' member with this rank. please change their rank before you delete the rank.');
+                    }
+                } else {
+                    return new ApiProblem(404, 'Rank not found.');
+                }
+            } else {
+                return new ApiProblem(403, 'You must own a guild to delete it.');
+            }
+        }
     }
 
     /**
@@ -199,6 +257,10 @@ class RankResource extends AbstractResourceListener
     public function fetch($id)
     {
         $rankId = filter_var($id, FILTER_SANITIZE_NUMBER_INT);
+
+        if($rankId < 0 || empty($rankId)) {
+            return new ApiProblem(400, 'Invalid rank');
+        }
 
         # Prevent 500 error
         if(!$this->getIdentity()) {
@@ -317,6 +379,10 @@ class RankResource extends AbstractResourceListener
             return $me;
         }
 
+        if($rankId <= 0 || empty($rankId)) {
+            return new ApiProblem(400, 'Invalid rank');
+        }
+
         # check if user already has joined or created a guild
         $checkWh = new Where();
         $checkWh->equalTo('user_idfs', $me->User_ID);
@@ -334,40 +400,102 @@ class RankResource extends AbstractResourceListener
                 if($rank->count() > 0) {
                     $rank = $rank->current();
 
-                    $dailyLimit = filter_var($data->daily_limit, FILTER_SANITIZE_NUMBER_INT);
-                    $canInvite = filter_var($data->invite, FILTER_SANITIZE_NUMBER_INT);
-                    # prevent negative values
-                    if($dailyLimit < 0) {
-                        $dailyLimit = 0;
+                    $cmd = filter_var($data->cmd, FILTER_SANITIZE_STRING);
+                    $secResult = $this->mSecTools->basicInputCheck([$data->cmd]);
+                    if ($secResult !== 'ok') {
+                        return new ApiProblem(418, 'Potential ' . $secResult . ' Attack - Goodbye');
                     }
-                    # force value we need
-                    if($canInvite != 0 && $canInvite != 1) {
-                        return new ApiProblem(400, 'Invalid Permissions');
+                    if($cmd == 'update') {
+                        $secResult = $this->mSecTools->basicInputCheck([$data->daily_limit, $data->invite]);
+                        if ($secResult !== 'ok') {
+                            return new ApiProblem(418, 'Potential ' . $secResult . ' Attack - Goodbye');
+                        }
+
+                        $dailyLimit = filter_var($data->daily_limit, FILTER_SANITIZE_NUMBER_INT);
+                        $canInvite = filter_var($data->invite, FILTER_SANITIZE_NUMBER_INT);
+                        # prevent negative values
+                        if($dailyLimit < 0) {
+                            $dailyLimit = 0;
+                        }
+                        # force value we need
+                        if($canInvite != 0 && $canInvite != 1) {
+                            return new ApiProblem(400, 'Invalid Permissions');
+                        }
+
+                        # update permissions
+                        $permissions = [];
+                        $this->mRankPermTbl->delete(['guild_idfs' => $userGuildInfo->guild_idfs]);
+                        if($canInvite == 1) {
+                            $this->mRankPermTbl->insert([
+                                'guild_idfs' => $userGuildInfo->guild_idfs,
+                                'rank_idfs' => $rankId,
+                                'permission' => 'invite'
+                            ]);
+                            $permissions[] = 'invite';
+                        }
+
+                        # set daily withdrawal limit
+                        $this->mGuildRankTbl->update([
+                            'daily_withdraw' => $dailyLimit
+                        ],['level' => $rankId,'guild_idfs' => $userGuildInfo->guild_idfs]);
+
+                        return (object)[
+                            'id' => $rankId,
+                            'name' => $rank->label,
+                            'daily_withdraw' => $rank->daily_withdraw,
+                            'permissions' => $permissions,
+                        ];
                     }
+                    if($cmd == 'sort') {
+                        $secResult = $this->mSecTools->basicInputCheck([$data->sort]);
+                        if ($secResult !== 'ok') {
+                            return new ApiProblem(418, 'Potential ' . $secResult . ' Attack - Goodbye');
+                        }
+                        if($rank->level == 0) {
+                            return new ApiProblem(404, 'you cannot change rank level of guild master');
+                        }
+                        $sort = filter_var($data->sort, FILTER_SANITIZE_STRING);
+                        switch($sort) {
+                            case 'up':
+                                if($rank->level == 1) {
+                                    return new ApiProblem(404, 'guild master rank must be highest rank');
+                                }
+                                // free number as its unique
+                                $this->mGuildRankTbl->update(['level' => 11], ['level' => $rank->level-1,'guild_idfs' => $userGuildInfo->guild_idfs]);
+                                // +1 rank
+                                $this->mGuildRankTbl->update(['level' => $rank->level-1], ['level' => $rank->level,'guild_idfs' => $userGuildInfo->guild_idfs]);
+                                // old rank to rank that was above
+                                $this->mGuildRankTbl->update(['level' => $rank->level], ['level' => 11,'guild_idfs' => $userGuildInfo->guild_idfs]);
+                                break;
+                            case 'down':
+                                // free number as its unique
+                                $this->mGuildRankTbl->update(['level' => 11], ['level' => $rank->level+1,'guild_idfs' => $userGuildInfo->guild_idfs]);
+                                // +1 rank
+                                $this->mGuildRankTbl->update(['level' => $rank->level+1], ['level' => $rank->level,'guild_idfs' => $userGuildInfo->guild_idfs]);
+                                // old rank to rank that was above
+                                $this->mGuildRankTbl->update(['level' => $rank->level], ['level' => 11,'guild_idfs' => $userGuildInfo->guild_idfs]);
+                                break;
+                            default:
+                                return new ApiProblem(404, 'invalid sort command.');
+                        }
 
-                    # update permissions
-                    $permissions = [];
-                    $this->mRankPermTbl->delete(['guild_idfs' => $userGuildInfo->guild_idfs]);
-                    if($canInvite == 1) {
-                        $this->mRankPermTbl->insert([
-                            'guild_idfs' => $userGuildInfo->guild_idfs,
-                            'rank_idfs' => $rankId,
-                            'permission' => 'invite'
-                        ]);
-                        $permissions[] = 'invite';
+                        $ranks = [];
+                        $guildRanks = $this->mGuildRankTbl->select(['guild_idfs' => $userGuildInfo->guild_idfs]);
+                        if(count($guildRanks) > 0) {
+                            foreach($guildRanks as $rank) {
+                                $ranks[] = (object)[
+                                    'id' => $rank->level,
+                                    'name' => $rank->label,
+                                ];
+                            }
+                        }
+
+                        return [
+                            'state' => 'done',
+                            'ranks' => $ranks
+                        ];
                     }
-
-                    # set daily withdrawal limit
-                    $this->mGuildRankTbl->update([
-                        'daily_withdraw' => $dailyLimit
-                    ],['level' => $rankId,'guild_idfs' => $userGuildInfo->guild_idfs]);
-
-                    return (object)[
-                        'id' => $rankId,
-                        'name' => $rank->label,
-                        'daily_withdraw' => $rank->daily_withdraw,
-                        'permissions' => $permissions,
-                    ];
+                    return new ApiProblem(404, 'invalid rank command.');
                 } else {
                     return new ApiProblem(404, 'Rank not found.');
                 }

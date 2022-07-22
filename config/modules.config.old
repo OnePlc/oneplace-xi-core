@@ -44,4 +44,5 @@ return [
     'Profession',
     'Marketplace',
     'Batch',
+    'Backend',
 ];

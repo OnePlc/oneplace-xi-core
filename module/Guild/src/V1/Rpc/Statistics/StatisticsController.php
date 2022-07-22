@@ -184,6 +184,175 @@ class StatisticsController extends AbstractActionController
             }
 
             /**
+             * Get Top 10 Offerwalls Small
+             */
+            $gWh = new Where();
+            $gWh->notLike('date_joined', '0000-00-00 00:00:00');
+            $gWh->equalTo('guild_idfs', $guildId);
+            if($mode == 'month') {
+                $gWh->like('ufs.stat_key', 'user-offersmall-m-'.date('n-Y', time()));
+            }
+            if($mode == 'week') {
+                $gWh->like('ufs.stat_key', 'user-offersmall-w-'.date('W-Y', time()));
+            }
+            if($mode == 'total') {
+                $gWh->like('ufs.stat_key', 'user-offersmall-total');
+            }
+
+            $gSel = new Select($this->mGuildUserTbl->getTable());
+            $gSel->join(['u' => 'user'],'faucet_guild_user.user_idfs = u.User_ID',['username','avatar']);
+            $gSel->join(['ufs' => 'user_faucet_stat'],'ufs.user_idfs = faucet_guild_user.user_idfs',['stat_data']);
+            $gSel->where($gWh);
+            $shortStats = $this->mGuildUserTbl->selectWith($gSel);
+
+            $offersByUserId = [];
+            foreach($shortStats as $sh) {
+                $offersByUserId[$sh->user_idfs] = ['amount' => $sh->stat_data,'id' => $sh->user_idfs, 'name' => $sh->username, 'avatar' => $sh->avatar];
+            }
+            arsort($offersByUserId);
+
+            $top10OFS = [];
+            $count = 1;
+            foreach($offersByUserId as $topOf) {
+                $top10OFS[] = $topOf;
+                if($count == 10) {
+                    break;
+                }
+                $count++;
+            }
+
+            /**
+             * Get Top 10 Daily Tasks
+             */
+            $gWh = new Where();
+            $gWh->notLike('date_joined', '0000-00-00 00:00:00');
+            $gWh->equalTo('guild_idfs', $guildId);
+            if($mode == 'month') {
+                $gWh->like('ufs.stat_key', 'user-dailys-m-'.date('n-Y', time()));
+            }
+            if($mode == 'week') {
+                $gWh->like('ufs.stat_key', 'user-dailys-w-'.date('W-Y', time()));
+            }
+            if($mode == 'total') {
+                $gWh->like('ufs.stat_key', 'user-dailys-total');
+            }
+
+            $gSel = new Select($this->mGuildUserTbl->getTable());
+            $gSel->join(['u' => 'user'],'faucet_guild_user.user_idfs = u.User_ID',['username','avatar']);
+            $gSel->join(['ufs' => 'user_faucet_stat'],'ufs.user_idfs = faucet_guild_user.user_idfs',['stat_data']);
+            $gSel->where($gWh);
+            $shortStats = $this->mGuildUserTbl->selectWith($gSel);
+
+            $offersByUserId = [];
+            foreach($shortStats as $sh) {
+                $offersByUserId[$sh->user_idfs] = ['amount' => $sh->stat_data,'id' => $sh->user_idfs, 'name' => $sh->username, 'avatar' => $sh->avatar];
+            }
+            arsort($offersByUserId);
+
+            $top10OD = [];
+            $count = 1;
+            foreach($offersByUserId as $topOf) {
+                $top10OD[] = $topOf;
+                if($count == 10) {
+                    break;
+                }
+                $count++;
+            }
+
+            /**
+             * Get Top 10 CPU miners
+             */
+            $gWh = new Where();
+            $gWh->notLike('date_joined', '0000-00-00 00:00:00');
+            $gWh->equalTo('guild_idfs', $guildId);
+            if($mode == 'month') {
+                $gWh->like('ufs.stat_key', 'nano-coin-m-xmr-'.date('n-Y', time()));
+            }
+            if($mode == 'week') {
+                $gWh->like('ufs.stat_key', 'nano-coin-w-xmr-'.date('W-Y', time()));
+            }
+            if($mode == 'total') {
+                $gWh->like('ufs.stat_key', 'nano-coin-total-xmr');
+            }
+
+            $gSel = new Select($this->mGuildUserTbl->getTable());
+            $gSel->join(['u' => 'user'],'faucet_guild_user.user_idfs = u.User_ID',['username','avatar']);
+            $gSel->join(['ufs' => 'user_faucet_stat'],'ufs.user_idfs = faucet_guild_user.user_idfs',['stat_data']);
+            $gSel->where($gWh);
+            $shortStats = $this->mGuildUserTbl->selectWith($gSel);
+
+            $offersByUserId = [];
+            foreach($shortStats as $sh) {
+                $offersByUserId[$sh->user_idfs] = ['amount' => $sh->stat_data,'id' => $sh->user_idfs, 'name' => $sh->username, 'avatar' => $sh->avatar];
+            }
+            arsort($offersByUserId);
+
+            $top10OCPU = [];
+            $count = 1;
+            foreach($offersByUserId as $topOf) {
+                $top10OCPU[] = $topOf;
+                if($count == 10) {
+                    break;
+                }
+                $count++;
+            }
+
+            /**
+             * Get Top 10 GPU miners
+             */
+            $gWh = new Where();
+            $gWh->notLike('date_joined', '0000-00-00 00:00:00');
+            $gWh->equalTo('guild_idfs', $guildId);
+            if($mode == 'month') {
+                $gWh->NEST
+                    ->like('ufs.stat_key', 'nano-coin-m-rvn-'.date('n-Y',time()))
+                    ->OR
+                    ->like('ufs.stat_key', 'nano-coin-m-etc-'.date('n-Y',time()))
+                    ->UNNEST;
+            }
+            if($mode == 'week') {
+                $gWh->NEST
+                    ->like('ufs.stat_key', 'nano-coin-w-rvn-'.date('n-Y',time()))
+                    ->OR
+                    ->like('ufs.stat_key', 'nano-coin-w-etc-'.date('n-Y',time()))
+                    ->UNNEST;
+            }
+            if($mode == 'total') {
+                $gWh->NEST
+                    ->like('ufs.stat_key', 'nano-coin-total-xmr')
+                    ->OR
+                    ->like('ufs.stat_key', 'nano-coin-total-etc')
+                    ->UNNEST;
+            }
+
+            $gSel = new Select($this->mGuildUserTbl->getTable());
+            $gSel->join(['u' => 'user'],'faucet_guild_user.user_idfs = u.User_ID',['username','avatar']);
+            $gSel->join(['ufs' => 'user_faucet_stat'],'ufs.user_idfs = faucet_guild_user.user_idfs',['stat_data']);
+            $gSel->where($gWh);
+            $shortStats = $this->mGuildUserTbl->selectWith($gSel);
+
+            $offersByUserId = [];
+            foreach($shortStats as $sh) {
+                if(!array_key_exists($sh->user_idfs, $offersByUserId)) {
+                    $offersByUserId[$sh->user_idfs] = ['amount' => $sh->stat_data,'id' => $sh->user_idfs, 'name' => $sh->username, 'avatar' => $sh->avatar];
+                } else {
+                    $offersByUserId[$sh->user_idfs]['amount'] += $sh->stat_data;
+                }
+            }
+            arsort($offersByUserId);
+
+            $top10OGPU = [];
+            $count = 1;
+            foreach($offersByUserId as $topOf) {
+                $top10OGPU[] = $topOf;
+                if($count == 10) {
+                    break;
+                }
+                $count++;
+            }
+
+
+            /**
              * Get Top 10 Claimers
              */
             $gWh = new Where();
@@ -225,7 +394,11 @@ class StatisticsController extends AbstractActionController
             return [
                 'shortlink' => $top10SH,
                 'offerwall' => $top10OF,
-                'faucet' => $top10Cl
+                'offersmall' => $top10OFS,
+                'faucet' => $top10Cl,
+                'dailys' => $top10OD,
+                'miner_cpu' => $top10OCPU,
+                'miner_gpu' => $top10OGPU
             ];
         }
         return new ApiProblemResponse(new ApiProblem(403, 'Not allowed'));
