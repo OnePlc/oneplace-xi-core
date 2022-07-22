@@ -39,7 +39,8 @@ class ApiTools extends AbstractResourceListener {
         $this->mSettingsTbl = new TableGateway('settings', $mapper);
     }
 
-    public function getSystemURL() {
+    public function getSystemURL()
+    {
         $url = $this->mSettingsTbl->select(['settings_key' => 'app-url']);
         if(count($url) == 0)
         {
@@ -48,7 +49,18 @@ class ApiTools extends AbstractResourceListener {
         return $url->current()->settings_value;
     }
 
-    public function getDashboardURL() {
+    public function getApiURL()
+    {
+        $url = $this->mSettingsTbl->select(['settings_key' => 'api-url']);
+        if(count($url) == 0)
+        {
+            return false;
+        }
+        return $url->current()->settings_value;
+    }
+
+    public function getDashboardURL()
+    {
         $url = $this->mSettingsTbl->select(['settings_key' => 'dashboard-url']);
         if(count($url) == 0)
         {

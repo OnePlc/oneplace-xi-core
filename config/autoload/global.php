@@ -29,6 +29,7 @@ return [
                 'Marketplace\\V1' => 'oneplace',
                 'Batch\\V1' => 'oneplace',
                 'Backend\\V1' => 'oneplace',
+                'Feedback\\V1' => 'oneplace',
             ],
         ],
         'adapters' => [

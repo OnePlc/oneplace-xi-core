@@ -45,4 +45,5 @@ return [
     'Marketplace',
     'Batch',
     'Backend',
+    'Feedback',
 ];

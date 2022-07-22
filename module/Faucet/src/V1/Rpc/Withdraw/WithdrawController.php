@@ -176,7 +176,7 @@ class WithdrawController extends AbstractActionController
                 if($wall->coin_sign == 'BNB') {
                     $networks = [
                         (object)['key' => 'onchain', 'name' => 'BNB - Binance Chain (BEP2)'],
-                        (object)['key' => 'bepchain', 'name' => 'BSC - Binance Smart Chain (BEP20)'],
+                        (object)['key' => 'bsc', 'name' => 'BSC - Binance Smart Chain (BEP20)'],
                     ];
                 }
 
