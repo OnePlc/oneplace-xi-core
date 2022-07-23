@@ -313,9 +313,15 @@ class ShortlinkResource extends AbstractResourceListener
                 $finLink = "#";
             }
 
+            $utfCheck = stripos($finLink, '%3A%');
+            if($utfCheck !== false) {
+                $finLink = urldecode($finLink);
+            }
+
             $link = (object)[
                 'href' => $finLink,
             ];
+
             return (object)[
                 'link' =>$link,
                 'id' => $provider->Shortlink_ID,
