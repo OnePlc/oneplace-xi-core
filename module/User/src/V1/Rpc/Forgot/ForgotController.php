@@ -145,13 +145,18 @@ class ForgotController extends AbstractActionController
                 return new ApiProblemResponse(new ApiProblem(400, 'Invalid Response Body (missing required fields)'));
             }
 
+            $secResult = $this->mSecTools->basicInputCheck([$json->email]);
+            if($secResult !== 'ok') {
+                return new ApiProblemResponse(new ApiProblem(418, 'Potential '.$secResult.' Attack - Goodbye'));
+            }
+
             $captcha = filter_var($json->captcha, FILTER_SANITIZE_STRING);
             $captchaMode = filter_var($json->captcha_mode, FILTER_SANITIZE_STRING);
 
             # Check which captcha secret key we should load
             $captchaKey = 'recaptcha-secret-login';
             if($captchaMode == 'app') {
-                $captchaKey = 'recaptcha-app-secretkey';
+                //$captchaKey = 'recaptcha-app-secretkey';
             }
 
             # check captcha (google v2)
@@ -175,10 +180,13 @@ class ForgotController extends AbstractActionController
             }
 
             $email = filter_var($json->email, FILTER_SANITIZE_EMAIL);
+            if($email == '' || empty($email) || is_numeric($email)) {
+                return new ApiProblemResponse(new ApiProblem(400, 'Invalid E-Mail Address'));
+            }
             $user = $this->mUserTbl->select(['email' => $email]);
             if(count($user) > 0) {
                 $user = $user->current();
-                if($user->password_reset_date == null || strtotime($user->password_reset_date) >= time()-(3600*24)) {
+                if($user->password_reset_date == null || strtotime($user->password_reset_date) <= time()-(3600*24)) {
                     $secToken = $this->mMailTools->generateSecurityToken($user);
                     $confirmLink = $this->mMailTools->getSystemURL().'/#/reset-pw/'.$secToken;
                     $this->mUserTbl->update([
@@ -232,14 +240,10 @@ class ForgotController extends AbstractActionController
                         'status' => 'sent',
                     ];
                 } else {
-                    return [
-                        'status' => 'already sent',
-                    ];
+                    return new ApiProblemResponse(new ApiProblem(400, 'E-Mail already sent. please wait at least 24 hours before requesting a new e-mail or join our discord or telegram if you have any issues'));
                 }
             } else {
-                return [
-                    'status' => 'nf',
-                ];
+                return new ApiProblemResponse(new ApiProblem(400, 'There is no account with that e-mail address'));
             }
         }
 

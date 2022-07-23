@@ -708,9 +708,13 @@ class UserResource extends AbstractResourceListener
          */
         $tokenValue = $this->mTransaction->getTokenValue();
         $coinInfo = $this->mWalletTbl->select(['coin_sign' => $user->prefered_coin]);
+        $prefColor = "#1bc5bd";
+        $prefText = '#fff';
         $cryptoBalance = 0;
         if(count($coinInfo) > 0) {
             $coinInfo = $coinInfo->current();
+            $prefColor = $coinInfo->bgcolor;
+            $prefText = $coinInfo->textcolor;
             $cryptoBalance = $user->token_balance*$tokenValue;
             if($coinInfo->dollar_val > 0) {
                 $cryptoBalance = $cryptoBalance/$coinInfo->dollar_val;
@@ -743,13 +747,15 @@ class UserResource extends AbstractResourceListener
             'xp_percent' => (float)$dPercent,
             'time_zone' => $user->timezone,
             'prefered_coin' => $user->prefered_coin,
+            'prefcoin_bg' => $prefColor,
+            'prefcoin_text' => $prefText,
             'guild' => $guild,
-            'withdrawals' => $withdrawals,
-            'inventory' => [],
+            'withdrawals' => $withdrawals, // remove v2
+            'inventory' => [], // remove v2
             //'inventory_bags' => $this->mInventory->getUserBags($user->User_ID),
-            'inventory_bags' => [],
-            'inventory_slots' => 0,
-            'inventory_slots_used' => 0,
+            'inventory_bags' => [], // remove v2
+            'inventory_slots' => 0, // remove v2
+            'inventory_slots_used' => 0, // remove v2
             //'inventory_slots' => $this->mInventory->getInventorySlots($user->User_ID),
             //'inventory_slots_used' => count($userInventory),
             'inbox_count' => $inboxMessages
@@ -1286,8 +1292,12 @@ class UserResource extends AbstractResourceListener
 
         $coinInfo = $this->mWalletTbl->select(['coin_sign' => $favCoin]);
         $cryptoBalance = 0;
+        $prefColor = "#1bc5bd";
+        $prefText = '#fff';
         if(count($coinInfo) > 0) {
             $coinInfo = $coinInfo->current();
+            $prefColor = $coinInfo->bgcolor;
+            $prefText = $coinInfo->textcolor;
             $cryptoBalance = $user->token_balance*$tokenValue;
             if($coinInfo->dollar_val > 0) {
                 $cryptoBalance = $cryptoBalance/$coinInfo->dollar_val;
@@ -1309,6 +1319,8 @@ class UserResource extends AbstractResourceListener
                 'xp_level' => $user->xp_level,
                 'xp_percent' => $dPercent,
                 'prefered_coin' => $favCoin,
+                'prefcoin_bg' => $prefColor,
+                'prefcoin_text' => $prefText,
                 'time_zone' => $user->timezone,
                 'guild' => $guild,
                 'messages' => $messages,
