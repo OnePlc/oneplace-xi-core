@@ -465,12 +465,29 @@ class GuildResource extends AbstractResourceListener
     {
         $guildId = 0;
         if(isset($_REQUEST['mode'])) {
-            $guildUrl = filter_var($id, FILTER_SANITIZE_URL);
+            $secResult = $this->mSecTools->basicInputCheck([$id]);
+            if($secResult !== 'ok') {
+                # ban user and force logout on client
+                return new ApiProblem(418, 'Potential '.$secResult.' Attack - Goodbye');
+            }
+
+            $guildUrl = filter_var($id, FILTER_SANITIZE_STRING);
 
             $guildFound = $this->mGuildTbl->select(['page_url' => $guildUrl]);
             if($guildFound->count() > 0) {
                 $guild = $guildFound->current();
                 $guildId = $guild->Guild_ID;
+
+                return [
+                    'guild' => [
+                        'id' => $guildId,
+                        'name' => $guild->label,
+                        'emblem_shield' => $guild->emblem_shield,
+                        'emblem_icon' => $guild->emblem_icon,
+                    ]
+                ];
+            } else {
+                return new ApiProblem(404, 'Invalid Guild Invite Link');
             }
         } else {
             # Prevent 500 error
@@ -711,6 +728,7 @@ class GuildResource extends AbstractResourceListener
                 'language' => $guild->main_language,
                 'emblem_shield' => $guild->emblem_shield,
                 'emblem_icon' => $guild->emblem_icon,
+                'link' => $guild->page_url,
                 'is_vip' => ($guild->is_vip == 1) ? true : false,
                 'token_balance' => $guild->token_balance,
                 'xp_level' => $guild->xp_level,
@@ -875,7 +893,7 @@ class GuildResource extends AbstractResourceListener
             $guildAPI = (object)[
                 'id' => $guild->Guild_ID,
                 'name' => utf8_encode($guild->label),
-                'focus' => utf8_encode($guild->focus),
+                'focus' => json_decode($guild->focus),
                 'guild_focus' => $gFocus,
                 'description' => utf8_encode($guild->description),
                 'members' => $guild->members,
@@ -915,19 +933,27 @@ class GuildResource extends AbstractResourceListener
 
             $newSel = new Select($this->mGuildTbl->getTable());
             $newSel->order('created_date DESC');
-            $newSel->limit(5);
+            $newSel->limit(4);
             $newGuilds = $this->mGuildTbl->selectWith($newSel);
             $guildsNew = [];
             foreach($newGuilds as $ng) {
+                if(array_key_exists($ng->Guild_ID,$userRequests)) {
+                    $ng->userHasRequestOpen = 1;
+                } else {
+                    $ng->userHasRequestOpen = 0;
+                }
                 $guildsNew[] = (object)[
                     'id' => $ng->Guild_ID,
-                    'name' => utf8_encode(filter_var($ng->label, FILTER_SANITIZE_STRING)),
-                    'focus' => utf8_encode(filter_var($ng->focus, FILTER_SANITIZE_STRING)),
+                    'name' => utf8_encode($ng->label),
+                    'focus' => json_decode(filter_var($ng->focus, FILTER_SANITIZE_STRING)),
                     'description' => utf8_encode(filter_var($ng->description, FILTER_SANITIZE_STRING)),
                     'members' => $ng->members,
                     'xp_level' => $ng->xp_level,
                     'xp_current' => $ng->xp_current,
+                    'emblem_shield' => $ng->emblem_shield,
+                    'emblem_icon' => $ng->emblem_icon,
                     'xp_total' => $ng->xp_total,
+                    'userHasRequestOpen' => $ng->userHasRequestOpen,
                     'icon' => $ng->icon,'is_vip' => ($ng->is_vip == 1) ? true : false];
             }
 
@@ -1107,6 +1133,58 @@ class GuildResource extends AbstractResourceListener
                     return new ApiProblem(404, 'Guild not found');
                 }
                 $guild = $guild->current();
+                # check if guild invite link should be updated
+                if(isset($data->link)) {
+                    $secResult = $this->mSecTools->basicInputCheck([$data->link]);
+                    if($secResult !== 'ok') {
+                        # ban user and force logout on client
+                        $this->mUserSetTbl->insert([
+                            'user_idfs' => $me->User_ID,
+                            'setting_name' => 'user-tempban',
+                            'setting_value' => 'Potential '.$secResult.' Attack @ '.date('Y-m-d H:i:s').' Guild Rename',
+                        ]);
+                        return new ApiProblem(418, 'Potential '.$secResult.' Attack - Goodbye');
+                    }
+                    # guild can be renamed only once per 7 days
+                    $lastRenameCounter = $this->mTransaction->findGuildTransaction($userGuildRole->guild_idfs, date('Y-m-d H:i:s', strtotime('-7 days')),'guild-link');
+                    if($lastRenameCounter) {
+                        return new ApiProblem(400, 'You can change your invite link only once per week (7 days)');
+                    }
+
+                    # get new name
+                    $newLink = strtolower(filter_var($data->link, FILTER_SANITIZE_STRING));
+                    # check if there is already a guild with a likely name
+                    $likeWh = new Where();
+                    $likeWh->like('page_url', $newLink.'%');
+                    $nameUsed = $this->mGuildTbl->select($likeWh);
+                    if(count($nameUsed) > 0) {
+                        return new ApiProblem(400, 'Another Guild already has the same invite link. Please choose another one');
+                    }
+                    # check if guild has enough balance for renaming
+                    $renamePrice = 1000;
+                    if($this->mTransaction->checkGuildBalance($renamePrice, $userGuildRole->guild_idfs)) {
+
+                        $newBalance = $this->mTransaction->executeGuildTransaction($renamePrice, true, $userGuildRole->guild_idfs, $userGuildRole->guild_idfs, 'guild-link', 'Guild Invite Link activated or changed', $me->User_ID);
+
+                        # rename
+                        if($newBalance !== false) {
+                            $this->mGuildTbl->update([
+                                'page_url' => $newLink,
+                            ],[
+                                'Guild_ID' => $userGuildRole->guild_idfs,
+                            ]);
+
+                            return [
+                                'token_balance' => $newBalance,
+                                'link' => $newLink,
+                            ];
+                        } else {
+                            return new ApiProblem(500, 'Transaction error. Please contact support.');
+                        }
+                    } else {
+                        return new ApiProblem(400, 'Guild Balance is too low for rename');
+                    }
+                }
                 # check if name should be updated
                 if(isset($data->name)) {
                     $secResult = $this->mSecTools->basicInputCheck([$data->name]);

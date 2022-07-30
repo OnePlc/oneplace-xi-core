@@ -131,7 +131,14 @@ class StatisticsController extends AbstractActionController
 
             $shortsByUserId = [];
             foreach($shortStats as $sh) {
-                $shortsByUserId[$sh->user_idfs] = ['amount' => $sh->stat_data,'id' => $sh->user_idfs, 'name' => $sh->username, 'avatar' => $sh->avatar];
+                $shortsByUserId[$sh->user_idfs] = [
+                    'amount' => $sh->stat_data,
+                    'id' => $sh->user_idfs,
+                    'name' => $sh->username,
+                    'avatar' => $sh->avatar,
+                    'rank' => [
+                        'id' => $sh->rank
+                    ]];
             }
             arsort($shortsByUserId);
 
@@ -171,7 +178,14 @@ class StatisticsController extends AbstractActionController
 
             $offersByUserId = [];
             foreach($shortStats as $sh) {
-                $offersByUserId[$sh->user_idfs] = ['amount' => $sh->stat_data,'id' => $sh->user_idfs, 'name' => $sh->username, 'avatar' => $sh->avatar];
+                $offersByUserId[$sh->user_idfs] = [
+                    'amount' => $sh->stat_data,
+                    'id' => $sh->user_idfs,
+                    'name' => $sh->username,
+                    'avatar' => $sh->avatar,
+                    'rank' => [
+                        'id' => $sh->rank
+                    ]];
             }
             arsort($offersByUserId);
 
@@ -210,7 +224,14 @@ class StatisticsController extends AbstractActionController
 
             $offersByUserId = [];
             foreach($shortStats as $sh) {
-                $offersByUserId[$sh->user_idfs] = ['amount' => $sh->stat_data,'id' => $sh->user_idfs, 'name' => $sh->username, 'avatar' => $sh->avatar];
+                $offersByUserId[$sh->user_idfs] = [
+                    'amount' => $sh->stat_data,
+                    'id' => $sh->user_idfs,
+                    'name' => $sh->username,
+                    'avatar' => $sh->avatar,
+                    'rank' => [
+                        'id' => $sh->rank
+                    ]];
             }
             arsort($offersByUserId);
 
@@ -249,7 +270,14 @@ class StatisticsController extends AbstractActionController
 
             $offersByUserId = [];
             foreach($shortStats as $sh) {
-                $offersByUserId[$sh->user_idfs] = ['amount' => $sh->stat_data,'id' => $sh->user_idfs, 'name' => $sh->username, 'avatar' => $sh->avatar];
+                $offersByUserId[$sh->user_idfs] = [
+                    'amount' => $sh->stat_data,
+                    'id' => $sh->user_idfs,
+                    'name' => $sh->username,
+                    'avatar' => $sh->avatar,
+                    'rank' => [
+                        'id' => $sh->rank
+                    ]];
             }
             arsort($offersByUserId);
 
@@ -288,7 +316,14 @@ class StatisticsController extends AbstractActionController
 
             $offersByUserId = [];
             foreach($shortStats as $sh) {
-                $offersByUserId[$sh->user_idfs] = ['amount' => $sh->stat_data,'id' => $sh->user_idfs, 'name' => $sh->username, 'avatar' => $sh->avatar];
+                $offersByUserId[$sh->user_idfs] = [
+                    'amount' => $sh->stat_data,
+                    'id' => $sh->user_idfs,
+                    'name' => $sh->username,
+                    'avatar' => $sh->avatar,
+                    'rank' => [
+                        'id' => $sh->rank
+                    ]];
             }
             arsort($offersByUserId);
 
@@ -340,7 +375,14 @@ class StatisticsController extends AbstractActionController
             $offersByUserId = [];
             foreach($shortStats as $sh) {
                 if(!array_key_exists($sh->user_idfs, $offersByUserId)) {
-                    $offersByUserId[$sh->user_idfs] = ['amount' => $sh->stat_data,'id' => $sh->user_idfs, 'name' => $sh->username, 'avatar' => $sh->avatar];
+                    $offersByUserId[$sh->user_idfs] = [
+                        'amount' => $sh->stat_data,
+                        'id' => $sh->user_idfs,
+                        'name' => $sh->username,
+                        'avatar' => $sh->avatar,
+                        'rank' => [
+                            'id' => $sh->rank
+                        ]];
                 } else {
                     $offersByUserId[$sh->user_idfs]['amount'] += $sh->stat_data;
                 }
@@ -379,12 +421,20 @@ class StatisticsController extends AbstractActionController
             $gSel = new Select($this->mGuildUserTbl->getTable());
             $gSel->join(['u' => 'user'],'faucet_guild_user.user_idfs = u.User_ID',['username','avatar']);
             $gSel->join(['ufs' => 'user_faucet_stat'],'ufs.user_idfs = faucet_guild_user.user_idfs',['stat_data']);
+            //$gSel->join(['fgr' => 'faucet_guild_rank'], 'faucet_guild_user.level = fgr.level', ['label']);
             $gSel->where($gWh);
             $shortStats = $this->mGuildUserTbl->selectWith($gSel);
 
             $claimsByUserId = [];
             foreach($shortStats as $sh) {
-                $claimsByUserId[$sh->user_idfs] = ['amount' => $sh->stat_data,'id' => $sh->user_idfs, 'name' => $sh->username, 'avatar' => $sh->avatar];
+                $claimsByUserId[$sh->user_idfs] = [
+                    'amount' => $sh->stat_data,
+                    'id' => $sh->user_idfs,
+                    'name' => $sh->username,
+                    'avatar' => $sh->avatar,
+                    'rank' => [
+                        'id' => $sh->rank
+                    ]];
             }
             arsort($claimsByUserId);
 

@@ -222,6 +222,9 @@ class UserResource extends AbstractResourceListener
         if(isset($data->ref_id)) {
             $checkFields[] = $data->ref_id;
         }
+        if(isset($data->guild_id)) {
+            $checkFields[] = $data->guild_id;
+        }
         if(isset($data->captcha_mode)) {
             $checkFields[] = $data->captcha_mode;
         }
@@ -241,6 +244,7 @@ class UserResource extends AbstractResourceListener
         $terms = filter_var($data->terms, FILTER_SANITIZE_NUMBER_INT);
         $refId = filter_var((isset($data->ref_id)) ? $data->ref_id : 0, FILTER_SANITIZE_NUMBER_INT);
         $development = filter_var((isset($data->development)) ? $data->development : '', FILTER_SANITIZE_NUMBER_INT);
+        $guildId = filter_var((isset($data->guild_id)) ? $data->guild_id : 0, FILTER_SANITIZE_NUMBER_INT);
 
         # Check which captcha secret key we should load
         $captchaKey = 'recaptcha-secret-login';
@@ -379,6 +383,15 @@ class UserResource extends AbstractResourceListener
             # country get error
         }
 
+        $guildInviteId = 0;
+        if($guildId != 0) {
+            $gCheck = $this->mGuildTbl->select(['Guild_ID' => $guildId]);
+            if($gCheck->count() > 0) {
+                $referal = $gCheck->current()->owner_idfs;
+                $guildInviteId = $guildId;
+            }
+        }
+
         # add user
         $passwordHash = password_hash($password, PASSWORD_DEFAULT);
         $this->mapper->insert([
@@ -408,6 +421,16 @@ class UserResource extends AbstractResourceListener
         # get new user's id
         $userId = $this->mapper->lastInsertValue;
 
+        if($guildInviteId != 0) {
+            $this->mGuildUserTbl->insert([
+                'user_idfs' => $userId,
+                'guild_idfs' => $guildInviteId,
+                'rank' => 9,
+                'date_requested' => date('Y-m-d H:i:s', time()),
+                'date_joined' => '0000-00-00 00:00:00',
+                'date_declined' => '0000-00-00 00:00:00',
+            ]);
+        }
 
         # add user session
         $this->mSessionTbl->insert([

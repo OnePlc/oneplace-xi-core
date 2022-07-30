@@ -100,8 +100,8 @@ class SuggestionResource extends AbstractResourceListener
         $this->mFeedbackTagTbl = new TableGateway('feedback_tag_feedback', $mapper);
         $this->mTokenTbl = new TableGateway('faucet_tokenbuy', $mapper);
 
-        $this->mTokenVoteComment = 1;
-        $this->mTokenCreate = 1;
+        $this->mTokenVoteComment = 5;
+        $this->mTokenCreate = 50;
 
         $this->mSecTools = new SecurityTools($mapper);
         $this->mApiTools = new ApiTools($mapper);

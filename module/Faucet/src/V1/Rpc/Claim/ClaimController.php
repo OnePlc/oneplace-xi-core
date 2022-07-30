@@ -195,6 +195,14 @@ class ClaimController extends AbstractActionController
                 } else {
                     $addMsg = true;
                 }
+                $countryReq = $this->mSecTools->getCoreSetting('faucet-claim-msg-country');
+                if($countryReq) {
+                    if($me->country == $countryReq) {
+                        $addMsg = true;
+                    } else {
+                        $addMsg = false;
+                    }
+                }
 
                 if($addMsg && strlen($message) > 0) {
                     $viewData['message'] = [

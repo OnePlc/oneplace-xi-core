@@ -68,6 +68,22 @@ class DashboardController extends AbstractActionController
     protected $mPTCTbl;
 
     /**
+     * Transaction Table
+     *
+     * @var TableGateway $mTxTbl
+     * @since 1.0.0
+     */
+    protected $mTxTbl;
+
+    /**
+     * Daily Task Done Table
+     *
+     * @var TableGateway $mDailyTbl
+     * @since 1.0.0
+     */
+    protected $mDailyTbl;
+
+    /**
      * PTC User (View) Table
      *
      * @var TableGateway $mPTCViewTbl
@@ -89,6 +105,8 @@ class DashboardController extends AbstractActionController
         $this->mOfferwallUserTbl = new TableGateway('offerwall_user', $mapper);
         $this->mShortTbl = new TableGateway('shortlink', $mapper);
         $this->mClaimTbl = new TableGateway('faucet_claim', $mapper);
+        $this->mDailyTbl = new TableGateway('faucet_dailytask_user', $mapper);
+        $this->mTxTbl = new TableGateway('faucet_transaction', $mapper);
         $this->mPTCTbl = new TableGateway('ptc', $mapper);
         $this->mPTCViewTbl = new TableGateway('ptc_user', $mapper);
     }
@@ -113,202 +131,171 @@ class DashboardController extends AbstractActionController
         $request = $this->getRequest();
 
         if($request->isGet()) {
-            $db = 'sf';
-            if(isset($_REQUEST['db'])) {
-                if(filter_var($_REQUEST['db'], FILTER_SANITIZE_STRING) == 'ca') {
-                    $db = 'ca';
+            $chartLabels = [];
+            $tasksDoneData = [];
+            $coinsEarnedData = [];
+            $tasksMax = 0;
+            $coinsMax = 0;
+
+            $txByDate = $this->getTxEarned($me->User_ID);
+            $shByDate = $this->getShortlinksDone($me->User_ID);
+            $ofByDate = $this->getOffersDone($me->User_ID);
+            $clByDate = $this->getClaimsDone($me->User_ID);
+            $dlByDate = $this->getDailysDone($me->User_ID);
+
+            for($day = -7;$day <= 0;$day++) {
+                $tasksDone = 0;
+                # add date to labels
+                $dayR = 0-$day;
+                $dateKey = date('Y-m-d', strtotime('-'.$dayR.' days'));
+                $date = ($dayR > 0) ? date('Y-m-d', strtotime('-'.$dayR.' days')) : date('Y-m-d', time());
+                $chartLabels[] = $date;
+
+                if(array_key_exists($dateKey, $shByDate)) {
+                    $tasksDone += $shByDate[$dateKey];
                 }
+                if(array_key_exists($dateKey, $clByDate)) {
+                    $tasksDone += $clByDate[$dateKey];
+                }
+                if(array_key_exists($dateKey, $ofByDate)) {
+                    $tasksDone += $ofByDate[$dateKey];
+                }
+                if(array_key_exists($dateKey, $dlByDate)) {
+                    $tasksDone += $dlByDate[$dateKey];
+                }
+
+                if($tasksMax < ($tasksDone*1.2)) {
+                    $tasksMax = ($tasksDone*1.2);
+                }
+
+                if(array_key_exists($dateKey, $txByDate)) {
+                    if($coinsMax < ($txByDate[$dateKey]*1.2)) {
+                        $coinsMax = ($txByDate[$dateKey]*1.2);
+                    }
+                    $coinsEarnedData[] = round($txByDate[$dateKey], 2);
+                } else {
+                    $coinsEarnedData[] = 0;
+                }
+
+                $tasksDoneData[] = $tasksDone;
             }
-            if($db == 'sf') {
-                $chartLabels = [];
-                $tasksDoneData = [];
-                $coinsEarnedData = [];
-                $tasksMax = 0;
-                $coinsMax = 0;
-                for($day = -7;$day <= 0;$day++) {
-                    $tasksDone = 0;
-                    $rewardsEarned = 0;
-                    # add date to labels
-                    $dayR = 0-$day;
-                    $date = ($dayR > 0) ? date('Y-m-d', strtotime('-'.$dayR.' days')) : date('Y-m-d', time());
-                    $chartLabels[] = $date;
 
-                    # Get Shortlinks done
-                    $shInfo = $this->getShortlinksDone($me->User_ID, $date);
-                    $tasksDone+=$shInfo['done'];
-                    $rewardsEarned+=$shInfo['reward'];
-
-                    # Get faucet claims
-                    $clInfo = $this->getClaimsDone($me->User_ID, $date);
-                    $tasksDone+=$clInfo['done'];
-                    $rewardsEarned+=$clInfo['reward'];
-
-                    # Get Offers done
-                    $owInfo = $this->getOffersDone($me->User_ID, $date);
-                    $tasksDone+=$owInfo['done'];
-                    $rewardsEarned+=$owInfo['reward'];
-
-                    if($coinsMax < ($rewardsEarned*1.2)) {
-                        $coinsMax = ($rewardsEarned*1.2);
-                    }
-
-                    if($tasksMax < ($tasksDone*1.2)) {
-                        $tasksMax = ($tasksDone*1.2);
-                    }
-
-                    $tasksDoneData[] = $tasksDone;
-                    $coinsEarnedData[] = $rewardsEarned;
-                }
-
-                return new ViewModel([
-                    'chart' => [
-                        'task_done_7day' => [
-                            'labels' => $chartLabels,
-                            'data' => $tasksDoneData,
-                            'max' => $tasksMax
-                        ],
-                        'coins_earned_7day' => [
-                            'labels' => $chartLabels,
-                            'data' => $coinsEarnedData,
-                            'max' => $coinsMax,
-                        ]
+            return new ViewModel([
+                'chart' => [
+                    'task_done_7day' => [
+                        'labels' => $chartLabels,
+                        'data' => $tasksDoneData,
+                        'max' => $tasksMax
+                    ],
+                    'coins_earned_7day' => [
+                        'labels' => $chartLabels,
+                        'data' => $coinsEarnedData,
+                        'max' => $coinsMax,
                     ]
-                ]);
-            } elseif($db == 'ca') {
-                $chartLabels = [];
-                $coinsEarnedData = [];
-                $coinsMax = 0;
-
-                for($day = -7;$day <= 0;$day++) {
-                    $viewsDelivered = 0;
-                    # add date to labels
-                    $dayR = 0-$day;
-                    $date = ($dayR > 0) ? date('Y-m-d', strtotime('-'.$dayR.' days')) : date('Y-m-d', time());
-                    $chartLabels[] = $date;
-
-                    # Get Shortlinks done
-                    $shInfo = $this->getPTCViewsDelivered($me->User_ID, $date);
-                    $viewsDelivered+=$shInfo['views'];
-
-                    if($coinsMax < ($viewsDelivered*1.2)) {
-                        $coinsMax = ($viewsDelivered*1.2);
-                    }
-
-                    $coinsEarnedData[] = $viewsDelivered;
-                }
-
-                return new ViewModel([
-                    'chart' => [
-                        'views_delivered_7day' => [
-                            'labels' => $chartLabels,
-                            'data' => $coinsEarnedData,
-                            'max' => $coinsMax,
-                        ],
-                        'tasks_delivered_7day' => [
-                            'labels' => [],
-                            'data' => [],
-                            'max' => 0,
-                        ]
-                    ]
-                ]);
-            }
+                ]
+            ]);
         }
 
         return new ApiProblemResponse(new ApiProblem(405, 'Method not allowed'));
     }
 
-    /**
-     * Get all Views delivered for a User
-     *
-     * @param $userId
-     * @param $date
-     * @return int[]
-     */
-    private function getPTCViewsDelivered($userId, $date): array
-    {
-        $totalViews = 0;
-        $myPtc = $this->mPTCTbl->select(['created_by' => $userId,'verified' => 1]);
-        if(count($myPtc) > 0) {
-            foreach($myPtc as $ptc) {
-                $viewWh = new Where();
-                $viewWh->like('date_completed', date('Y-m-d', strtotime($date)).'%');
-                $viewWh->equalTo('ptc_idfs', $ptc->PTC_ID);
-                $ptcViews = $this->mPTCViewTbl->select($viewWh)->count();
-                $totalViews+=$ptcViews;
+    private function getTxEarned($userId) {
+        $txWh = new Where();
+        $txWh->greaterThanOrEqualTo('date', strtotime('-7 days'));
+        $txWh->equalTo('user_idfs', $userId);
+
+        $recentTx = $this->mTxTbl->select($txWh);
+        $txByDate = [];
+        foreach($recentTx as $tx) {
+            // skip outputs
+            if($tx->is_output == 1) {
+                continue;
             }
+            $dateKey = date('Y-m-d', strtotime($tx->date));
+            if(!array_key_exists($dateKey, $txByDate)) {
+                $txByDate[$dateKey] = 0;
+            }
+            $txByDate[$dateKey]+=$tx->amount;
         }
 
-        return [
-            'views' => $totalViews
-        ];
+        return $txByDate;
     }
 
-    private function getShortlinksDone($userId, $date) {
-        $shProviderRewards = [];
-        $providers = $this->mShortTbl->select();
-        foreach($providers as $prov) {
-            $shProviderRewards[$prov->Shortlink_ID] = $prov->reward;
-        }
-
-        $reward = 0;
-        $done = 0;
-
+    private function getShortlinksDone($userId) {
         $oWh = new Where();
         $oWh->equalTo('user_idfs', $userId);
-        $oWh->like('date_completed', $date.'%');
+        $oWh->greaterThanOrEqualTo('date_completed', strtotime('-7 days'));
         $shortsDone = $this->mShortDoneTbl->select($oWh);
+        $shDoneByDate = [];
         if(count($shortsDone) > 0) {
             foreach($shortsDone as $shDone) {
-                $reward+=$shProviderRewards[$shDone->shortlink_idfs];
-                $done++;
+                $dateKey = date('Y-m-d', strtotime($shDone->date_completed));
+                if(!array_key_exists($dateKey,$shDoneByDate)) {
+                    $shDoneByDate[$dateKey] = 0;
+                }
+                $shDoneByDate[$dateKey]++;
             }
         }
 
-        return [
-            'done' => $done,
-            'reward' => $reward
-        ];
+        return $shDoneByDate;
     }
 
-    private function getClaimsDone($userId, $date) {
-        $reward = 0;
-        $done = 0;
-
+    private function getDailysDone($userId) {
         $oWh = new Where();
         $oWh->equalTo('user_idfs', $userId);
-        $oWh->like('date', $date.'%');
+        $oWh->greaterThanOrEqualTo('date', strtotime('-7 days'));
+
+        $claimsDone = $this->mDailyTbl->select($oWh);
+        $shDoneByDate = [];
+        if(count($claimsDone) > 0) {
+            foreach($claimsDone as $cl) {
+                $dateKey = date('Y-m-d', strtotime($cl->date));
+                if(!array_key_exists($dateKey,$shDoneByDate)) {
+                    $shDoneByDate[$dateKey] = 0;
+                }
+                $shDoneByDate[$dateKey]++;
+            }
+        }
+
+        return $shDoneByDate;
+    }
+
+    private function getClaimsDone($userId) {
+        $oWh = new Where();
+        $oWh->equalTo('user_idfs', $userId);
+        $oWh->greaterThanOrEqualTo('date', strtotime('-7 days'));
+
         $claimsDone = $this->mClaimTbl->select($oWh);
+        $shDoneByDate = [];
         if(count($claimsDone) > 0) {
             foreach($claimsDone as $cl) {
-                $reward+=$cl->amount;
-                $done++;
+                $dateKey = date('Y-m-d', strtotime($cl->date));
+                if(!array_key_exists($dateKey,$shDoneByDate)) {
+                    $shDoneByDate[$dateKey] = 0;
+                }
+                $shDoneByDate[$dateKey]++;
             }
         }
 
-        return [
-            'done' => $done,
-            'reward' => $reward
-        ];
+        return $shDoneByDate;
     }
 
-    private function getOffersDone($userId, $date) {
-        $reward = 0;
-        $done = 0;
-
+    private function getOffersDone($userId) {
         $oWh = new Where();
         $oWh->equalTo('user_idfs', $userId);
-        $oWh->like('date_completed', $date.'%');
+        $oWh->greaterThanOrEqualTo('date_completed', strtotime('-7 days'));
         $claimsDone = $this->mOfferwallUserTbl->select($oWh);
+        $shDoneByDate = [];
         if(count($claimsDone) > 0) {
             foreach($claimsDone as $cl) {
-                $reward+=$cl->amount;
-                $done++;
+                $dateKey = date('Y-m-d', strtotime($cl->date_completed));
+                if(!array_key_exists($dateKey,$shDoneByDate)) {
+                    $shDoneByDate[$dateKey] = 0;
+                }
+                $shDoneByDate[$dateKey]++;
             }
         }
 
-        return [
-            'done' => $done,
-            'reward' => $reward
-        ];
+        return $shDoneByDate;
     }
 }
