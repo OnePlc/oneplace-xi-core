@@ -18,6 +18,7 @@ use Application\Controller\IndexController;
 use Faucet\Tools\SecurityTools;
 use Faucet\Tools\UserTools;
 use Faucet\Transaction\TransactionHelper;
+use Laminas\Http\ClientStatic;
 use Laminas\Mvc\Controller\AbstractActionController;
 use Laminas\ApiTools\ContentNegotiation\ViewModel;
 use Laminas\ApiTools\ApiProblem\ApiProblem;
@@ -210,10 +211,40 @@ class ClaimController extends AbstractActionController
         if($sTime > 0) {
             return new ApiProblemResponse(new ApiProblem(409, 'Already claimed - wait '.$sTime.' more seconds before claiming again'));
         } else {
-            # Get Data from Request Body
-            $json = IndexController::loadJSONFromRequestBody(['device','ad_id','advertiser'],$this->getRequest()->getContent());
-            if(!$json) {
-                return new ApiProblemResponse(new ApiProblem(400, 'Invalid Response Body (missing required fields)'));
+            if(isset($_REQUEST['v2'])) {
+                # Get Data from Request Body
+                $json = IndexController::loadJSONFromRequestBody(['device','ad_id','advertiser', 'captcha'],$this->getRequest()->getContent());
+                if(!$json) {
+                    return new ApiProblemResponse(new ApiProblem(400, 'Invalid Response Body (missing required fields)'));
+                }
+
+                $captchaToken = $json->captcha;
+                if(strlen($captchaToken) < 10) {
+                    return new ApiProblemResponse(new ApiProblem(400, 'Please use the captcha'));
+                }
+                $captchaSecret = $this->mSecTools->getCoreSetting('hcaptcha-secret');
+                if($captchaSecret) {
+                    $response = ClientStatic::post(
+                        'https://hcaptcha.com/siteverify', [
+                        'secret' => $captchaSecret,
+                        'response' => $captchaToken
+                    ]);
+
+                    $status = $response->getStatusCode();
+                    $googleResponse = $response->getBody();
+
+                    $googleJson = json_decode($googleResponse);
+
+                    if(!$googleJson->success) {
+                        return new ApiProblemResponse(new ApiProblem(400, 'Captcha not valid. Please try again or contact support.'));
+                    }
+                }
+            } else {
+                # Get Data from Request Body
+                $json = IndexController::loadJSONFromRequestBody(['device','ad_id','advertiser'],$this->getRequest()->getContent());
+                if(!$json) {
+                    return new ApiProblemResponse(new ApiProblem(400, 'Invalid Response Body (missing required fields)'));
+                }
             }
 
             # check for attack vendors

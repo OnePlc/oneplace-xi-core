@@ -115,9 +115,10 @@ class TransactionHelper {
      * @param string $refType - Reference Type for Transaction
      * @param string $description - Detailed Description for Transaction
      * @param int $createdBy (optional) - Source User ID
+     * @param bool $updateOnlineStatus (optional) - Update User Online Status (default = true)
      * @since 1.0.0
      */
-    public function executeTransaction(float $amount, bool $isOutput, int $userId, int $refId, string $refType, string $description, int $createdBy = 0)
+    public function executeTransaction(float $amount, bool $isOutput, int $userId, int $refId, string $refType, string $description, int $createdBy = 0, $updateOnlineStatus = true)
     {
         # no negative transactions allowed
         if($amount < 0) {
@@ -167,11 +168,15 @@ class TransactionHelper {
                     'user_idfs' => $userId,
                     'created_by' => ($createdBy == 0) ? $userId : $createdBy,
                 ])) {
-                    # update user balance
-                    TransactionHelper::$mUserTbl->update([
+                    $userUpd = [
                         'token_balance' => $newBalance,
-                        'last_action' => date('Y-m-d H:i:s', time()),
-                    ],[
+                    ];
+                    if($updateOnlineStatus) {
+                        $userUpd['last_action'] = date('Y-m-d H:i:s', time());
+                        $userUpd['is_online'] = 1;
+                    }
+                    # update user balance
+                    TransactionHelper::$mUserTbl->update($userUpd,[
                         'User_ID' => $userId
                     ]);
                     return $newBalance;

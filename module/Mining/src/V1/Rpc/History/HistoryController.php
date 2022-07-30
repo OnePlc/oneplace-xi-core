@@ -71,7 +71,7 @@ class HistoryController extends AbstractActionController
     public function __construct($mapper)
     {
         $this->mMinerTbl = new TableGateway('faucet_miner', $mapper);
-        $this->mMinerBatchTbl = new TableGateway('faucet_miner_shares', $mapper);
+        $this->mMinerBatchTbl = new TableGateway('faucet_miner_payment', $mapper);
         $this->mQuoteTbl = new TableGateway('faucet_didyouknow', $mapper);
         $this->mSecTools = new SecurityTools($mapper);
         $this->mUserTools = new UserTools($mapper);
@@ -171,7 +171,46 @@ class HistoryController extends AbstractActionController
                 $quote = $quotesOrdered[$quoteRandom];
             }
 
+            $activeWorkerWh = new Where();
+            $activeWorkerWh->equalTo('user_idfs', $me->User_ID);
+            $activeWorkerWh->greaterThanOrEqualTo('date', date('Y-m-d H:i:s', time()-3600));
+
+            $hashrateFormat = [
+                'etc' => ' MH/s',
+                'rvn' => ' MH/s',
+                'xmr' => ' H/s'
+            ];
+
+            $poolAddresses = [
+                'etc' => '0x9b79a4ad71e6f1db71adc5b4f0dddbee4c1bcad1',
+                'rvn' => 'RQMwgG6sY3aby48Hdo7MdQUHZUTUvACCcT',
+                'xmr' => '45mYciovPc8GNWBuQaymPyGcNvubron5DeyVRNgMRAExHCumTDZXwnH657atftktRkEF4xD14wcFZTcCaWzo99wg317afGf'
+            ];
+
+            $myWorkers = [];
+            $activeWorkers = $this->mMinerBatchTbl->select($activeWorkerWh);
+            foreach($activeWorkers as $worker) {
+                $hashrateInfo = '';
+                if(array_key_exists($worker->coin, $hashrateFormat)) {
+                    $hashrateInfo = $hashrateFormat[$worker->coin];
+                }
+                $poolUrl = '';
+                if(array_key_exists($worker->coin, $poolAddresses)) {
+                    $poolUrl = 'https://'.$worker->coin.'.nanopool.org/account/'.$poolAddresses[$worker->coin].'/swissfaucetio'.$me->User_ID;
+                    if($worker->worker != 'default') {
+                        $poolUrl.='-'.$worker->worker;
+                    }
+                }
+                $myWorkers[] = [
+                    'coin' => $worker->coin,
+                    'hashrate' => round($worker->hashrate,2).$hashrateInfo,
+                    'name' => $worker->worker,
+                    'pool' => $poolUrl
+                ];
+            }
+
             $viewData = [
+                'workers' => $myWorkers,
                 'gpu_current_hash' => $gpuCurrentHash,
                 'cpu_current_hash' => $cpuCurrentHash,
                 'total_items' => $totalHistory,

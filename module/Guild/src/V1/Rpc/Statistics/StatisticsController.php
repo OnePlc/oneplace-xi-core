@@ -113,7 +113,8 @@ class StatisticsController extends AbstractActionController
                 $gWh->like('ufs.stat_key', 'shdone-m-'.date('n-Y', time()));
             }
             if($mode == 'week') {
-                $gWh->like('ufs.stat_key', 'shdone-w-'.date('W-Y', time()));
+                $week = $this->getCurrentWeekNumber();
+                $gWh->like('ufs.stat_key', 'shdone-w-'.$week);
             }
             if($mode == 'total') {
                 $gWh->like('ufs.stat_key', 'shdone-total');
@@ -154,7 +155,8 @@ class StatisticsController extends AbstractActionController
                 $gWh->like('ufs.stat_key', 'user-offerbig-m-'.date('n-Y', time()));
             }
             if($mode == 'week') {
-                $gWh->like('ufs.stat_key', 'user-offerbig-w-'.date('W-Y', time()));
+                $week = $this->getCurrentWeekNumber();
+                $gWh->like('ufs.stat_key', 'user-offerbig-w-'.$week);
             }
             if($mode == 'total') {
                 $gWh->like('ufs.stat_key', 'user-offerbig-total');
@@ -193,7 +195,8 @@ class StatisticsController extends AbstractActionController
                 $gWh->like('ufs.stat_key', 'user-offersmall-m-'.date('n-Y', time()));
             }
             if($mode == 'week') {
-                $gWh->like('ufs.stat_key', 'user-offersmall-w-'.date('W-Y', time()));
+                $week = $this->getCurrentWeekNumber();
+                $gWh->like('ufs.stat_key', 'user-offersmall-w-'.$week);
             }
             if($mode == 'total') {
                 $gWh->like('ufs.stat_key', 'user-offersmall-total');
@@ -231,7 +234,8 @@ class StatisticsController extends AbstractActionController
                 $gWh->like('ufs.stat_key', 'user-dailys-m-'.date('n-Y', time()));
             }
             if($mode == 'week') {
-                $gWh->like('ufs.stat_key', 'user-dailys-w-'.date('W-Y', time()));
+                $week = $this->getCurrentWeekNumber();
+                $gWh->like('ufs.stat_key', 'user-dailys-w-'.$week);
             }
             if($mode == 'total') {
                 $gWh->like('ufs.stat_key', 'user-dailys-total');
@@ -266,13 +270,14 @@ class StatisticsController extends AbstractActionController
             $gWh->notLike('date_joined', '0000-00-00 00:00:00');
             $gWh->equalTo('guild_idfs', $guildId);
             if($mode == 'month') {
-                $gWh->like('ufs.stat_key', 'nano-coin-m-xmr-'.date('n-Y', time()));
+                $gWh->like('ufs.stat_key', 'user-nano-xmr-coin-m-'.date('n-Y', time()));
             }
             if($mode == 'week') {
-                $gWh->like('ufs.stat_key', 'nano-coin-w-xmr-'.date('W-Y', time()));
+                $week = $this->getCurrentWeekNumber();
+                $gWh->like('ufs.stat_key', 'user-nano-xmr-coin-w-'.$week);
             }
             if($mode == 'total') {
-                $gWh->like('ufs.stat_key', 'nano-coin-total-xmr');
+                $gWh->like('ufs.stat_key', 'user-nano-xmr-coin-total');
             }
 
             $gSel = new Select($this->mGuildUserTbl->getTable());
@@ -305,23 +310,24 @@ class StatisticsController extends AbstractActionController
             $gWh->equalTo('guild_idfs', $guildId);
             if($mode == 'month') {
                 $gWh->NEST
-                    ->like('ufs.stat_key', 'nano-coin-m-rvn-'.date('n-Y',time()))
+                    ->like('ufs.stat_key', 'user-nano-etc-coin-m-'.date('n-Y',time()))
                     ->OR
-                    ->like('ufs.stat_key', 'nano-coin-m-etc-'.date('n-Y',time()))
+                    ->like('ufs.stat_key', 'user-nano-rvn-coin-m-'.date('n-Y',time()))
                     ->UNNEST;
             }
             if($mode == 'week') {
+                $week = $this->getCurrentWeekNumber();
                 $gWh->NEST
-                    ->like('ufs.stat_key', 'nano-coin-w-rvn-'.date('n-Y',time()))
+                    ->like('ufs.stat_key', 'user-nano-etc-coin-w-'.$week)
                     ->OR
-                    ->like('ufs.stat_key', 'nano-coin-w-etc-'.date('n-Y',time()))
+                    ->like('ufs.stat_key', 'user-nano-rvn-coin-w-'.$week)
                     ->UNNEST;
             }
             if($mode == 'total') {
                 $gWh->NEST
-                    ->like('ufs.stat_key', 'nano-coin-total-xmr')
+                    ->like('ufs.stat_key', 'user-nano-etc-coin-total')
                     ->OR
-                    ->like('ufs.stat_key', 'nano-coin-total-etc')
+                    ->like('ufs.stat_key', 'user-nano-rvn-coin-total')
                     ->UNNEST;
             }
 
@@ -363,7 +369,8 @@ class StatisticsController extends AbstractActionController
                 $gWh->like('ufs.stat_key', 'fclaim-m-web-'.date('n-Y', time()));
             }
             if($mode == 'week') {
-                $gWh->like('ufs.stat_key', 'fclaim-w-web-'.date('W-Y', time()));
+                $week = $this->getCurrentWeekNumber();
+                $gWh->like('ufs.stat_key', 'fclaim-w-web-'.$week);
             }
             if($mode == 'total') {
                 $gWh->like('ufs.stat_key', 'fclaim-web-total');
@@ -402,5 +409,15 @@ class StatisticsController extends AbstractActionController
             ];
         }
         return new ApiProblemResponse(new ApiProblem(403, 'Not allowed'));
+    }
+
+    private function getCurrentWeekNumber() {
+        $week = date('W-Y',time());
+        $weekDay = date('w', time());
+        // if monday or tuesday, show stats from last week
+        if($weekDay == 1 || $weekDay == 2) {
+            $week = (date('W', time())-1).'-'.date('Y', time());
+        }
+        return $week;
     }
 }

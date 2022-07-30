@@ -4,7 +4,6 @@ return [
         'factories' => [
             'Batch\\V1\\Rpc\\Refstats\\Controller' => \Batch\V1\Rpc\Refstats\RefstatsControllerFactory::class,
             'Batch\\V1\\Rpc\\Guildactivity\\Controller' => \Batch\V1\Rpc\Guildactivity\GuildactivityControllerFactory::class,
-            'Batch\\V1\\Rpc\\MinerPayments\\Controller' => \Batch\V1\Rpc\MinerPayments\MinerPaymentsControllerFactory::class,
             'Batch\\V1\\Rpc\\BatchChecker\\Controller' => \Batch\V1\Rpc\BatchChecker\BatchCheckerControllerFactory::class,
             'Batch\\V1\\Rpc\\ContestBatch\\Controller' => \Batch\V1\Rpc\ContestBatch\ContestBatchControllerFactory::class,
             'Batch\\V1\\Rpc\\OfferwallStats\\Controller' => \Batch\V1\Rpc\OfferwallStats\OfferwallStatsControllerFactory::class,
@@ -36,16 +35,6 @@ return [
                     'defaults' => [
                         'controller' => 'Batch\\V1\\Rpc\\Guildactivity\\Controller',
                         'action' => 'guildactivity',
-                    ],
-                ],
-            ],
-            'batch.rpc.miner-payments' => [
-                'type' => 'Segment',
-                'options' => [
-                    'route' => '/miner-paymentrun',
-                    'defaults' => [
-                        'controller' => 'Batch\\V1\\Rpc\\MinerPayments\\Controller',
-                        'action' => 'minerPayments',
                     ],
                 ],
             ],
@@ -95,7 +84,6 @@ return [
         'uri' => [
             0 => 'batch.rpc.refstats',
             1 => 'batch.rpc.guildactivity',
-            2 => 'batch.rpc.miner-payments',
             3 => 'batch.rpc.batch-checker',
             4 => 'batch.rpc.contest-batch',
             5 => 'batch.rpc.offerwall-stats',
@@ -116,13 +104,6 @@ return [
                 0 => 'GET',
             ],
             'route_name' => 'batch.rpc.guildactivity',
-        ],
-        'Batch\\V1\\Rpc\\MinerPayments\\Controller' => [
-            'service_name' => 'MinerPayments',
-            'http_methods' => [
-                0 => 'GET',
-            ],
-            'route_name' => 'batch.rpc.miner-payments',
         ],
         'Batch\\V1\\Rpc\\BatchChecker\\Controller' => [
             'service_name' => 'BatchChecker',
@@ -157,7 +138,6 @@ return [
         'controllers' => [
             'Batch\\V1\\Rpc\\Refstats\\Controller' => 'Json',
             'Batch\\V1\\Rpc\\Guildactivity\\Controller' => 'Json',
-            'Batch\\V1\\Rpc\\MinerPayments\\Controller' => 'Json',
             'Batch\\V1\\Rpc\\BatchChecker\\Controller' => 'Json',
             'Batch\\V1\\Rpc\\ContestBatch\\Controller' => 'Json',
             'Batch\\V1\\Rpc\\OfferwallStats\\Controller' => 'Json',
@@ -170,11 +150,6 @@ return [
                 2 => 'application/*+json',
             ],
             'Batch\\V1\\Rpc\\Guildactivity\\Controller' => [
-                0 => 'application/vnd.batch.v1+json',
-                1 => 'application/json',
-                2 => 'application/*+json',
-            ],
-            'Batch\\V1\\Rpc\\MinerPayments\\Controller' => [
                 0 => 'application/vnd.batch.v1+json',
                 1 => 'application/json',
                 2 => 'application/*+json',
@@ -206,10 +181,6 @@ return [
                 1 => 'application/json',
             ],
             'Batch\\V1\\Rpc\\Guildactivity\\Controller' => [
-                0 => 'application/vnd.batch.v1+json',
-                1 => 'application/json',
-            ],
-            'Batch\\V1\\Rpc\\MinerPayments\\Controller' => [
                 0 => 'application/vnd.batch.v1+json',
                 1 => 'application/json',
             ],

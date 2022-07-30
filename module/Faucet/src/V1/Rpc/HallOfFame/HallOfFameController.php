@@ -724,9 +724,9 @@ class HallOfFameController extends AbstractActionController
                  */
                 $statWh = new Where();
                 $statWh->NEST
-                    ->like('stat_key', 'nano-coin-m-rvn-'.date('n-Y',time()))
+                    ->like('stat_key', 'user-nano-etc-coin-m-'.date('n-Y',time()))
                     ->OR
-                    ->like('stat_key', 'nano-coin-m-etc-'.date('n-Y',time()))
+                    ->like('stat_key', 'user-nano-rvn-coin-m-'.date('n-Y',time()))
                     ->UNNEST;
                 $statSel = new Select($this->mUsrStatsTbl->getTable());
                 $statSel->order('date DESC');
@@ -763,9 +763,9 @@ class HallOfFameController extends AbstractActionController
                 }
                 $statWh = new Where();
                 $statWh->NEST
-                    ->like('stat_key', 'nano-coin-m-rvn-'.date('n-Y',time()))
+                    ->like('stat_key', 'user-nano-etc-coin-m-'.date('n-Y',time()))
                     ->OR
-                    ->like('stat_key', 'nano-coin-m-etc-'.date('n-Y',time()))
+                    ->like('stat_key', 'user-nano-rvn-coin-m-'.date('n-Y',time()))
                     ->UNNEST;
                 $statWh->equalTo('user_idfs', $me->User_ID);
                 $myStatSel = new Select($this->mUsrStatsTbl->getTable());
@@ -786,7 +786,7 @@ class HallOfFameController extends AbstractActionController
                  * CPU Miners
                  */
                 $statWh = new Where();
-                $statWh->like('stat_key', 'nano-coin-m-xmr-'.date('n-Y',time()));
+                $statWh->like('stat_key', 'user-nano-xmr-coin-m-'.date('n-Y',time()));
                 $statSel = new Select($this->mUsrStatsTbl->getTable());
                 $statSel->order('date DESC');
                 $statSel->where($statWh);
@@ -818,7 +818,7 @@ class HallOfFameController extends AbstractActionController
                 }
 
                 $myStatSel = new Select($this->mUsrStatsTbl->getTable());
-                $myStatSel->where(['stat_key' => 'nano-coin-m-'.date('n-Y', time()), 'user_idfs' => $me->User_ID]);
+                $myStatSel->where(['stat_key' => 'user-nano-xmr-coin-m-'.date('n-Y', time()), 'user_idfs' => $me->User_ID]);
                 $myStat = $this->mUsrStatsTbl->selectWith($myStatSel);
                 if($myStat->count() > 0) {
                     $myContestStats[6] = $myStat->current()->stat_data;
