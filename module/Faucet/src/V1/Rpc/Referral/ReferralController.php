@@ -116,8 +116,13 @@ class ReferralController extends AbstractActionController
         $membersPaginated->setItemCountPerPage($pageSize);
         foreach($membersPaginated as $ref) {
             $myRefs[] = (object)[
-                'id' => $ref->User_ID, 'name' => $ref->username,'xp_level' => $ref->xp_level,
-                'signup' => $ref->created_date, 'withdrawn' => 0, 'bonus' => 0,
+                'id' => $ref->User_ID,
+                'name' => $ref->username,
+                'xp_level' => $ref->xp_level,
+                'signup' => $ref->created_date,
+                'withdrawn' => 0,
+                'bonus' => 0,
+                'source' => $ref->ref_source
             ];
         }
 

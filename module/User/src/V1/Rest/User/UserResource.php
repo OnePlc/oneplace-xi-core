@@ -222,6 +222,9 @@ class UserResource extends AbstractResourceListener
         if(isset($data->ref_id)) {
             $checkFields[] = $data->ref_id;
         }
+        if(isset($data->ref_source)) {
+            $checkFields[] = $data->ref_source;
+        }
         if(isset($data->guild_id)) {
             $checkFields[] = $data->guild_id;
         }
@@ -243,6 +246,7 @@ class UserResource extends AbstractResourceListener
         $captchaMode = filter_var($data->captcha_mode, FILTER_SANITIZE_STRING);
         $terms = filter_var($data->terms, FILTER_SANITIZE_NUMBER_INT);
         $refId = filter_var((isset($data->ref_id)) ? $data->ref_id : 0, FILTER_SANITIZE_NUMBER_INT);
+        $refSource = filter_var((isset($data->ref_source)) ? $data->ref_source : null, FILTER_SANITIZE_STRING);
         $development = filter_var((isset($data->development)) ? $data->development : '', FILTER_SANITIZE_NUMBER_INT);
         $guildId = filter_var((isset($data->guild_id)) ? $data->guild_id : 0, FILTER_SANITIZE_NUMBER_INT);
 
@@ -398,6 +402,7 @@ class UserResource extends AbstractResourceListener
             'login_counter' => 0,
             'username' => $username,
             'ref_user_idfs' => $referal,
+            'ref_source' => $refSource,
             'full_name' => $username,
             'email' => $email,
             'email_verified' => 0,
