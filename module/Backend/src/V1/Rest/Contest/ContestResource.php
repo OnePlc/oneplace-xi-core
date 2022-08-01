@@ -256,7 +256,7 @@ class ContestResource extends AbstractResourceListener
                 $iCount++;
             }
         }
-        $contestWinnersById[10] = $top3Level;
+        $contestWinnersById['contest-10'] = $top3Level;
 
         /**
          * Offerwalls Done Contest Data
@@ -291,7 +291,7 @@ class ContestResource extends AbstractResourceListener
                 $iCount++;
             }
         }
-        $contestWinnersById[11] = $top3Level;
+        $contestWinnersById['contest-11'] = $top3Level;
 
         /**
          * Offerwalls Done Contest Data
@@ -326,7 +326,7 @@ class ContestResource extends AbstractResourceListener
                 $iCount++;
             }
         }
-        $contestWinnersById[12] = $top3Level;
+        $contestWinnersById['contest-12'] = $top3Level;
 
         /**
          * Daily Tasks Contest Data
@@ -361,16 +361,16 @@ class ContestResource extends AbstractResourceListener
                 $iCount++;
             }
         }
-        $contestWinnersById[13] = $top3Level;
+        $contestWinnersById['contest-13'] = $top3Level;
 
         $statWh = new Where();
-        $statWh->like('stat_key', 'nano-coin-m-xmr-'.date('n-Y',$date));
+        $statWh->like('stat_key', 'user-nano-xmr-coin-m-'.date('n-Y',$date));
         $statSel = new Select($this->mUsrStatsTbl->getTable());
         $statSel->order('date DESC');
         $statSel->where($statWh);
         $statFound = $this->mUsrStatsTbl->selectWith($statSel);
         $top3ShById = [];
-        $contestWinnersById[5] = [];
+        $contestWinnersById['contest-6'] = [];
         if($statFound->count() > 0) {
             foreach($statFound as $statUser) {
                 if(!array_key_exists($statUser->user_idfs, $top3ShById)) {
@@ -385,7 +385,7 @@ class ContestResource extends AbstractResourceListener
                 $topInfo = $this->mUserTbl->select(['User_ID' => $topId]);
                 if($topInfo->count() > 0) {
                     $topInfo = $topInfo->current();
-                    $contestWinnersById[6][] = (object)[
+                    $contestWinnersById['contest-6'][] = (object)[
                         'id' => $topId,
                         'rank' => ($iCount+1),
                         'count' => round($top3ShById[$topId]),
@@ -403,16 +403,16 @@ class ContestResource extends AbstractResourceListener
 
         $statWh = new Where();
         $statWh->NEST
-            ->like('stat_key', 'nano-coin-m-rvn-'.date('n-Y',$date))
+            ->like('stat_key', 'user-nano-rvn-coin-m-'.date('n-Y',$date))
             ->OR
-            ->like('stat_key', 'nano-coin-m-etc-'.date('n-Y',$date))
+            ->like('stat_key', 'user-nano-etc-coin-m-'.date('n-Y',$date))
             ->UNNEST;
         $statSel = new Select($this->mUsrStatsTbl->getTable());
         $statSel->order('date DESC');
         $statSel->where($statWh);
         $statFound = $this->mUsrStatsTbl->selectWith($statSel);
         $top3ShById = [];
-        $contestWinnersById[5] = [];
+        $contestWinnersById['contest-5'] = [];
         if($statFound->count() > 0) {
             foreach($statFound as $statUser) {
                 if(!array_key_exists($statUser->user_idfs, $top3ShById)) {
@@ -427,7 +427,7 @@ class ContestResource extends AbstractResourceListener
                 $topInfo = $this->mUserTbl->select(['User_ID' => $topId]);
                 if($topInfo->count() > 0) {
                     $topInfo = $topInfo->current();
-                    $contestWinnersById[5][] = (object)[
+                    $contestWinnersById['contest-5'][] = (object)[
                         'id' => $topId,
                         'rank' => ($iCount+1),
                         'count' => round($top3ShById[$topId]),
@@ -487,12 +487,13 @@ class ContestResource extends AbstractResourceListener
                 if($iCount == 5) {
                     break;
                 }
+                $top->rank = ($iCount+1);
                 $top3Guild[] = $top;
                 $iCount++;
             }
         }
 
-        $contestWinnersById[1] = $top3Guild;
+        $contestWinnersById['contest-1'] = $top3Guild;
 
         $conSel = new Select($this->mContestTbl->getTable());
         $conSel->join(['fcr' => 'faucet_contest_reward'], 'fcr.contest_idfs = faucet_contest.Contest_ID');
@@ -504,7 +505,7 @@ class ContestResource extends AbstractResourceListener
 
         $contestList = $this->mContestTbl->selectWith($conSel);
         foreach($contestList as $contest) {
-            if(array_key_exists($contest->Contest_ID, $contestWinnersById)) {
+            if(array_key_exists('contest-'.$contest->Contest_ID, $contestWinnersById)) {
                 $contests[] = [
                     'id' => $contest->Contest_ID,
                     'name' => $contest->contest_label,
@@ -521,33 +522,17 @@ class ContestResource extends AbstractResourceListener
                     $rewards[$rew->rank] = $rew->amount;
                 }
 
-                if($contest->contest_type == 'guild') {
-                    foreach($contestWinnersById[$contest->Contest_ID] as $winner) {
-                        if(array_key_exists($winner->rank, $rewards)) {
-                            $this->mWinnerTbl->insert([
-                                'contest_idfs' => $contest->Contest_ID,
-                                'user_idfs' => $winner->id,
-                                'rank' => $winner->rank,
-                                'month' => $month,
-                                'year' => $year,
-                                'reward' => $rewards[$winner->rank],
-                                'amount' => $winner->count
-                            ]);
-                        }
-                    }
-                } else {
-                    foreach($contestWinnersById[$contest->Contest_ID] as $winner) {
-                        if(array_key_exists($winner->rank, $rewards)) {
-                            $this->mWinnerTbl->insert([
-                                'contest_idfs' => $contest->Contest_ID,
-                                'user_idfs' => $winner->id,
-                                'rank' => $winner->rank,
-                                'month' => $month,
-                                'year' => $year,
-                                'reward' => $rewards[$winner->rank],
-                                'amount' => $winner->count
-                            ]);
-                        }
+                foreach($contestWinnersById['contest-'.$contest->Contest_ID] as $winner) {
+                    if(array_key_exists($winner->rank, $rewards)) {
+                        $this->mWinnerTbl->insert([
+                            'contest_idfs' => $contest->Contest_ID,
+                            'user_idfs' => $winner->id,
+                            'rank' => $winner->rank,
+                            'month' => $month,
+                            'year' => $year,
+                            'reward' => $rewards[$winner->rank],
+                            'amount' => $winner->count
+                        ]);
                     }
                 }
             }
@@ -652,6 +637,7 @@ class ContestResource extends AbstractResourceListener
          * **/
 
         return [
+            'contests' => $contests,
             'winners' => $winnerInfo,
             'skipped' => $skipList
         ];
@@ -721,8 +707,9 @@ class ContestResource extends AbstractResourceListener
             $winInfo = [];
             $winSel = new Select($this->mWinnerTbl->getTable());
             $winSel->join(['u' => 'user'],'u.User_ID = faucet_contest_winner.user_idfs');
+            $winSel->join(['fc' => 'faucet_contest'],'fc.Contest_ID = faucet_contest_winner.contest_idfs');
             $winSel->order('rank ASC');
-            $winSel->where(['year' => $year, 'month' => $month]);
+            $winSel->where(['year' => $year, 'month' => $month,'contest_type' => 'player']);
             $winners = $this->mWinnerTbl->selectWith($winSel);
             foreach($winners as $win) {
                 if(!array_key_exists($win->contest_idfs, $winInfo)) {
@@ -739,6 +726,31 @@ class ContestResource extends AbstractResourceListener
                 $winInfo[$win->contest_idfs]['winners'][] = [
                     'rank' => $win->rank,
                     'name' => $win->username,
+                    'amount' => $win->amount
+                ];
+            }
+
+            $winSel = new Select($this->mWinnerTbl->getTable());
+            $winSel->join(['g' => 'faucet_guild'],'g.Guild_ID = faucet_contest_winner.user_idfs',['label']);
+            $winSel->join(['fc' => 'faucet_contest'],'fc.Contest_ID = faucet_contest_winner.contest_idfs');
+            $winSel->order('rank ASC');
+            $winSel->where(['year' => $year, 'month' => $month,'contest_type' => 'guild']);
+            $winners = $this->mWinnerTbl->selectWith($winSel);
+            foreach($winners as $win) {
+                if(!array_key_exists($win->contest_idfs, $winInfo)) {
+                    $contestInfo = $this->mContestTbl->select(['Contest_ID' => $win->contest_idfs]);
+                    $name = '-';
+                    if($contestInfo->count() > 0) {
+                        $name = $contestInfo->current()->contest_label;
+                    }
+                    $winInfo[$win->contest_idfs] = [
+                        'name' => $name,
+                        'winners' => []
+                    ];
+                }
+                $winInfo[$win->contest_idfs]['winners'][] = [
+                    'rank' => $win->rank,
+                    'name' => $win->label,
                     'amount' => $win->amount
                 ];
             }
@@ -964,7 +976,7 @@ class ContestResource extends AbstractResourceListener
             $contestWinnersById[13] = $top3Level;
 
             $statWh = new Where();
-            $statWh->like('stat_key', 'nano-coin-m-xmr-'.date('n-Y',$date));
+            $statWh->like('stat_key', 'user-nano-xmr-coin-m-'.date('n-Y',$date));
             $statSel = new Select($this->mUsrStatsTbl->getTable());
             $statSel->order('date DESC');
             $statSel->where($statWh);
@@ -1003,9 +1015,9 @@ class ContestResource extends AbstractResourceListener
 
             $statWh = new Where();
             $statWh->NEST
-                ->like('stat_key', 'nano-coin-m-rvn-'.date('n-Y',$date))
+                ->like('stat_key', 'user-nano-etc-coin-m-'.date('n-Y',$date))
                 ->OR
-                ->like('stat_key', 'nano-coin-m-etc-'.date('n-Y',$date))
+                ->like('stat_key', 'user-nano-rvn-coin-m-'.date('n-Y',$date))
                 ->UNNEST;
             $statSel = new Select($this->mUsrStatsTbl->getTable());
             $statSel->order('date DESC');

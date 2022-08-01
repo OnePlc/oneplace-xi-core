@@ -280,15 +280,24 @@ class ShortlinkResource extends AbstractResourceListener
                                 $finLink = "sherror";
                             } else {
                                 if(is_array($googleJson)) {
-                                    $finLink = $googleJson["shortenedUrl"];
+                                    if(isset($googleJson["shortenedUrl"])) {
+                                        $finLink = $googleJson["shortenedUrl"];
+                                    } elseif(isset($googleJson["short_url"])) {
+                                        $finLink = $googleJson["short_url"];
+                                    }
                                 } else {
-                                    $finLink = $googleJson->shortenedUrl;
+                                    if(isset($googleJson->shortenedUrl)) {
+                                        $finLink = $googleJson->shortenedUrl;
+                                    } elseif(isset($googleJson->short_url)) {
+                                        $finLink = $googleJson->short_url;
+                                    }
+
                                 }
                             }
                             break;
                     }
 
-                    if($finLink != '#') {
+                    if($finLink != '#' && $finLink != 'sherror') {
                         $newLink = [
                             'user_idfs' => $me->User_ID,
                             'link_id' => $destHash,
@@ -299,6 +308,8 @@ class ShortlinkResource extends AbstractResourceListener
                             'date_completed' => '0000-00-00 00:00:00'
                         ];
                         $this->mShortDoneTbl->insert($newLink);
+                    } else {
+                        return new ApiProblem(400, 'Could not generate shortlink - please try again later');
                     }
                 }
             } else {
@@ -321,6 +332,10 @@ class ShortlinkResource extends AbstractResourceListener
             $link = (object)[
                 'href' => $finLink,
             ];
+
+            if($me->xp_level >= 20) {
+                $provider->reward=$provider->reward*1.5;
+            }
 
             return (object)[
                 'link' =>$link,
