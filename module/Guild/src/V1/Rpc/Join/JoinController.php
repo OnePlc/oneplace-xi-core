@@ -126,7 +126,7 @@ class JoinController extends AbstractActionController
         $checkWh->notLike('date_joined', '0000-00-00 00:00:00');
         $userHasGuild = $this->mGuildUserTbl->select($checkWh);
         if(count($userHasGuild) == 0) {
-            return new ApiProblemResponse(new ApiProblem(409, 'You are not part of a guild and so not eligable to deposit to a guildbank'));
+            return new ApiProblemResponse(new ApiProblem(409, 'You are not part of a guild'));
         }
         $userHasGuild = $userHasGuild->current();
         if($userHasGuild->rank != 0) {
@@ -315,9 +315,30 @@ class JoinController extends AbstractActionController
             if(!$json) {
                 return new ApiProblemResponse(new ApiProblem(400, 'Invalid JSON Body'));
             }
+            if($userHasGuild->rank != 0) {
+                return new ApiProblemResponse(new ApiProblem(400, 'Only Guildmasters can change ranks'));
+            }
 
             $userId = filter_var($json->user_id, FILTER_SANITIZE_NUMBER_INT);
             $newRankId = filter_var($json->new_rank, FILTER_SANITIZE_NUMBER_INT);
+            if($userId <= 0 || empty($userId)) {
+                return new ApiProblemResponse(new ApiProblem(400, 'Invalid User Id'));
+            }
+            if($newRankId <= 0 || empty($newRankId)) {
+                return new ApiProblemResponse(new ApiProblem(400, 'Invalid Rank Id'));
+            }
+
+            # check if rank exists
+            $rCheck = $this->mGuildRankTbl->select(['level' => $newRankId, 'guild_idfs' => $guild->Guild_ID]);
+            if($rCheck->count() == 0) {
+                return new ApiProblemResponse(new ApiProblem(400, 'Invalid Rank Id'));
+            }
+
+            # check if user is in guild
+            $uCheck = $this->mGuildUserTbl->select(['user_idfs' => $userId, 'guild_idfs' => $guild->Guild_ID]);
+            if($uCheck->count() == 0) {
+                return new ApiProblemResponse(new ApiProblem(400, 'Invalid User Id'));
+            }
 
             $this->mGuildUserTbl->update([
                 'rank' => $newRankId

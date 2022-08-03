@@ -548,7 +548,7 @@ class HallOfFameController extends AbstractActionController
                 $conYear = date('Y', time());
 
                 $myContestStats = [];
-                $top10Contest = ['contest-10' => [],'contest-5' => [],'contest-6' => [],'contest-11' => [],'contest-12' => [],'contest-13' => [],'contest-1' => []];
+                $top10Contest = ['contest-10' => [],'contest-5' => [],'contest-6' => [],'contest-11' => [],'contest-12' => [],'contest-13' => [],'contest-1' => [],'contest-14' => [],'contest-15' => []];
 
                 /**
                  * Shortlinks
@@ -718,6 +718,90 @@ class HallOfFameController extends AbstractActionController
                     $myContestStats[12] = 0;
                 }
 
+                /**
+                 * Offerwalls Tiny
+                 */
+                $statSel = new Select($this->mUsrStatsTbl->getTable());
+                $statSel->order('date DESC');
+                $statSel->where(['stat_key' => 'user-offertiny-m-'.date('n-Y',time())]);
+                $statFound = $this->mUsrStatsTbl->selectWith($statSel);
+                if($statFound->count() > 0) {
+                    $top3ShById = [];
+                    foreach($statFound as $statUser) {
+                        $top3ShById[$statUser->user_idfs] = $statUser->stat_data;
+                    }
+                    arsort($top3ShById);
+                    $iCount = 0;
+                    foreach(array_keys($top3ShById) as $topId) {
+                        $topInfo = $this->mUserTbl->select(['User_ID' => $topId]);
+                        if($topInfo->count() > 0) {
+                            $topInfo = $topInfo->current();
+                            $top10Contest['contest-14'][] = (object)[
+                                'id' => $topId,
+                                'rank' => ($iCount+1),
+                                'count' => $top3ShById[$topId],
+                                'name' => $topInfo->username,
+                                'avatar' => ($topInfo->avatar == '') ? $topInfo->username : $topInfo->avatar,
+                            ];
+                            if($iCount == 10) {
+                                break;
+                            }
+                            $iCount++;
+                        }
+                    }
+                }
+
+                $myStatSel = new Select($this->mUsrStatsTbl->getTable());
+                $myStatSel->where(['stat_key' => 'user-offertiny-m-'.date('n-Y', time()), 'user_idfs' => $me->User_ID]);
+                $myStat = $this->mUsrStatsTbl->selectWith($myStatSel);
+                if($myStat->count() > 0) {
+                    $myContestStats[14] = $myStat->current()->stat_data;
+                } else {
+                    $myContestStats[14] = 0;
+                }
+
+                /**
+                 * Offerwalls Medium
+                 */
+                $statSel = new Select($this->mUsrStatsTbl->getTable());
+                $statSel->order('date DESC');
+                $statSel->where(['stat_key' => 'user-offermed-m-'.date('n-Y',time())]);
+                $statFound = $this->mUsrStatsTbl->selectWith($statSel);
+                if($statFound->count() > 0) {
+                    $top3ShById = [];
+                    foreach($statFound as $statUser) {
+                        $top3ShById[$statUser->user_idfs] = $statUser->stat_data;
+                    }
+                    arsort($top3ShById);
+                    $iCount = 0;
+                    foreach(array_keys($top3ShById) as $topId) {
+                        $topInfo = $this->mUserTbl->select(['User_ID' => $topId]);
+                        if($topInfo->count() > 0) {
+                            $topInfo = $topInfo->current();
+                            $top10Contest['contest-15'][] = (object)[
+                                'id' => $topId,
+                                'rank' => ($iCount+1),
+                                'count' => $top3ShById[$topId],
+                                'name' => $topInfo->username,
+                                'avatar' => ($topInfo->avatar == '') ? $topInfo->username : $topInfo->avatar,
+                            ];
+                            if($iCount == 10) {
+                                break;
+                            }
+                            $iCount++;
+                        }
+                    }
+                }
+
+                $myStatSel = new Select($this->mUsrStatsTbl->getTable());
+                $myStatSel->where(['stat_key' => 'user-offermed-m-'.date('n-Y', time()), 'user_idfs' => $me->User_ID]);
+                $myStat = $this->mUsrStatsTbl->selectWith($myStatSel);
+                if($myStat->count() > 0) {
+                    $myContestStats[15] = $myStat->current()->stat_data;
+                } else {
+                    $myContestStats[15] = 0;
+                }
+
                 // nano-coin-m-rvn-5-2022
                 /**
                  * GPU Miners
@@ -861,6 +945,7 @@ class HallOfFameController extends AbstractActionController
                 $conSel = new Select($this->mContest->getTable());
                 $conSel->join(['fcr' => 'faucet_contest_reward'], 'fcr.contest_idfs = faucet_contest.Contest_ID');
                 $conSel->where(['fcr.month' => $conMonth, 'fcr.year' => $conYear]);
+                $conSel->order('faucet_contest.sort_id');
                 $conSel->group('faucet_contest.Contest_ID');
 
                 $activeContests = $this->mContest->selectWith($conSel);

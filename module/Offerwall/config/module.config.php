@@ -186,36 +186,6 @@ return [
                     ],
                 ],
             ],
-            'offerwall.rpc.offers4all' => [
-                'type' => 'Segment',
-                'options' => [
-                    'route' => '/off4all-pb',
-                    'defaults' => [
-                        'controller' => 'Offerwall\\V1\\Rpc\\Offers4all\\Controller',
-                        'action' => 'offers4all',
-                    ],
-                ],
-            ],
-            'offerwall.rpc.admantium-pb' => [
-                'type' => 'Segment',
-                'options' => [
-                    'route' => '/admantium-pb',
-                    'defaults' => [
-                        'controller' => 'Offerwall\\V1\\Rpc\\AdmantiumPB\\Controller',
-                        'action' => 'admantiumPB',
-                    ],
-                ],
-            ],
-            'offerwall.rpc.offeroc-pb' => [
-                'type' => 'Segment',
-                'options' => [
-                    'route' => '/offeroc-pb',
-                    'defaults' => [
-                        'controller' => 'Offerwall\\V1\\Rpc\\OfferocPB\\Controller',
-                        'action' => 'offerocPB',
-                    ],
-                ],
-            ],
             'offerwall.rpc.adgem-pb' => [
                 'type' => 'Segment',
                 'options' => [
@@ -248,9 +218,6 @@ return [
             15 => 'offerwall.rpc.timewall-pb',
             16 => 'offerwall.rpc.notik-pb',
             17 => 'offerwall.rpc.adgate-pb',
-            18 => 'offerwall.rpc.offers4all',
-            19 => 'offerwall.rpc.admantium-pb',
-            20 => 'offerwall.rpc.offeroc-pb',
             21 => 'offerwall.rpc.adgem-pb',
         ],
     ],
@@ -294,9 +261,6 @@ return [
             'Offerwall\\V1\\Rpc\\TimewallPB\\Controller' => 'Json',
             'Offerwall\\V1\\Rpc\\NotikPB\\Controller' => 'Json',
             'Offerwall\\V1\\Rpc\\AdgatePB\\Controller' => 'Json',
-            'Offerwall\\V1\\Rpc\\Offers4all\\Controller' => 'Json',
-            'Offerwall\\V1\\Rpc\\AdmantiumPB\\Controller' => 'Json',
-            'Offerwall\\V1\\Rpc\\OfferocPB\\Controller' => 'Json',
             'Offerwall\\V1\\Rpc\\AdgemPB\\Controller' => 'Json',
         ],
         'accept_whitelist' => [
@@ -390,29 +354,6 @@ return [
                 1 => 'application/json',
                 2 => 'application/*+json',
             ],
-            'Offerwall\\V1\\Rpc\\Offers4all\\Controller' => [
-                0 => 'application/vnd.offerwall.v1+json',
-                1 => 'application/json',
-                2 => 'application/*+json',
-                3 => 'application/*',
-                4 => 'text/html',
-                5 => 'multipart/form-data',
-                6 => '*/*',
-            ],
-            'Offerwall\\V1\\Rpc\\AdmantiumPB\\Controller' => [
-                0 => 'application/vnd.offerwall.v1+json',
-                1 => 'application/json',
-                2 => 'application/*+json',
-                3 => 'application/x-www-form-urlencoded',
-                4 => 'text/html',
-                5 => 'multipart/form-data',
-                6 => '*/*',
-            ],
-            'Offerwall\\V1\\Rpc\\OfferocPB\\Controller' => [
-                0 => 'application/vnd.offerwall.v1+json',
-                1 => 'application/json',
-                2 => 'application/*+json',
-            ],
             'Offerwall\\V1\\Rpc\\AdgemPB\\Controller' => [
                 0 => 'application/vnd.offerwall.v1+json',
                 1 => 'application/json',
@@ -489,26 +430,6 @@ return [
                 1 => 'application/json',
             ],
             'Offerwall\\V1\\Rpc\\AdgatePB\\Controller' => [
-                0 => 'application/vnd.offerwall.v1+json',
-                1 => 'application/json',
-            ],
-            'Offerwall\\V1\\Rpc\\Offers4all\\Controller' => [
-                0 => 'application/vnd.offerwall.v1+json',
-                1 => 'application/json',
-                2 => 'application/*',
-                3 => 'text/html',
-                4 => 'multipart/form-data',
-                5 => '*/*',
-            ],
-            'Offerwall\\V1\\Rpc\\AdmantiumPB\\Controller' => [
-                0 => 'application/vnd.offerwall.v1+json',
-                1 => 'application/json',
-                2 => 'application/x-www-form-urlencoded',
-                3 => 'text/html',
-                4 => 'multipart/form-data',
-                5 => '*/*',
-            ],
-            'Offerwall\\V1\\Rpc\\OfferocPB\\Controller' => [
                 0 => 'application/vnd.offerwall.v1+json',
                 1 => 'application/json',
             ],
@@ -639,9 +560,6 @@ return [
             'Offerwall\\V1\\Rpc\\TimewallPB\\Controller' => \Offerwall\V1\Rpc\TimewallPB\TimewallPBControllerFactory::class,
             'Offerwall\\V1\\Rpc\\NotikPB\\Controller' => \Offerwall\V1\Rpc\NotikPB\NotikPBControllerFactory::class,
             'Offerwall\\V1\\Rpc\\AdgatePB\\Controller' => \Offerwall\V1\Rpc\AdgatePB\AdgatePBControllerFactory::class,
-            'Offerwall\\V1\\Rpc\\Offers4all\\Controller' => \Offerwall\V1\Rpc\Offers4all\Offers4allControllerFactory::class,
-            'Offerwall\\V1\\Rpc\\AdmantiumPB\\Controller' => \Offerwall\V1\Rpc\AdmantiumPB\AdmantiumPBControllerFactory::class,
-            'Offerwall\\V1\\Rpc\\OfferocPB\\Controller' => \Offerwall\V1\Rpc\OfferocPB\OfferocPBControllerFactory::class,
             'Offerwall\\V1\\Rpc\\AdgemPB\\Controller' => \Offerwall\V1\Rpc\AdgemPB\AdgemPBControllerFactory::class,
         ],
     ],
@@ -767,28 +685,6 @@ return [
                 0 => 'GET',
             ],
             'route_name' => 'offerwall.rpc.adgate-pb',
-        ],
-        'Offerwall\\V1\\Rpc\\Offers4all\\Controller' => [
-            'service_name' => 'Offers4all',
-            'http_methods' => [
-                0 => 'GET',
-            ],
-            'route_name' => 'offerwall.rpc.offers4all',
-        ],
-        'Offerwall\\V1\\Rpc\\AdmantiumPB\\Controller' => [
-            'service_name' => 'AdmantiumPB',
-            'http_methods' => [
-                0 => 'GET',
-                1 => 'POST',
-            ],
-            'route_name' => 'offerwall.rpc.admantium-pb',
-        ],
-        'Offerwall\\V1\\Rpc\\OfferocPB\\Controller' => [
-            'service_name' => 'OfferocPB',
-            'http_methods' => [
-                0 => 'GET',
-            ],
-            'route_name' => 'offerwall.rpc.offeroc-pb',
         ],
         'Offerwall\\V1\\Rpc\\AdgemPB\\Controller' => [
             'service_name' => 'AdgemPB',

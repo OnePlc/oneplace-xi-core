@@ -246,7 +246,7 @@ class UserResource extends AbstractResourceListener
         $captchaMode = filter_var($data->captcha_mode, FILTER_SANITIZE_STRING);
         $terms = filter_var($data->terms, FILTER_SANITIZE_NUMBER_INT);
         $refId = filter_var((isset($data->ref_id)) ? $data->ref_id : 0, FILTER_SANITIZE_NUMBER_INT);
-        $refSource = filter_var((isset($data->ref_source)) ? $data->ref_source : null, FILTER_SANITIZE_STRING);
+        $refSource = substr(filter_var((isset($data->ref_source)) ? $data->ref_source : null, FILTER_SANITIZE_STRING), 0, 50);
         $development = filter_var((isset($data->development)) ? $data->development : '', FILTER_SANITIZE_NUMBER_INT);
         $guildId = filter_var((isset($data->guild_id)) ? $data->guild_id : 0, FILTER_SANITIZE_NUMBER_INT);
 

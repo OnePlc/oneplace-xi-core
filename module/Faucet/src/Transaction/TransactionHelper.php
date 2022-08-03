@@ -415,8 +415,12 @@ class TransactionHelper {
     {
         # Compile list of all guilds
         $transactions = [];
+        $txWh = new Where();
+        $txWh->equalTo('faucet_guild_transaction.guild_idfs', $guildId);
+        $txWh->notLike('date_joined', '0000-00-00 00:00:00');
         $transactionsSel = new Select(TransactionHelper::$mGuildTransTbl->getTable());
-        $transactionsSel->where(['guild_idfs' => $guildId]);
+        $transactionsSel->join(['fgu' => 'faucet_guild_user'],'fgu.user_idfs = faucet_guild_transaction.created_by', ['rank']);
+        $transactionsSel->where($txWh);
         $transactionsSel->order('date DESC');
         # Create a new pagination adapter object
         $oPaginatorAdapter = new DbSelect(

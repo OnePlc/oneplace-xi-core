@@ -179,7 +179,8 @@ class ManageController extends AbstractActionController
                 $newBalance = $this->mTransaction->executeCreditTransaction($creditCost, true, $me->User_ID, $ptc->PTC_ID, 'topup');
                 if($newBalance !== false) {
                     $this->mPTCTbl->update([
-                        'view_balance' => $ptc->view_balance + $value
+                        'view_balance' => $ptc->view_balance + $value,
+                        'active' => 1,
                     ], ['PTC_ID' => $ptc->PTC_ID]);
 
                     return [

@@ -91,10 +91,10 @@ class GuildResource extends AbstractResourceListener
     /**
      * Guild Statistics Table
      *
-     * @var TableGateway $mGuildStatTbl
+     * @var TableGateway $mGuildWeeklyStatusTbl
      * @since 1.0.0
      */
-    protected $mGuildStatTbl;
+    protected $mGuildWeeklyStatusTbl;
 
     /**
      * Guild Table User Table
@@ -181,7 +181,7 @@ class GuildResource extends AbstractResourceListener
         $this->mGuildFocusTbl = new TableGateway('faucet_guild_focus_guild', $mapper);
         $this->mGuildTaskTbl = new TableGateway('faucet_guild_weekly', $mapper);
         $this->mGuildAchievTbl = new TableGateway('faucet_guild_achievement', $mapper);
-        $this->mGuildStatTbl = new TableGateway('faucet_guild_statistic', $mapper);
+        $this->mGuildWeeklyStatusTbl = new TableGateway('faucet_guild_weekly_status', $mapper);
         $this->mGuildChatBanTbl = new TableGateway('faucet_guild_chat_ban', $mapper);
         $this->mUserTbl = new TableGateway('user', $mapper);
         $this->mXPLvlTbl = new TableGateway('user_xp_level', $mapper);
@@ -562,44 +562,36 @@ class GuildResource extends AbstractResourceListener
         }
         $totalMembers = $this->mGuildUserTbl->select($checkWh)->count();
 
+        $gTaskWeek = $this->mSecTools->getWeek(time());
+        $weekInfo = explode('-', $gTaskWeek);
+        $weekNo = $weekInfo[0];
+        $yearNo = $weekInfo[1];
+
         /**
          * Get Weekly Tasks Progress
          */
-        $weeklyStats = (object)['faucet_claims' => 0,'shortlinks' => 0];
+        $weeklyStatus = [];
         $statCheckWh = new Where();
         $statCheckWh->equalTo('guild_idfs', $guild->Guild_ID);
-        $statCheckWh->like('stat_key', 'weekly-progress');
-        $statCheckWh->like('date', date('Y-m-d', strtotime("last wednesday")));
-        $statCheck = $this->mGuildStatTbl->select($statCheckWh);
-        if(count($statCheck) > 0) {
-            $weeklyStats = json_decode($statCheck->current()->data);
+        $statCheckWh->equalTo('week', $weekNo);
+        $statCheckWh->equalTo('year', $yearNo);
+        $statCheck = $this->mGuildWeeklyStatusTbl->select($statCheckWh);
+        foreach($statCheck as $stat) {
+            $weeklyStatus[$stat->weekly_key] = $stat->progress;
         }
 
         /**
          * Load Guild Tasks List (Weeklys)
          */
         $weeklyTasks = [];
-        $weeklysDB = $this->mGuildTaskTbl->select(['series' => 0]);
+        $weeklysDB = $this->mGuildTaskTbl->select(['series' => 0, 'active' => 1]);
         foreach($weeklysDB as $weekly) {
             $progress = 0;
-            switch($weekly->target_mode) {
-                case 'faucet':
-                    $progress = $weeklyStats->faucet_claims;
-                    break;
-                case 'shortlink':
-                    $progress = $weeklyStats->shortlinks;
-                    break;
-                case 'offerwall':
-                    $progress = $weeklyStats->offerwalls;
-                    break;
-                case 'gpushare':
-                    $progress = $weeklyStats->gpushares;
-                    break;
-                default:
-                    break;
+            if(array_key_exists($weekly->target_mode, $weeklyStatus)) {
+                $progress = $weeklyStatus[$weekly->target_mode];
             }
             if($progress >= $weekly->target) {
-                $nextLvl = $this->mGuildTaskTbl->select(['series' => $weekly->Weekly_ID]);
+                $nextLvl = $this->mGuildTaskTbl->select(['series' => $weekly->Weekly_ID, 'active' => 1]);
                 if($nextLvl->count() == 0) {
                     $weeklyTasks[] = (object)[
                         'id' => $weekly->Weekly_ID,
@@ -612,15 +604,41 @@ class GuildResource extends AbstractResourceListener
                     ];
                 } else {
                     $nextLvl = $nextLvl->current();
-                    $weeklyTasks[] = (object)[
-                        'id' => $nextLvl->Weekly_ID,
-                        'name' => $nextLvl->label,
-                        'description' => $nextLvl->description,
-                        'target' => $nextLvl->target,
-                        'target_mode' => $nextLvl->target_mode,
-                        'reward' => $nextLvl->reward,
-                        'current' => $progress,
-                    ];
+                    if($progress >= $nextLvl->target) {
+                        $nextLvl2 = $this->mGuildTaskTbl->select(['series' => $nextLvl->Weekly_ID, 'active' => 1]);
+                        if($nextLvl2->count() == 0) {
+                            $weeklyTasks[] = (object)[
+                                'id' => $nextLvl->Weekly_ID,
+                                'name' => $nextLvl->label,
+                                'description' => $nextLvl->description,
+                                'target' => $nextLvl->target,
+                                'target_mode' => $nextLvl->target_mode,
+                                'reward' => $nextLvl->reward,
+                                'current' => $progress,
+                            ];
+                        } else {
+                            $nextLvl2 = $nextLvl2->current();
+                            $weeklyTasks[] = (object)[
+                                'id' => $nextLvl2->Weekly_ID,
+                                'name' => $nextLvl2->label,
+                                'description' => $nextLvl2->description,
+                                'target' => $nextLvl2->target,
+                                'target_mode' => $nextLvl2->target_mode,
+                                'reward' => $nextLvl2->reward,
+                                'current' => $progress,
+                            ];
+                        }
+                    } else {
+                        $weeklyTasks[] = (object)[
+                            'id' => $nextLvl->Weekly_ID,
+                            'name' => $nextLvl->label,
+                            'description' => $nextLvl->description,
+                            'target' => $nextLvl->target,
+                            'target_mode' => $nextLvl->target_mode,
+                            'reward' => $nextLvl->reward,
+                            'current' => $progress,
+                        ];
+                    }
                 }
             } else {
                 $weeklyTasks[] = (object)[
@@ -729,6 +747,7 @@ class GuildResource extends AbstractResourceListener
                 'emblem_shield' => $guild->emblem_shield,
                 'emblem_icon' => $guild->emblem_icon,
                 'link' => $guild->page_url,
+                'week_no' => $weekNo,
                 'is_vip' => ($guild->is_vip == 1) ? true : false,
                 'token_balance' => $guild->token_balance,
                 'xp_level' => $guild->xp_level,

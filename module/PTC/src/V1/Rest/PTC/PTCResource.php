@@ -416,7 +416,7 @@ class PTCResource extends AbstractResourceListener
                 $myPTCAds[] = (object)[
                     'id' => $ptc->PTC_ID,
                     'title' => utf8_decode($ptc->title),
-                    'description' => utf8_decode( $ptc->description),
+                    'description' => utf8_decode($ptc->description),
                     'views' => $ptc->view_balance,
                     'redirect' => $ptc->redirect,
                     'nsfw' => $ptc->nsfw_warn,
@@ -509,19 +509,17 @@ class PTCResource extends AbstractResourceListener
             }
         }
 
-        $ptcById = [];
-        $allPTC = $this->mPTCTbl->select();
-        foreach($allPTC as $ptc) {
-            $ptcById[$ptc->PTC_ID] = $ptc;
-        }
-
         # User PTC History
         $page = (isset($_REQUEST['page'])) ? filter_var($_REQUEST['page'], FILTER_SANITIZE_NUMBER_INT) : 1;
         $pageSize = 10;
         # Compile history
         $history = [];
+        $historyWh = new Where();
+        $historyWh->equalTo('user_idfs', $me->User_ID);
+        $historyWh->isNotNull('date_completed');
         $historySel = new Select($this->mPTCViewTbl->getTable());
-        $historySel->where(['user_idfs' => $me->User_ID]);
+        $historySel->join(['p' => 'ptc'],'p.PTC_ID = ptc_user.ptc_idfs', ['title','url','timer']);
+        $historySel->where($historyWh);
         $historySel->order('date_started DESC');
         # Create a new pagination adapter object
         $oPaginatorAdapter = new DbSelect(
@@ -535,16 +533,14 @@ class PTCResource extends AbstractResourceListener
         $offersPaginated->setCurrentPageNumber($page);
         $offersPaginated->setItemCountPerPage($pageSize);
         foreach($offersPaginated as $offer) {
-            if(array_key_exists($offer->ptc_idfs,$ptcById) && strlen($offer->date_completed) > 0) {
-                $history[] = (object)[
-                    'date' => $offer->date_completed,
-                    'reward' => $rewardsByTimer[$ptcById[$offer->ptc_idfs]->timer],
-                    'url' => $ptcById[$offer->ptc_idfs]->url,
-                    'title' => $ptcById[$offer->ptc_idfs]->title,
-                ];
-            }
+            $history[] = (object)[
+                'date' => $offer->date_completed,
+                'url' => $offer->url,
+                'title' => $offer->title,
+                'reward' => $rewardsByTimer[$offer->timer]
+            ];
         }
-        $totalHistory = $this->mPTCViewTbl->select(['user_idfs' => $me->User_ID])->count();
+        $totalHistory = $this->mPTCViewTbl->select($historyWh)->count();
 
         return (object)[
             'ptc_my' => $myPTCAds,
@@ -750,9 +746,15 @@ class PTCResource extends AbstractResourceListener
                 'date_completed' => null,
             ]);
 
-            $this->mPTCTbl->update([
-                'view_balance' => $ptcInfo->view_balance-1
-            ],['PTC_ID' => $ptcInfo->PTC_ID]);
+            $newPtcBalance = $ptcInfo->view_balance-1;
+            $update = [
+                'view_balance' => $newPtcBalance
+            ];
+            // stop ptc ad if no more views left
+            if($newPtcBalance == 0) {
+                $update['active'] = 0;
+            }
+            $this->mPTCTbl->update($update,['PTC_ID' => $ptcInfo->PTC_ID]);
 
             $rewardsByTimer = [15 => 10,30 => 15,60 => 20,90 => 25];
 

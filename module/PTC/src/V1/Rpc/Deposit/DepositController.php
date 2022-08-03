@@ -11,6 +11,7 @@ use Laminas\Db\Sql\Select;
 use Laminas\Db\Sql\Where;
 use Laminas\Db\TableGateway\TableGateway;
 use Laminas\Http\Client;
+use Laminas\Http\ClientStatic;
 use Laminas\Mvc\Controller\AbstractActionController;
 use Laminas\Paginator\Adapter\DbSelect;
 use Laminas\Paginator\Paginator;
@@ -67,7 +68,7 @@ class DepositController extends AbstractActionController
     /**
      * PTC Deposit History and Payment
      *
-     * @return ApiProblemResponse|ViewModel
+     * @return ApiProblemResponse
      * @since 1.0.0
      */
     public function depositAction()
@@ -192,7 +193,7 @@ class DepositController extends AbstractActionController
             }
 
             $currency = filter_var($json->currency, FILTER_SANITIZE_STRING);
-            if($currency != 'COINS' && $currency != 'BCH' && $currency != 'LTC' && $currency != 'ZEN') {
+            if($currency != 'COINS' && $currency != 'USD') {
                 return new ApiProblemResponse(new ApiProblem(400, 'Invalid Currency'));
             }
 
@@ -209,6 +210,66 @@ class DepositController extends AbstractActionController
 
             $walletReceive = "";
             switch(strtolower($currency)) {
+                case 'usd':
+                    $cWh = new Where();
+                    $cWh->equalTo('user_idfs', $me->User_ID);
+                    $cWh->like('coin', 'usd');
+                    $cWh->greaterThanOrEqualTo('date', date('Y-m-d H:i:s', strtotime('-24 hours')));
+                    $check = $this->mDepositTbl->select($cWh);
+                    if($check->count() > 0) {
+                        return new ApiProblemResponse(new ApiProblem(400, 'You can buy PTC Credits with crypto only once every 24 hours'));
+                    }
+                    $merchKey = $this->mSecTools->getCoreSetting('cu-merchant-key');
+                    $secKey = $this->mSecTools->getCoreSetting('cu-secret-key');
+
+                    // Make sure amount is a multiple of 500
+                    $fixedAmount = round($amount / 500) * 500;
+
+                    // calculate dollar value
+                    $targetVal = round((($fixedAmount * 0.0012) * 100)) / 100;
+
+                    $response = ClientStatic::post(
+                        'https://cryptounifier.io/api/v1/merchant/create-invoice', [
+                        'cryptocurrencies' => json_encode(["bch", "ltc", "doge", "zen"]),
+                        'currency' => 'usd',
+                        'target_value' => $targetVal,
+                        'title' => 'Buy PTC Credits',
+                        'description' => 'Purchase of '.$fixedAmount.' PTC Credits for Swissfaucet.io'
+                    ], [
+                        'X-Merchant-Key' => $merchKey,
+                        'X-Secret-Key' => $secKey
+                    ]);
+                    $status = $response->getStatusCode();
+                    if($status == 200) {
+                        $responseBody = $response->getBody();
+
+                        $responseJson = json_decode($responseBody);
+                        if(isset($responseJson->message->hash)) {
+                            $hash = $responseJson->message->hash;
+                            $walletReceive = $hash;
+
+                            $this->mDepositTbl->insert([
+                                'user_idfs' => $me->User_ID,
+                                'date' => date('Y-m-d H:i:s', time()),
+                                'coin' => $currency,
+                                'wallet_receive' => $walletReceive,
+                                'amount' => $fixedAmount,
+                                'price' => $targetVal,
+                                'received' => 0,
+                                'sent' => 0,
+                            ]);
+
+                            return new ViewModel([
+                                'wallet' => $walletReceive
+                            ]);
+                        } else {
+                            return new ApiProblemResponse(new ApiProblem(400, 'Could not generate Invoice (2). Please try again later'));
+                        }
+                    } else {
+                        return new ApiProblemResponse(new ApiProblem(400, 'Could not generate Invoice. Please try again later'));
+                    }
+                /**
+                 * Disabled direct node payments - replaced with CryptoUnifier
                 case 'bch':
                     $sBCHNodeUrl = $this->mSecTools->getCoreSetting('bchnode-rpcurl');
                     if($sBCHNodeUrl) {
@@ -227,42 +288,7 @@ class DepositController extends AbstractActionController
                         $price = number_format($amountCrypto*$coinInfoBCH->dollar_val,8,'.','');
                     }
                     break;
-                case 'ltc':
-                    $sLTCNodeUrl = $this->mSecTools->getCoreSetting('ltcnode-rpcurl');
-                    if($sLTCNodeUrl) {
-                        $client = new Client();
-                        $client->setUri($sLTCNodeUrl);
-                        $client->setMethod('POST');
-                        $client->setRawBody('{"jsonrpc":"2.0","id":"curltext","method":"getnewaddress","params":[]}');
-                        $response = $client->send();
-                        $googleResponse = json_decode($response->getBody());
-                        $walletReceive = $googleResponse->result;
-                    }
-                    $coinInfoLTC = $this->mWalletTbl->select(['coin_sign' => 'LTC'])->current();
-                    if($coinInfoLTC->dollar_val > 0) {
-                        $price = number_format($amountCrypto/$coinInfoLTC->dollar_val,8,'.','');
-                    } else {
-                        $price = number_format($amountCrypto*$coinInfoLTC->dollar_val,8,'.','');
-                    }
-                    break;
-                case 'zen':
-                    $sZENNodeUrl = $this->mSecTools->getCoreSetting('zennode-rpcurl');
-                    if($sZENNodeUrl) {
-                        $client = new Client();
-                        $client->setUri($sZENNodeUrl);
-                        $client->setMethod('POST');
-                        $client->setRawBody('{"jsonrpc":"2.0","id":"curltext","method":"getnewaddress","params":[]}');
-                        $response = $client->send();
-                        $googleResponse = json_decode($response->getBody());
-                        $walletReceive = $googleResponse->result;
-                    }
-                    $coinInfoZEN = $this->mWalletTbl->select(['coin_sign' => 'ZEN'])->current();
-                    if($coinInfoZEN->dollar_val > 0) {
-                        $price = number_format($amountCrypto/$coinInfoZEN->dollar_val,8,'.','');
-                    } else {
-                        $price = number_format($amountCrypto*$coinInfoZEN->dollar_val,8,'.','');
-                    }
-                    break;
+                **/
                 case 'coins':
                     $walletReceive = $me->User_ID;
                     $price = $tokenPrice*$amount;

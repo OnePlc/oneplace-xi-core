@@ -142,7 +142,6 @@ class ClaimController extends AbstractActionController
         # Lets check if there was a claim less than 60 minutes ago
         $oWh = new Where();
         $oWh->equalTo('user_idfs', $me->User_ID);
-        $oWh->like('source', $platform);
         $oWh->greaterThanOrEqualTo('date', date('Y-m-d H:i:s', strtotime($timeCheck)));
         $oClaimCheck = $this->mClaimTbl->select($oWh);
         if(count($oClaimCheck) > 0) {
@@ -156,7 +155,6 @@ class ClaimController extends AbstractActionController
         if(!$oRequest->isPost()) {
             $oWhT = new Where();
             $oWhT->equalTo('user_idfs', $me->User_ID);
-            $oWhT->like('source', $platform);
             $oWhT->greaterThanOrEqualTo('date', date('Y-m-d H:i:s', strtotime('-24 hours')));
             $todayClaims = $this->mClaimTbl->select($oWhT)->count();
 
@@ -248,11 +246,7 @@ class ClaimController extends AbstractActionController
                     }
                 }
             } else {
-                # Get Data from Request Body
-                $json = IndexController::loadJSONFromRequestBody(['device','ad_id','advertiser'],$this->getRequest()->getContent());
-                if(!$json) {
-                    return new ApiProblemResponse(new ApiProblem(400, 'Invalid Response Body (missing required fields)'));
-                }
+                return new ApiProblemResponse(new ApiProblem(400, 'You are using an old version of the faucet. Please reload the page or empty your browser cache so you have Version 2.0.5'));
             }
 
             # check for attack vendors
@@ -302,10 +296,10 @@ class ClaimController extends AbstractActionController
                     'date' => date('Y-m-d H:i:s', time()),
                     'date_next' => $nextDate,
                     'amount' => $claimAmount,
-                    'mode' => 'coins',
-                    'source' => ($platform != 'website') ? 'android' : 'website',
-                    'ad_id' => $ad_id,
-                    'advertiser' => $advertiser,
+                    //'mode' => 'coins',
+                    //'source' => ($platform != 'website') ? 'android' : 'website',
+                    //'ad_id' => $ad_id,
+                    //'advertiser' => $advertiser,
                     'device' => $device,
                     'claim_ip' => $sIpAddr
                 ]);
@@ -327,7 +321,7 @@ class ClaimController extends AbstractActionController
                 $this->mUserTools->getItemDropChance('faucet-claim', $me->User_ID);
 
                 # check for achievement completetion
-                $currentClaimsDone = $this->mClaimTbl->select(['user_idfs' => $me->User_ID,'source' => $platform])->count();
+                $currentClaimsDone = $this->mClaimTbl->select(['user_idfs' => $me->User_ID])->count();
 
                 # check if user has completed an achievement
                 if(array_key_exists($currentClaimsDone,$this->mAchievementPoints)) {

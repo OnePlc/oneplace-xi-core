@@ -211,7 +211,6 @@ class DailytaskResource extends AbstractResourceListener
         $oWh = new Where();
         $oWh->equalTo('user_idfs', $me->User_ID);
         $oWh->like('date', $sDate.'%');
-        $oWh->like('source', $source);
         $claimsDone = $this->mClaimTbl->select($oWh)->count();
 
         $oWh = new Where();
@@ -438,11 +437,14 @@ class DailytaskResource extends AbstractResourceListener
             # Load Dailytasks
             $oWh = new Where();
             $oWh->NEST
-                ->equalTo('mode', $data->platform)
+                ->equalTo('mode', 'website')
                 ->OR
                 ->equalTo('mode', 'global')
                 ->UNNEST;
-            $achievementsDB = $this->mTaskTbl->select($oWh);
+            $dailySel = new Select($this->mTaskTbl->getTable());
+            $dailySel->where($oWh);
+            $dailySel->order('sort_id ASC');
+            $achievementsDB = $this->mTaskTbl->selectWith($dailySel);
             $achievements = [];
             foreach($achievementsDB as $achiev) {
                 switch($achiev->type) {

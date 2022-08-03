@@ -258,7 +258,7 @@ class RankResource extends AbstractResourceListener
     {
         $rankId = filter_var($id, FILTER_SANITIZE_NUMBER_INT);
 
-        if($rankId < 0 || empty($rankId)) {
+        if($rankId < 0 || $rankId == '' || $rankId == null) {
             return new ApiProblem(400, 'Invalid rank');
         }
 
@@ -379,7 +379,7 @@ class RankResource extends AbstractResourceListener
             return $me;
         }
 
-        if($rankId <= 0 || empty($rankId)) {
+        if($rankId < 0 || $rankId == '' || $rankId == null) {
             return new ApiProblem(400, 'Invalid rank');
         }
 

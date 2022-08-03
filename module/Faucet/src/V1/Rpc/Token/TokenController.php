@@ -322,6 +322,7 @@ class TokenController extends AbstractActionController
             $chartProfit = [];
             $chartPercent = [];
             $chartLabels = [];
+            $chartBonus = [];
             $chartTokens = [];
             $totalPay = 0;
 
@@ -337,6 +338,7 @@ class TokenController extends AbstractActionController
                     $chartCost[$lp->week] = $lp->total_out;
                     $chartPercent[$lp->week] = $lp->active_bonus;
                     $chartProfit[$lp->week] = $lp->total_profit;
+                    $chartBonus[$lp->week] = $lp->admin_bonus;
                     $chartTokens[$lp->week] = $lp->tokens_circulating;
                     $totalPay+=$lp->coins_per_token;
                 }
@@ -348,6 +350,7 @@ class TokenController extends AbstractActionController
             ksort($chartCost);
             ksort($chartPercent);
             ksort($chartProfit);
+            ksort($chartBonus);
             ksort($chartTokens);
 
             $finLabels = [];
@@ -385,6 +388,12 @@ class TokenController extends AbstractActionController
                 $finLabels[] = $chartProfi;
             }
             $chartProfit = $finLabels;
+
+            $finLabels = [];
+            foreach($chartBonus as $chartBoni) {
+                $finLabels[] = $chartBoni;
+            }
+            $chartBonus = $finLabels;
 
             $finLabels = [];
             foreach($chartTokens as $chartToken) {
@@ -433,6 +442,7 @@ class TokenController extends AbstractActionController
                             'income' => $chartIncome,
                             'cost' => $chartCost,
                             'profit' => $chartProfit,
+                            'bonus' => $chartBonus,
                             'percent' => $chartPercent,
                             'tokens' => $chartTokens
                         ],

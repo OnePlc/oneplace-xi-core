@@ -225,7 +225,11 @@ class ShortlinkResource extends AbstractResourceListener
             $oWhDone = new Where();
             $oWhDone->equalTo('user_idfs', $me->User_ID);
             $oWhDone->equalTo('shortlink_idfs',  $provider->Shortlink_ID);
-            $oWhDone->greaterThanOrEqualTo('date_started', date('Y-m-d H:i:s', strtotime('-23 hours')));
+            if($provider->cooldown == 1) {
+                $oWhDone->greaterThanOrEqualTo('date_started', date('Y-m-d H:i:s', strtotime('-65 minutes')));
+            } else {
+                $oWhDone->greaterThanOrEqualTo('date_started', date('Y-m-d H:i:s', strtotime('-23 hours')));
+            }
             $linksDoneByUser = $this->mShortDoneTbl->select($oWhDone);
             $linksDone = $linksDoneByUser->count();
             $finLink = "#";
@@ -238,6 +242,7 @@ class ShortlinkResource extends AbstractResourceListener
 
                     $status = "error";
                     $finLink = "sherror";
+                    $dev = 0;
 
                     switch($provider->api_type) {
                         case 'ouo':
@@ -278,6 +283,7 @@ class ShortlinkResource extends AbstractResourceListener
                             }
                             if($status === 'error') {
                                 $finLink = "sherror";
+                                //$dev = 2;
                             } else {
                                 if(is_array($googleJson)) {
                                     if(isset($googleJson["shortenedUrl"])) {
@@ -410,13 +416,24 @@ class ShortlinkResource extends AbstractResourceListener
             $oWh->equalTo('shortlink_idfs', $sh->Shortlink_ID);
             //$oWh->like('link_id', $lnk->link_id);
             $oWh->equalTo('user_idfs', $me->User_ID);
-            $oWh->greaterThanOrEqualTo('date_completed', date('Y-m-d H:i:s', strtotime('-23 hours')));
+            if($sh->cooldown == 1) {
+                $oWh->greaterThanOrEqualTo('date_completed', date('Y-m-d H:i:s', strtotime('-65 minutes')));
+            } else {
+                $oWh->greaterThanOrEqualTo('date_completed', date('Y-m-d H:i:s', strtotime('-23 hours')));
+            }
             $slCheck = $this->mShortDoneTbl->select($oWh);
             if(count($slCheck) > 0) {
                 foreach($slCheck as $check) {
                     $linksDone++;
                     $sh->last_done = $check->date_completed;
-                    $sh->unlock_in = strtotime($check->date_completed)+(23*3600)-time();
+                    if($sh->cooldown == 24) {
+                        $sh->unlock_in = strtotime($check->date_completed)+(23*3600)-time();
+                    } elseif ($sh->cooldown == 1) {
+                        $sh->unlock_in = (strtotime($check->date_completed)+3960)-time();
+                    } else {
+                        $sh->unlock_in = strtotime($check->date_completed)+(23*3600)-time();
+                    }
+
                     $totalLinksDone24h++;
                 }
             }
