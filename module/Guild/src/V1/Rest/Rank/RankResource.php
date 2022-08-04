@@ -466,6 +466,13 @@ class RankResource extends AbstractResourceListener
                                 $this->mGuildRankTbl->update(['level' => $rank->level-1], ['level' => $rank->level,'guild_idfs' => $userGuildInfo->guild_idfs]);
                                 // old rank to rank that was above
                                 $this->mGuildRankTbl->update(['level' => $rank->level], ['level' => 11,'guild_idfs' => $userGuildInfo->guild_idfs]);
+
+                                // update guild member rank
+                                $this->mGuildUserTbl->update(['rank' => 11],['rank' => $rank->level-1,'guild_idfs' => $userGuildInfo->guild_idfs]);
+                                // +1 rank
+                                $this->mGuildUserTbl->update(['rank' => $rank->level-1],['rank' => $rank->level,'guild_idfs' => $userGuildInfo->guild_idfs]);
+                                // old rank to rank that was above
+                                $this->mGuildUserTbl->update(['rank' => $rank->level],['rank' => 11,'guild_idfs' => $userGuildInfo->guild_idfs]);
                                 break;
                             case 'down':
                                 // free number as its unique
@@ -474,6 +481,13 @@ class RankResource extends AbstractResourceListener
                                 $this->mGuildRankTbl->update(['level' => $rank->level+1], ['level' => $rank->level,'guild_idfs' => $userGuildInfo->guild_idfs]);
                                 // old rank to rank that was above
                                 $this->mGuildRankTbl->update(['level' => $rank->level], ['level' => 11,'guild_idfs' => $userGuildInfo->guild_idfs]);
+
+                                // update guild member rank
+                                $this->mGuildUserTbl->update(['rank' => 11],['rank' => $rank->level+1,'guild_idfs' => $userGuildInfo->guild_idfs]);
+                                // +1 rank
+                                $this->mGuildUserTbl->update(['rank' => $rank->level+1],['rank' => $rank->level,'guild_idfs' => $userGuildInfo->guild_idfs]);
+                                // old rank to rank that was above
+                                $this->mGuildUserTbl->update(['rank' => $rank->level],['rank' => 11,'guild_idfs' => $userGuildInfo->guild_idfs]);
                                 break;
                             default:
                                 return new ApiProblem(404, 'invalid sort command.');

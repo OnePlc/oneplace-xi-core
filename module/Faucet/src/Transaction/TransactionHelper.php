@@ -87,6 +87,11 @@ class TransactionHelper {
     private static $mPTCTbl;
 
     /**
+     * @var TableGateway
+     */
+    private static $mGuildUserTbl;
+
+    /**
      * Constructor
      *
      * LoginController constructor.
@@ -99,6 +104,7 @@ class TransactionHelper {
         TransactionHelper::$mPTCTbl = new TableGateway('ptc_transaction', $mapper);
         TransactionHelper::$mUserTbl = new TableGateway('user', $mapper);
         TransactionHelper::$mGuildTbl = new TableGateway('faucet_guild', $mapper);
+        TransactionHelper::$mGuildUserTbl = new TableGateway('faucet_guild_user', $mapper);
         TransactionHelper::$mSettingsTbl = new TableGateway('settings', $mapper);
         TransactionHelper::$mGuildTransTbl = new TableGateway('faucet_guild_transaction', $mapper);
         TransactionHelper::$mWalletTbl = new TableGateway('faucet_wallet', $mapper);
@@ -413,13 +419,20 @@ class TransactionHelper {
      */
     public function getGuildTransactions($guildId,$page,$itemsPerPage)
     {
+        # load guild users to add ranks
+        $guildUsers = TransactionHelper::$mGuildUserTbl->select(['guild_idfs' => $guildId]);
+        $guildRanksByUserId = [];
+        foreach($guildUsers as $guildUser) {
+            $guildRanksByUserId['user-'.$guildUser->user_idfs] = $guildUser->rank;
+        }
+
         # Compile list of all guilds
         $transactions = [];
         $txWh = new Where();
         $txWh->equalTo('faucet_guild_transaction.guild_idfs', $guildId);
-        $txWh->notLike('date_joined', '0000-00-00 00:00:00');
+        //$txWh->notLike('date_joined', '0000-00-00 00:00:00');
         $transactionsSel = new Select(TransactionHelper::$mGuildTransTbl->getTable());
-        $transactionsSel->join(['fgu' => 'faucet_guild_user'],'fgu.user_idfs = faucet_guild_transaction.created_by', ['rank']);
+        //$transactionsSel->join(['fgu' => 'faucet_guild_user'],'fgu.user_idfs = faucet_guild_transaction.created_by', ['rank']);
         $transactionsSel->where($txWh);
         $transactionsSel->order('date DESC');
         # Create a new pagination adapter object
@@ -435,6 +448,12 @@ class TransactionHelper {
         $transactionsPaginated->setItemCountPerPage($itemsPerPage);
 
         foreach($transactionsPaginated as $trans) {
+            if(array_key_exists('user-'.$trans->created_by, $guildRanksByUserId)) {
+                // dont include guild masters
+                if($guildRanksByUserId['user-'.$trans->created_by] != 0) {
+                    $trans->rank = $guildRanksByUserId['user-'.$trans->created_by];
+                }
+            }
             $transactions[] = $trans;
         }
 
@@ -463,7 +482,7 @@ class TransactionHelper {
         return $cryptoBalance;
     }
 
-    public function findGuildTransaction($guildId, $date, $refType, $userId = 0)
+    public function findGuildTransaction($guildId, $date, $refType, $userId = 0, $getTransaction = false)
     {
         $transWh = new Where();
         $transWh->equalTo('guild_idfs', $guildId);
@@ -474,7 +493,16 @@ class TransactionHelper {
         }
         $transaction = TransactionHelper::$mGuildTransTbl->select($transWh);
         if($transaction->count() > 0) {
-            return true;
+            if(!$getTransaction) {
+                return true;
+            } else {
+                $transaction = $transaction->current();
+                return (object)[
+                    'id' => $transaction->Transaction_ID,
+                    'amount' => $transaction->amount,
+                    'date' => $transaction->date
+                ];
+            }
         } else {
             return false;
         }

@@ -192,7 +192,7 @@ class AchievementResource extends AbstractResourceListener
                     $progress = $user->xp_level;
                     break;
                 case 'faucetclaim':
-                    $progress = $this->mClaimTbl->select(['user_idfs' => $user->User_ID,'source' => 'website'])->count();
+                    $progress = $this->mClaimTbl->select(['user_idfs' => $user->User_ID])->count();
                     break;
                 case 'shortlink':
                     $progress = $this->mShortDoneTbl->select(['user_idfs' => $user->User_ID])->count();
@@ -498,7 +498,7 @@ class AchievementResource extends AbstractResourceListener
                         $progress = $this->mShortDoneTbl->select(['user_idfs' => $me->User_ID])->count();
                         break;
                     case 'faucetclaim':
-                        $progress = $this->mClaimTbl->select(['user_idfs' => $me->User_ID,'source' => 'website'])->count();
+                        $progress = $this->mClaimTbl->select(['user_idfs' => $me->User_ID])->count();
                         break;
                     case 'offerwall':
                         $progress = $this->mOfferwallUserTbl->select(['user_idfs' => $me->User_ID])->count();

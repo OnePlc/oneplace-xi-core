@@ -77,8 +77,8 @@ class VerifyController extends AbstractActionController
             $userFound = $userFound->current();
 
             # check timer
-            if((strtotime($userFound->send_verify)+172800) < time()) {
-                echo 'Link is not valid anymore. You must verify within 48 hours. Please start again.';
+            if((strtotime($userFound->send_verify)+(3600*336)) < time()) {
+                echo 'Link is not valid anymore. You must verify within 14 Days. Please send E-Mail to admin@swissfaucet.io to get verified.';
                 return false;
             }
 

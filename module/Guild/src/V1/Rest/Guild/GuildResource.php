@@ -865,7 +865,7 @@ class GuildResource extends AbstractResourceListener
             $guildWh->like('main_language', $langFilter);
         }
         $guildSel->where($guildWh);
-        $guildSel->order(['token_balance DESC', 'emblem_shield DESC','description DESC' ]);
+        $guildSel->order(['sort_id ASC']);
         # Create a new pagination adapter object
         $oPaginatorAdapter = new DbSelect(
         # our configured select object
@@ -911,10 +911,10 @@ class GuildResource extends AbstractResourceListener
             }
             $guildAPI = (object)[
                 'id' => $guild->Guild_ID,
-                'name' => utf8_encode($guild->label),
+                'name' => $guild->label,
                 'focus' => json_decode($guild->focus),
                 'guild_focus' => $gFocus,
-                'description' => utf8_encode($guild->description),
+                'description' => utf8_decode($guild->description),
                 'members' => $guild->members,
                 'xp_level' => $guild->xp_level,
                 'xp_current' => $guild->xp_current,

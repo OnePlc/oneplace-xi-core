@@ -174,8 +174,9 @@ class BankController extends AbstractActionController
 
         # Get Request Data
         $request = $this->getRequest();
+        $amount = 0;
         if($request->isPut() || $request->isPost()) {
-            $json = IndexController::loadJSONFromRequestBody(['amount','item'],$this->getRequest()->getContent());
+            $json = IndexController::loadJSONFromRequestBody(['amount'],$this->getRequest()->getContent());
             if(!$json) {
                 return new ApiProblemResponse(new ApiProblem(400, 'Invalid JSON Body'));
             }
@@ -191,7 +192,6 @@ class BankController extends AbstractActionController
                 return new ApiProblemResponse(new ApiProblem(418, 'Potential '.$secResult.' Attack - Goodbye'));
             }
             $amount = filter_var($json->amount, FILTER_SANITIZE_NUMBER_INT);
-            $item = filter_var($json->item, FILTER_SANITIZE_NUMBER_INT);
         }
 
         $rank = '-';
@@ -240,11 +240,20 @@ class BankController extends AbstractActionController
                     $dailyLimit = $rankInfo->daily_withdraw;
                 }
 
+                $withdrawTimer = 0;
+                if($dailyLimit > 0) {
+                    $lastWth = $this->mTransaction->findGuildTransaction($userHasGuild->guild_idfs,date('Y-m-d H:i:s', time()-(3600*24)),'member-wth', $me->User_ID, true);
+                    if($lastWth) {
+                        $withdrawTimer = (3600*24)-(time()-strtotime($lastWth->date));
+                    }
+                }
+
                 return [
                     'guild_token_balance' => $guild->token_balance,
                     'page_size' => 10,
                     'page' => $page,
                     'withdraw_limit' => $dailyLimit,
+                    'withdraw_timer' => $withdrawTimer,
                     'page_count' => $pages,
                     'total_items' => $totalItems,
                     'transactions' => $this->mTransaction->getGuildTransactions($guild->Guild_ID, $page, 10),
@@ -272,6 +281,9 @@ class BankController extends AbstractActionController
                     }
                 }
                 if($withdrawAllowed) {
+                    if($amount <= 0 || empty($amount)) {
+                        return new ApiProblemResponse(new ApiProblem(400, 'Invalid Amount'));
+                    }
                     # check guild balance
                     if($this->mTransaction->checkGuildBalance($amount, $guild->Guild_ID)) {
                         if($amount > $rankInfo->daily_withdraw) {
@@ -314,54 +326,40 @@ class BankController extends AbstractActionController
              * Deposit
              */
             case $request->isPut():
-                # Transfer item
-                if($item != 0 && $amount == 0) {
-                    # check if user has item and it is not used
-                    // $this->mGuildItemTbl
-                    if($this->mInventory->userHasItemActive($item, $me->User_ID)) {
-                        if($this->mInventory->depositItemToGuildBank($item, $me->User_ID, $guild->Guild_ID)) {
-                            return (object)[
+                if($amount <= 0 || empty($amount)) {
+                    return new ApiProblemResponse(new ApiProblem(400, 'Invalid Amount'));
+                }
+                # check if user has enough funds
+                if ($this->mTransaction->checkUserBalance($amount, $me->User_ID)) {
+                    $newBalance = $this->mTransaction->executeTransaction($amount, true, $me->User_ID, $guild->Guild_ID, 'guild-deposit', '');
+                    if ($newBalance !== false) {
+                        # move coins from user to guild
+                        $newGuildBalance = $this->mTransaction->executeGuildTransaction($amount, false, $guild->Guild_ID, 0, '', 'Deposit from User ' . $me->username, $me->User_ID);
+                        if ($newGuildBalance !== false) {
+                            return [
                                 'state' => 'success',
+                                'message' => $amount . ' successfully deposited to Guildbank',
+                                'guild' => (object)[
+                                    'id' => $guild->Guild_ID,
+                                    'name' => $guild->label,
+                                    'icon' => $guild->icon,
+                                    'xp_level' => $guild->xp_level,
+                                    'xp_total' => $guild->xp_total,
+                                    'xp_current' => $guild->xp_current,
+                                    'xp_percent' => $guildXPPercent,
+                                    'rank' => (object)['id' => $userHasGuild->rank, 'name' => $rank],
+                                    'token_balance' => $newGuildBalance,
+                                ],
+                                'token_balance' => $newBalance,
                             ];
                         } else {
-                            return new ApiProblemResponse(new ApiProblem(500, 'There was an error with the guild transaction. please contact support'));
+                            return new ApiProblemResponse(new ApiProblem(400, 'There was an error with the guild transaction. please contact support'));
                         }
                     } else {
-                        return new ApiProblemResponse(new ApiProblem(403, 'You do not have this item in your inventory'));
+                        return new ApiProblemResponse(new ApiProblem(400, 'There was an error with the transaction. please contact support'));
                     }
                 } else {
-                    # check if user has enough funds
-                    if ($this->mTransaction->checkUserBalance($amount, $me->User_ID)) {
-                        $newBalance = $this->mTransaction->executeTransaction($amount, true, $me->User_ID, $guild->Guild_ID, 'guild-deposit', '');
-                        if ($newBalance !== false) {
-                            # move coins from user to guild
-                            $newGuildBalance = $this->mTransaction->executeGuildTransaction($amount, false, $guild->Guild_ID, 0, '', 'Deposit from User ' . $me->username, $me->User_ID);
-                            if ($newGuildBalance !== false) {
-                                return [
-                                    'state' => 'success',
-                                    'message' => $amount . ' successfully deposited to Guildbank',
-                                    'guild' => (object)[
-                                        'id' => $guild->Guild_ID,
-                                        'name' => $guild->label,
-                                        'icon' => $guild->icon,
-                                        'xp_level' => $guild->xp_level,
-                                        'xp_total' => $guild->xp_total,
-                                        'xp_current' => $guild->xp_current,
-                                        'xp_percent' => $guildXPPercent,
-                                        'rank' => (object)['id' => $userHasGuild->rank, 'name' => $rank],
-                                        'token_balance' => $newGuildBalance,
-                                    ],
-                                    'token_balance' => $newBalance,
-                                ];
-                            } else {
-                                return new ApiProblemResponse(new ApiProblem(500, 'There was an error with the guild transaction. please contact support'));
-                            }
-                        } else {
-                            return new ApiProblemResponse(new ApiProblem(500, 'There was an error with the transaction. please contact support'));
-                        }
-                    } else {
-                        return new ApiProblemResponse(new ApiProblem(409, 'Not enough funds to deposit ' . $amount . ' coins to guildbank'));
-                    }
+                    return new ApiProblemResponse(new ApiProblem(400, 'Not enough funds to deposit ' . $amount . ' coins to guildbank'));
                 }
             default:
                 return new ApiProblemResponse(new ApiProblem(405, 'Method not supported'));

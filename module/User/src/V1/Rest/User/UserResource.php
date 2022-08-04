@@ -54,14 +54,6 @@ class UserResource extends AbstractResourceListener
     protected $mXPLvlTbl;
 
     /**
-     * User Withdrawal Table
-     *
-     * @var TableGateway $mWithdrawTbl
-     * @since 1.0.0
-     */
-    protected $mWithdrawTbl;
-
-    /**
      * Guild Table
      *
      * @var TableGateway $mGuildTbl
@@ -170,6 +162,10 @@ class UserResource extends AbstractResourceListener
     protected $mInboxTbl;
 
     protected $mUserAccsTbl;
+    /**
+     * @var TableGateway
+     */
+    private $mClaimTbl;
 
     /**
      * Constructor
@@ -188,11 +184,11 @@ class UserResource extends AbstractResourceListener
         $this->mGuildRankTbl = new TableGateway('faucet_guild_rank', $mapper);
         $this->mSettingsTbl = new TableGateway('settings', $mapper);
         $this->mGuildUserTbl = new TableGateway('faucet_guild_user', $mapper);
-        $this->mWithdrawTbl = new TableGateway('faucet_withdraw', $mapper);
         $this->mSessionTbl = new TableGateway('user_session', $mapper);
         $this->mInboxTbl = new TableGateway('user_inbox', $mapper);
         $this->mUserSetTbl = new TableGateway('user_setting', $mapper);
         $this->mUserAccsTbl = new TableGateway('user_linked_account', $mapper);
+        $this->mClaimTbl = new TableGateway('faucet_claim', $mapper);
 
         $this->mTransaction = new TransactionHelper($mapper);
         $this->mSecTools = new SecurityTools($mapper);
@@ -759,12 +755,38 @@ class UserResource extends AbstractResourceListener
 
         $inboxMessages = $this->mInboxTbl->select(['to_idfs' => $user->User_ID,'is_read' => 0])->count();
 
+        # Set Timer for next claim
+        $sTime = 0;
+        $timeCheck = '-1 hour';
+        # Lets check if there was a claim less than 60 minutes ago
+        $oWh = new Where();
+        $oWh->equalTo('user_idfs', $user->User_ID);
+        $oWh->greaterThanOrEqualTo('date', date('Y-m-d H:i:s', strtotime($timeCheck)));
+        $oClaimCheck = $this->mClaimTbl->select($oWh);
+        if(count($oClaimCheck) > 0) {
+            $oClaimCheck = $oClaimCheck->current();
+            # override timer
+            $sTime = strtotime($oClaimCheck->date_next)-time();
+        }
+
+        if($user->User_ID == 335874987) {
+            $sTime = 10;
+        }
+
+        $claimSound = 'none';
+        $claimSoundSet = $this->mUserTools->getSetting($user->User_ID, 'claim-sound');
+        if($claimSoundSet) {
+            $claimSound = $claimSoundSet;
+        }
+
         $returnData = [
             'id' => (int)$user->User_ID,
             'name' => $user->username,
             'email' => $user->email,
             'avatar' => ($user->avatar != '') ? $user->avatar : $user->username,
             'servertime' => date('Y-m-d H:i:s', time()),
+            'claim_timer' => $sTime,
+            'claim_sound' => $claimSound,
             'emp_mode' => ($user->is_employee == 1) ? 'mod' : '',
             'verified' => (int)$user->email_verified,
             'show_verify_mail' => ($user->send_verify == null) ? ($user->email_verified == 1) ? false : true : false,
@@ -1034,12 +1056,13 @@ class UserResource extends AbstractResourceListener
         }
 
         $withdrawals = ['done' => [],'cancel' => [],'new' => [], 'total_items' => 0];
+        /**
         $userWithdrawals = $this->mWithdrawTbl->select(['user_idfs' => $user->User_ID]);
         if(count($userWithdrawals) > 0) {
             foreach($userWithdrawals as $wth) {
                 $withdrawals[$wth->state][] = $wth;
             }
-        }
+        } **/
 
         $tokenValue = 0.00004;
 
@@ -1071,7 +1094,7 @@ class UserResource extends AbstractResourceListener
             'guild' => $guild,
             'messages' => $messages,
             'link' => $confirmLink,
-            'withdrawals' => $withdrawals
+            'withdrawals' => []
         ]];
     }
 
@@ -1116,6 +1139,9 @@ class UserResource extends AbstractResourceListener
         if(isset($data->account_gacha)) {
             $checkFields[] = $data->account_gacha;
         }
+        if(isset($data->claim_sound)) {
+            $checkFields[] = $data->claim_sound;
+        }
         if(isset($data->passwordCheck)) {
             $checkFields[] = $data->passwordCheck;
             $checkFields[] = $data->passwordNew;
@@ -1144,6 +1170,7 @@ class UserResource extends AbstractResourceListener
         $passwordCheck = filter_var($data->passwordCheck, FILTER_SANITIZE_STRING);
         $avatar = filter_var($data->avatar, FILTER_SANITIZE_STRING);
         $gachaAcc = filter_var($data->account_gacha, FILTER_SANITIZE_STRING);
+        $claimSound = filter_var($data->claim_sound, FILTER_SANITIZE_STRING);
 
         $favCoin = filter_var($data->favCoin, FILTER_SANITIZE_STRING);
 
@@ -1158,13 +1185,37 @@ class UserResource extends AbstractResourceListener
             $update['username'] = $name;
         }
 
+        if($claimSound != '') {
+            $allowedSounds = [
+                'none',
+                'mario-coin-sound.ogg',
+                'mixkit-clinking-coins-1993.ogg',
+                'mixkit-coin-win-notification-1992.ogg',
+                'mixkit-final-level-bonus-2061.ogg',
+                'mixkit-game-treasure-coin-2038.ogg',
+                'mixkit-gold-coin-prize-1999.ogg',
+                'mixkit-magical-coin-win-1936.ogg',
+                'mixkit-melodic-gold-price-2000.ogg',
+                'mixkit-money-bag-drop-1989.ogg',
+                'mixkit-winning-a-coin-video-game-2069.ogg'];
+            if(!in_array($claimSound, $allowedSounds)) {
+                return new ApiProblem(409, 'invalid sound - please choose another one');
+            }
+
+            $this->mUserTools->setSetting($user->User_ID, 'claim-sound', $claimSound);
+        }
+
         if($avatar != '') {
             if(strlen($avatar) > 100) {
                 return new ApiProblem(409, 'name for avatar is too long');
             }
             $update['avatar'] = $avatar;
         } else {
-            $avatar = $user->username;
+            if($user->avatar == '') {
+                $avatar = $user->username;
+            } else {
+                $avatar = $user->avatar;
+            }
         }
 
         # check if password has changed
@@ -1309,12 +1360,14 @@ class UserResource extends AbstractResourceListener
         }
 
         $withdrawals = ['done' => [],'cancel' => [],'new' => [], 'total_items' => 0];
+        /**
         $userWithdrawals = $this->mWithdrawTbl->select(['user_idfs' => $user->User_ID]);
         if(count($userWithdrawals) > 0) {
             foreach($userWithdrawals as $wth) {
                 $withdrawals[$wth->state][] = $wth;
             }
         }
+         * **/
 
         $tokenValue = 0.00004;
 

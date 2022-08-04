@@ -1155,11 +1155,21 @@ class HallOfFameController extends AbstractActionController
             }
 
             if($detail == 'cpumining') {
-                $totalUserShorts = $this->mUserSetTbl->select(['setting_name' => 'cpuminer-totalcoins']);
+                $totalSel = new Select($this->mUsrStatsTbl->getTable());
+                $totalSel->join(['u' => 'user'],'u.User_ID = user_faucet_stat.user_idfs', ['username','avatar']);
+                $totalSel->where(['stat_key' => 'user-nano-xmr-coin-total']);
+                $totalUserShorts = $this->mUsrStatsTbl->selectWith($totalSel);
                 $shortsByUser = [];
+                $infoByUserId = [];
                 if(count($totalUserShorts) > 0) {
                     foreach($totalUserShorts as $shd) {
-                        $shortsByUser[$shd->user_idfs] = (int)$shd->setting_value;
+                        $shortsByUser['user-'.$shd->user_idfs] = (int)$shd->stat_data;
+                        $infoByUserId['user-'.$shd->user_idfs] = (object)[
+                            'name' => $shd->username,
+                            'avatar' => ($shd->avatar != '') ? $shd->avatar : $shd->username,
+                            'id' => $shd->user_idfs,
+                            'coins' => (int)$shd->stat_data
+                        ];
                     }
                 }
                 arsort($shortsByUser);
@@ -1168,57 +1178,51 @@ class HallOfFameController extends AbstractActionController
                 $myRank = "-";
                 $myShorts = 0;
                 foreach(array_keys($shortsByUser) as $claimUser) {
-                    if($claimUser == $me->User_ID) {
+                    if($claimUser == 'user-'.$me->User_ID) {
                         $myRank = $rank;
                         $myShorts = $shortsByUser[$claimUser];
                     }
                     if($rank <= 50) {
-                        $userInfo = $this->mUserTbl->select(['User_ID' => $claimUser]);
-                        if(count($userInfo) > 0) {
-                            $userInfo = $userInfo->current();
-                            $topShorters[] = (object)[
-                                'name' => $userInfo->username,
-                                'avatar' => ($userInfo->avatar != '') ? $userInfo->avatar : $userInfo->username,
-                                'id' => $userInfo->User_ID,
-                                'rank' => $rank,
-                                'coins' => (int)$shortsByUser[$claimUser],
-                            ];
+                        if(array_key_exists($claimUser,$infoByUserId)) {
+                            $infoByUserId[$claimUser]->rank = $rank;
+                            $topShorters[] = $infoByUserId[$claimUser];
                         }
-
                     }
                     $rank++;
                 }
 
-                $totalUserShorts = $this->mUserSetTbl->select(['setting_name' => 'gpuminer-xmr-month']);
+                $totalSel = new Select($this->mUsrStatsTbl->getTable());
+                $totalSel->join(['u' => 'user'],'u.User_ID = user_faucet_stat.user_idfs', ['username','avatar']);
+                $totalSel->where(['stat_key' => 'user-nano-xmr-coin-m-'.date('n-Y', time())]);
+                $totalUserShorts = $this->mUsrStatsTbl->selectWith($totalSel);
                 $shortsByUser = [];
+                $infoByUserId = [];
                 if(count($totalUserShorts) > 0) {
                     foreach($totalUserShorts as $shd) {
-                        $shortsByUser[$shd->user_idfs] = (int)$shd->setting_value;
+                        $shortsByUser['user-'.$shd->user_idfs] = (int)$shd->stat_data;
+                        $infoByUserId['user-'.$shd->user_idfs] = (object)[
+                            'name' => $shd->username,
+                            'avatar' => ($shd->avatar != '') ? $shd->avatar : $shd->username,
+                            'id' => $shd->user_idfs,
+                            'coins' => (int)$shd->stat_data
+                        ];
                     }
                 }
                 arsort($shortsByUser);
-                $topShortersMonth = [];
+                $topShortersM = [];
                 $rank = 1;
                 $myRankM = "-";
                 $myShortsM = 0;
                 foreach(array_keys($shortsByUser) as $claimUser) {
-                    if($claimUser == $me->User_ID) {
+                    if($claimUser == 'user-'.$me->User_ID) {
                         $myRankM = $rank;
                         $myShortsM = $shortsByUser[$claimUser];
                     }
                     if($rank <= 50) {
-                        $userInfo = $this->mUserTbl->select(['User_ID' => $claimUser]);
-                        if(count($userInfo) > 0) {
-                            $userInfo = $userInfo->current();
-                            $topShortersMonth[] = (object)[
-                                'name' => $userInfo->username,
-                                'avatar' => ($userInfo->avatar != '') ? $userInfo->avatar : $userInfo->username,
-                                'id' => $userInfo->User_ID,
-                                'rank' => $rank,
-                                'coins' => (int)$shortsByUser[$claimUser],
-                            ];
+                        if(array_key_exists($claimUser,$infoByUserId)) {
+                            $infoByUserId[$claimUser]->rank = $rank;
+                            $topShortersM[] = $infoByUserId[$claimUser];
                         }
-
                     }
                     $rank++;
                 }
@@ -1227,7 +1231,7 @@ class HallOfFameController extends AbstractActionController
                 return new ViewModel([
                     'date' => date('Y-m-d H:i:s'),
                     'player_list' => [
-                        'month' => $topShortersMonth,
+                        'month' => $topShortersM,
                         'all' => $topShorters,
                     ],
                     'me_month' => ['coins' => $myShortsM,'rank' => $myRankM],
@@ -1236,20 +1240,31 @@ class HallOfFameController extends AbstractActionController
             }
 
             if($detail == 'mining') {
-                $totalUserShorts = $this->mUserSetTbl->select(['setting_name' => 'gpuminer-etc-totalcoins']);
+                $totalSel = new Select($this->mUsrStatsTbl->getTable());
+                $totalSel->join(['u' => 'user'],'u.User_ID = user_faucet_stat.user_idfs', ['username','avatar']);
+                $gWh = new Where();
+                $gWh->NEST
+                    ->like('stat_key', 'user-nano-etc-coin-total')
+                    ->OR
+                    ->like('stat_key', 'user-nano-rvn-coin-total')
+                    ->UNNEST;
+                $totalSel->where($gWh);
+                $totalUserShorts = $this->mUsrStatsTbl->selectWith($totalSel);
                 $shortsByUser = [];
+                $infoByUserId = [];
                 if(count($totalUserShorts) > 0) {
                     foreach($totalUserShorts as $shd) {
-                        $shortsByUser[$shd->user_idfs] = (int)$shd->setting_value;
-                    }
-                }
-                $totalUserShorts = $this->mUserSetTbl->select(['setting_name' => 'gpuminer-totalcoins']);
-                if(count($totalUserShorts) > 0) {
-                    foreach($totalUserShorts as $shd) {
-                        if(!array_key_exists($shd->user_idfs,$shortsByUser)) {
-                            $shortsByUser[$shd->user_idfs] = (int)$shd->setting_value;
+                        if(!array_key_exists('user-'.$shd->user_idfs, $shortsByUser)) {
+                            $shortsByUser['user-'.$shd->user_idfs] = (int)$shd->stat_data;
+                            $infoByUserId['user-'.$shd->user_idfs] = (object)[
+                                'name' => $shd->username,
+                                'avatar' => ($shd->avatar != '') ? $shd->avatar : $shd->username,
+                                'id' => $shd->user_idfs,
+                                'coins' => (int)$shd->stat_data
+                            ];
                         } else {
-                            $shortsByUser[$shd->user_idfs]+= (int)$shd->setting_value;
+                            $shortsByUser['user-'.$shd->user_idfs] += (int)$shd->stat_data;
+                            $infoByUserId['user-'.$shd->user_idfs]->coins += (int)$shd->stat_data;
                         }
                     }
                 }
@@ -1259,63 +1274,62 @@ class HallOfFameController extends AbstractActionController
                 $myRank = "-";
                 $myShorts = 0;
                 foreach(array_keys($shortsByUser) as $claimUser) {
-                    if($claimUser == $me->User_ID) {
+                    if($claimUser == 'user-'.$me->User_ID) {
                         $myRank = $rank;
                         $myShorts = $shortsByUser[$claimUser];
                     }
                     if($rank <= 50) {
-                        $userInfo = $this->mUserTbl->select(['User_ID' => $claimUser]);
-                        if(count($userInfo) > 0) {
-                            $userInfo = $userInfo->current();
-                            $topShorters[] = (object)[
-                                'name' => $userInfo->username,
-                                'avatar' => ($userInfo->avatar != '') ? $userInfo->avatar : $userInfo->username,
-                                'id' => $userInfo->User_ID,
-                                'rank' => $rank,
-                                'coins' => (int)$shortsByUser[$claimUser],
-                            ];
+                        if(array_key_exists($claimUser,$infoByUserId)) {
+                            $infoByUserId[$claimUser]->rank = $rank;
+                            $topShorters[] = $infoByUserId[$claimUser];
                         }
-
                     }
                     $rank++;
                 }
 
-                $totalUserShorts = $this->mUserSetTbl->select(['setting_name' => 'gpuminer-rvn-month']);
+                $totalSel = new Select($this->mUsrStatsTbl->getTable());
+                $totalSel->join(['u' => 'user'],'u.User_ID = user_faucet_stat.user_idfs', ['username','avatar']);
+                $gWh = new Where();
+                $gWh->NEST
+                    ->like('stat_key', 'user-nano-etc-coin-m-'.date('n-Y',time()))
+                    ->OR
+                    ->like('stat_key', 'user-nano-rvn-coin-m-'.date('n-Y',time()))
+                    ->UNNEST;
+                $totalSel->where($gWh);
+                $totalUserShorts = $this->mUsrStatsTbl->selectWith($totalSel);
                 $shortsByUser = [];
+                $infoByUserId = [];
                 if(count($totalUserShorts) > 0) {
                     foreach($totalUserShorts as $shd) {
-                        $shortsByUser[$shd->user_idfs] = (int)$shd->setting_value;
-                    }
-                }
-                $totalUserShorts = $this->mUserSetTbl->select(['setting_name' => 'gpuminer-etc-month']);
-                if(count($totalUserShorts) > 0) {
-                    foreach($totalUserShorts as $shd) {
-                        $shortsByUser[$shd->user_idfs] = (int)$shd->setting_value;
+                        if(!array_key_exists('user-'.$shd->user_idfs, $shortsByUser)) {
+                            $shortsByUser['user-'.$shd->user_idfs] = (int)$shd->stat_data;
+                            $infoByUserId['user-'.$shd->user_idfs] = (object)[
+                                'name' => $shd->username,
+                                'avatar' => ($shd->avatar != '') ? $shd->avatar : $shd->username,
+                                'id' => $shd->user_idfs,
+                                'coins' => (int)$shd->stat_data
+                            ];
+                        } else {
+                            $shortsByUser['user-'.$shd->user_idfs] += (int)$shd->stat_data;
+                            $infoByUserId['user-'.$shd->user_idfs]->coins += (int)$shd->stat_data;
+                        }
                     }
                 }
                 arsort($shortsByUser);
-                $topShortersMonth = [];
+                $topShortersM = [];
                 $rank = 1;
                 $myRankM = "-";
                 $myShortsM = 0;
                 foreach(array_keys($shortsByUser) as $claimUser) {
-                    if($claimUser == $me->User_ID) {
+                    if($claimUser == 'user-'.$me->User_ID) {
                         $myRankM = $rank;
                         $myShortsM = $shortsByUser[$claimUser];
                     }
                     if($rank <= 50) {
-                        $userInfo = $this->mUserTbl->select(['User_ID' => $claimUser]);
-                        if(count($userInfo) > 0) {
-                            $userInfo = $userInfo->current();
-                            $topShortersMonth[] = (object)[
-                                'name' => $userInfo->username,
-                                'avatar' => ($userInfo->avatar != '') ? $userInfo->avatar : $userInfo->username,
-                                'id' => $userInfo->User_ID,
-                                'rank' => $rank,
-                                'coins' => (int)$shortsByUser[$claimUser],
-                            ];
+                        if(array_key_exists($claimUser,$infoByUserId)) {
+                            $infoByUserId[$claimUser]->rank = $rank;
+                            $topShortersM[] = $infoByUserId[$claimUser];
                         }
-
                     }
                     $rank++;
                 }
@@ -1324,7 +1338,7 @@ class HallOfFameController extends AbstractActionController
                 return new ViewModel([
                     'date' => date('Y-m-d H:i:s'),
                     'player_list' => [
-                        'month' => $topShortersMonth,
+                        'month' => $topShortersM,
                         'all' => $topShorters,
                     ],
                     'me_month' => ['coins' => $myShortsM,'rank' => $myRankM],
@@ -1467,11 +1481,11 @@ class HallOfFameController extends AbstractActionController
             }
 
             if($detail == 'faucet') {
-                $totalUserClaims = $this->mUserSetTbl->select(['setting_name' => 'faucet-claimtotal']);
+                $totalUserClaims = $this->mUsrStatsTbl->select(['stat_key' => 'user-claims-total']);
                 $claimsByUser = [];
                 if(count($totalUserClaims) > 0) {
                     foreach($totalUserClaims as $cl) {
-                        $claimsByUser[$cl->user_idfs] = (int)$cl->setting_value;
+                        $claimsByUser[$cl->user_idfs] = (int)$cl->stat_data;
                     }
                 }
                 arsort($claimsByUser);
@@ -1501,14 +1515,48 @@ class HallOfFameController extends AbstractActionController
                     $rank++;
                 }
 
+                $totalUserClaims = $this->mUsrStatsTbl->select(['stat_key' => 'user-claims-m-'.date('n-Y', time())]);
+                $claimsByUser = [];
+                if(count($totalUserClaims) > 0) {
+                    foreach($totalUserClaims as $cl) {
+                        $claimsByUser[$cl->user_idfs] = (int)$cl->stat_data;
+                    }
+                }
+                arsort($claimsByUser);
+                $topClaimersM = [];
+                $rank = 1;
+                $myRankM = "-";
+                $myClaimsM = 0;
+                foreach(array_keys($claimsByUser) as $claimUser) {
+                    if($claimUser == $me->User_ID) {
+                        $myRankM = $rank;
+                        $myClaimsM = $claimsByUser[$claimUser];
+                    }
+                    if($rank <= 50) {
+                        $userInfo = $this->mUserTbl->select(['User_ID' => $claimUser]);
+                        if(count($userInfo) > 0) {
+                            $userInfo = $userInfo->current();
+                            $topClaimersM[] = (object)[
+                                'name' => $userInfo->username,
+                                'avatar' => ($userInfo->avatar != '') ? $userInfo->avatar : $userInfo->username,
+                                'id' => $userInfo->User_ID,
+                                'rank' => $rank,
+                                'claims' => (int)$claimsByUser[$claimUser],
+                            ];
+                        }
+
+                    }
+                    $rank++;
+                }
+
                 # Show Stats
                 return new ViewModel([
                     'date' => date('Y-m-d H:i:s'),
                     'player_list' => [
-                        'month' => $topClaimers,
+                        'month' => $topClaimersM,
                         'all' => $topClaimers,
                     ],
-                    'me_month' => ['claims' => (int)$myClaims,'rank' => $myRank],
+                    'me_month' => ['claims' => (int)$myClaimsM,'rank' => $myRankM],
                     'me_all' => ['claims' => (int)$myClaims,'rank' => $myRank]
                 ]);
             }
