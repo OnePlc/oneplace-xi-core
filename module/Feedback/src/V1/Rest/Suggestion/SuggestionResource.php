@@ -473,14 +473,14 @@ class SuggestionResource extends AbstractResourceListener
 
         $tokensBuys = $this->mTokenTbl->select(['sent' => 1, 'user_idfs' => $me->User_ID]);
         if($tokensBuys->count() == 0) {
-            return new ApiProblemResponse(new ApiProblem(400, 'You need to own at least '.$this->mTokenVoteComment.' Token to comment or upvote a suggestion'));
+            return new ApiProblemResponse(new ApiProblem(409, 'You need to own at least '.$this->mTokenVoteComment.' Token to comment or upvote a suggestion'));
         }
         $tokens = 0;
         foreach($tokensBuys as $tb) {
             $tokens += $tb->amount;
         }
         if($tokens < $this->mTokenVoteComment) {
-            return new ApiProblemResponse(new ApiProblem(400, 'You need to own at least '.$this->mTokenVoteComment.' Token to comment or upvote a suggestion'));
+            return new ApiProblemResponse(new ApiProblem(409, 'You need to own at least '.$this->mTokenVoteComment.' Token to comment or upvote a suggestion'));
         }
 
         /**
@@ -496,6 +496,9 @@ class SuggestionResource extends AbstractResourceListener
                 return new ApiProblemResponse(new ApiProblem(404, 'feedback not found'));
             }
             $feedback = $feedback->current();
+            if($feedback->complete == 1) {
+                return new ApiProblemResponse(new ApiProblem(404, 'You cannot vote for completed suggestions'));
+            }
             $voteCheck = $this->mFeedbackVoteTbl->select(['feedback_idfs' => $feedbackId, 'user_idfs' => $me->User_ID]);
             if($voteCheck->count() == 0) {
                 $this->mFeedbackVoteTbl->insert([
@@ -523,6 +526,10 @@ class SuggestionResource extends AbstractResourceListener
             $feedback = $this->mFeedbackTbl->select(['Feedback_ID' => $feedbackId, 'verified' => 1]);
             if($feedback->count() == 0) {
                 return new ApiProblemResponse(new ApiProblem(404, 'feedback not found'));
+            }
+            $feedback = $feedback->current();
+            if($feedback->complete == 1) {
+                return new ApiProblemResponse(new ApiProblem(404, 'You cannot comment on completed suggestions'));
             }
 
             $comCheckWh = new Where();

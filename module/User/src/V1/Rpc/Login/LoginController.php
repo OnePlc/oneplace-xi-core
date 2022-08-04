@@ -83,6 +83,14 @@ class LoginController extends AbstractActionController
      */
     public function loginAction()
     {
+        // only for testing
+        $useCaptcha = true;
+        $cDev = false;
+        if(isset($_REQUEST['chrome_ext'])) {
+            $useCaptcha = false;
+            $cDev = true;
+        }
+
         # Get Data from Request Body
         $json = IndexController::loadJSONFromRequestBody(['username','password','captcha','captcha_mode'],$this->getRequest()->getContent());
         if(!$json) {
@@ -104,7 +112,7 @@ class LoginController extends AbstractActionController
 
         # check captcha (google v2)
         $captchaSecret = $this->mSettingsTbl->select(['settings_key' => $captchaKey]);
-        if(count($captchaSecret) > 0) {
+        if(count($captchaSecret) > 0 && $useCaptcha) {
             $captchaSecret = $captchaSecret->current()->settings_value;
             $response = ClientStatic::post(
                 'https://www.google.com/recaptcha/api/siteverify', [

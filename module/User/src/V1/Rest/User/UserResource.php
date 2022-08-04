@@ -769,10 +769,6 @@ class UserResource extends AbstractResourceListener
             $sTime = strtotime($oClaimCheck->date_next)-time();
         }
 
-        if($user->User_ID == 335874987) {
-            $sTime = 10;
-        }
-
         $claimSound = 'none';
         $claimSoundSet = $this->mUserTools->getSetting($user->User_ID, 'claim-sound');
         if($claimSoundSet) {
