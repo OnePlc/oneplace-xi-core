@@ -22,6 +22,7 @@ use Faucet\Transaction\InventoryHelper;
 use Faucet\Transaction\TransactionHelper;
 use Laminas\ApiTools\ApiProblem\ApiProblem;
 use Laminas\ApiTools\Rest\AbstractResourceListener;
+use Laminas\Db\Sql\Select;
 use Laminas\Db\TableGateway\TableGateway;
 use Laminas\Db\Sql\Where;
 use Laminas\Http\ClientStatic;
@@ -166,6 +167,18 @@ class UserResource extends AbstractResourceListener
      * @var TableGateway
      */
     private $mClaimTbl;
+    /**
+     * @var TableGateway
+     */
+    private $mTaskDoneTbl;
+    /**
+     * @var TableGateway
+     */
+    private $mShortDoneTbl;
+    /**
+     * @var TableGateway
+     */
+    private $mTaskTbl;
 
     /**
      * Constructor
@@ -189,6 +202,9 @@ class UserResource extends AbstractResourceListener
         $this->mUserSetTbl = new TableGateway('user_setting', $mapper);
         $this->mUserAccsTbl = new TableGateway('user_linked_account', $mapper);
         $this->mClaimTbl = new TableGateway('faucet_claim', $mapper);
+        $this->mTaskDoneTbl = new TableGateway('faucet_dailytask_user', $mapper);
+        $this->mShortDoneTbl = new TableGateway('shortlink_link_user', $mapper);
+        $this->mTaskTbl = new TableGateway('faucet_dailytask', $mapper);
 
         $this->mTransaction = new TransactionHelper($mapper);
         $this->mSecTools = new SecurityTools($mapper);
@@ -783,6 +799,7 @@ class UserResource extends AbstractResourceListener
             'servertime' => date('Y-m-d H:i:s', time()),
             'claim_timer' => $sTime,
             'claim_sound' => $claimSound,
+            'daily_claim_count' => $this->getDailyTasksReadyToClaim($user),
             'emp_mode' => ($user->is_employee == 1) ? 'mod' : '',
             'verified' => (int)$user->email_verified,
             'show_verify_mail' => ($user->send_verify == null) ? ($user->email_verified == 1) ? false : true : false,
@@ -806,6 +823,23 @@ class UserResource extends AbstractResourceListener
             //'inventory_slots_used' => count($userInventory),
             'inbox_count' => $inboxMessages
         ];
+
+        $forceUpdateTo = '2.0.8';
+        if(isset($_REQUEST['v'])) {
+            $clientVersion = substr(filter_var($_REQUEST['v'], FILTER_SANITIZE_STRING),0, 6);
+
+            if(!empty($user->User_ID) && $user->User_ID > 0) {
+                $this->mapper->update([
+                    'client_version' => $clientVersion
+                ],['User_ID' => $user->User_ID]);
+            }
+
+            if($forceUpdateTo) {
+                if($forceUpdateTo != $clientVersion) {
+                    $returnData['force_update'] = 1;
+                }
+            }
+        }
 
         $systemAlert = $this->mSettingsTbl->select(['settings_key' => 'system_alert']);
         if(count($systemAlert) > 0) {
@@ -1405,5 +1439,67 @@ class UserResource extends AbstractResourceListener
                 'withdrawals' => $withdrawals
             ]
         ];
+    }
+
+    private function getDailyTasksReadyToClaim($me) {
+        $sDate = date('Y-m-d', time());
+
+        /**
+         * Gather relevant data for progress
+         */
+        $oWh = new Where();
+        $oWh->equalTo('user_idfs', $me->User_ID);
+        $oWh->like('date_claimed', $sDate.'%');
+        $shortlinksDone = $this->mShortDoneTbl->select($oWh)->count();
+
+        $oWh = new Where();
+        $oWh->equalTo('user_idfs', $me->User_ID);
+        $oWh->like('date', $sDate.'%');
+        $claimsDone = $this->mClaimTbl->select($oWh)->count();
+
+        $oWh = new Where();
+        $oWh->equalTo('user_idfs', $me->User_ID);
+        $oWh->like('date', $sDate.'%');
+        $dailysToday = $this->mTaskDoneTbl->select($oWh);
+        $dailyDoneById = [];
+        foreach($dailysToday as $daily) {
+            $dailyDoneById['task-'.$daily->task_idfs] = 1;
+        }
+        $dailysDone = $dailysToday->count();
+
+        # Load Dailytasks
+        $oWh = new Where();
+        $oWh->NEST
+            ->equalTo('mode', 'website')
+            ->OR
+            ->equalTo('mode', 'global')
+            ->UNNEST;
+        $dailySel = new Select($this->mTaskTbl->getTable());
+        $dailySel->where($oWh);
+        $dailySel->order('sort_id ASC');
+        $achievementsDB = $this->mTaskTbl->selectWith($dailySel);
+        $readyToClaim = 0;
+        foreach($achievementsDB as $achiev) {
+            switch($achiev->type) {
+                case 'shortlink':
+                    $progress = $shortlinksDone;
+                    break;
+                case 'claim':
+                    $progress = $claimsDone;
+                    break;
+                case 'daily':
+                    $progress = $dailysDone;
+                    break;
+                default:
+                    $progress = 0;
+                    break;
+            }
+
+            if($progress >= $achiev->goal && !array_key_exists('task-'.$achiev->Dailytask_ID, $dailyDoneById)) {
+                $readyToClaim++;
+            }
+        }
+
+        return $readyToClaim;
     }
 }

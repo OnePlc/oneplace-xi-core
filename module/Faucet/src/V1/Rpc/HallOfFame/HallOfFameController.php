@@ -114,6 +114,14 @@ class HallOfFameController extends AbstractActionController
      * @since 1.0.0
      */
     protected $mContest;
+    /**
+     * @var TableGateway
+     */
+    private $mContestRewards;
+    /**
+     * @var TableGateway
+     */
+    private $mGuildStatsTbl;
 
     /**
      * Constructor
@@ -129,6 +137,7 @@ class HallOfFameController extends AbstractActionController
         $this->mUserSetTbl = new TableGateway('user_setting', $mapper);
         $this->mLotteryWinTbl = new TableGateway('faucet_lottery_winner', $mapper);
         $this->mGuildTbl = new TableGateway('faucet_guild', $mapper);
+        $this->mGuildStatsTbl = new TableGateway('faucet_guild_statistic', $mapper);
         $this->mAchievDoneTbl = new TableGateway('faucet_achievement_user', $mapper);
         $this->mAchievTbl = new TableGateway('faucet_achievement', $mapper);
         $this->mUsrStatsTbl = new TableGateway('user_faucet_stat', $mapper);
@@ -380,7 +389,7 @@ class HallOfFameController extends AbstractActionController
             if($detail == 'referral') {
                 $aAdAcounts = [335875860 => true, 335877074 => true,335876060 => true,335880700 => true,335875071 => true,335880436 => true,335890616 => true,335898589 => true];
 
-                $totalUserShorts = $this->mUsrStatsTbl->select(['stat_key' => 'ref-count-'.date('n-Y', time())]);
+                $totalUserShorts = $this->mUsrStatsTbl->select(['stat_key' => 'user-referral-m-'.date('n-Y', time())]);
                 $shortsByUser = [];
                 if(count($totalUserShorts) > 0) {
                     foreach($totalUserShorts as $shd) {
@@ -416,7 +425,7 @@ class HallOfFameController extends AbstractActionController
                     $rank++;
                 }
 
-                $totalUserShortsA = $this->mUsrStatsTbl->select(['stat_key' => 'ref-count-total']);
+                $totalUserShortsA = $this->mUsrStatsTbl->select(['stat_key' => 'user-referral-total']);
                 $shortsByUserA = [];
                 if(count($totalUserShortsA) > 0) {
                     foreach($totalUserShortsA as $shda) {
@@ -548,380 +557,405 @@ class HallOfFameController extends AbstractActionController
                 $conYear = date('Y', time());
 
                 $myContestStats = [];
+                $myContestRanks = [];
                 $top10Contest = ['contest-10' => [],'contest-5' => [],'contest-6' => [],'contest-11' => [],'contest-12' => [],'contest-13' => [],'contest-1' => [],'contest-14' => [],'contest-15' => []];
 
                 /**
                  * Shortlinks
                  */
-                $statSel = new Select($this->mUsrStatsTbl->getTable());
-                $statSel->order('date DESC');
-                $statSel->where(['stat_key' => 'shdone-m-'.date('n-Y',time())]);
-                $statFound = $this->mUsrStatsTbl->selectWith($statSel);
-                if($statFound->count() > 0) {
-                    $top3ShById = [];
-                    foreach($statFound as $statUser) {
-                        $top3ShById[$statUser->user_idfs] = $statUser->stat_data;
+                $totalSel = new Select($this->mUsrStatsTbl->getTable());
+                $totalSel->join(['u' => 'user'],'u.User_ID = user_faucet_stat.user_idfs', ['username','avatar','xp_level']);
+                $totalSel->where(['stat_key' => 'user-shortlink-m-'.date('n-Y', time())]);
+                $totalSel->order('u.xp_level DESC');
+                $totalUserShorts = $this->mUsrStatsTbl->selectWith($totalSel);
+                $shortsByUser = [];
+                $infoByUserId = [];
+                if(count($totalUserShorts) > 0) {
+                    foreach($totalUserShorts as $shd) {
+                        $shortsByUser['user-'.$shd->user_idfs] = (int)$shd->stat_data.$shd->xp_level;
+                        $infoByUserId['user-'.$shd->user_idfs] = (object)[
+                            'name' => $shd->username,
+                            'xp_level' => $shd->xp_level,
+                            'avatar' => ($shd->avatar != '') ? $shd->avatar : $shd->username,
+                            'id' => $shd->user_idfs,
+                            'count' => (int)$shd->stat_data
+                        ];
                     }
-                    arsort($top3ShById);
-                    $iCount = 0;
-                    foreach(array_keys($top3ShById) as $topId) {
-                        $topInfo = $this->mUserTbl->select(['User_ID' => $topId]);
-                        if($topInfo->count() > 0) {
-                            $topInfo = $topInfo->current();
-                            $top10Contest['contest-10'][] = (object)[
-                                'id' => $topId,
-                                'rank' => ($iCount+1),
-                                'count' => $top3ShById[$topId],
-                                'name' => $topInfo->username,
-                                'avatar' => ($topInfo->avatar == '') ? $topInfo->username : $topInfo->avatar,
-                            ];
-                            if($iCount == 10) {
-                                break;
-                            }
-                            $iCount++;
+                }
+                arsort($shortsByUser);
+                $rank = 1;
+                $myRankM = "-";
+                $myShortsM = 0;
+                foreach(array_keys($shortsByUser) as $claimUser) {
+                    if($claimUser == 'user-'.$me->User_ID) {
+                        $myRankM = $rank;
+                        $myShortsM = $infoByUserId[$claimUser]->count;
+                    }
+                    if($rank <= 10) {
+                        if(array_key_exists($claimUser,$infoByUserId)) {
+                            $infoByUserId[$claimUser]->rank = $rank;
+                            $top10Contest['contest-10'][] = $infoByUserId[$claimUser];
                         }
                     }
+                    $rank++;
                 }
 
-                $myStatSel = new Select($this->mUsrStatsTbl->getTable());
-                $myStatSel->where(['stat_key' => 'shdone-m-'.date('n-Y', time()), 'user_idfs' => $me->User_ID]);
-                $myStat = $this->mUsrStatsTbl->selectWith($myStatSel);
-                if($myStat->count() > 0) {
-                    $myContestStats[10] = $myStat->current()->stat_data;
-                } else {
-                    $myContestStats[10] = 0;
-                }
+                $myContestStats[10] = $myShortsM;
+                $myContestRanks[10] = $myRankM;
 
                 /**
                  * Daily Tasks
                  */
-                $statSel = new Select($this->mUsrStatsTbl->getTable());
-                $statSel->order('date DESC');
-                $statSel->where(['stat_key' => 'user-dailys-m-'.date('n-Y',time())]);
-                $statFound = $this->mUsrStatsTbl->selectWith($statSel);
-                if($statFound->count() > 0) {
-                    $top3ShById = [];
-                    foreach($statFound as $statUser) {
-                        $top3ShById[$statUser->user_idfs] = $statUser->stat_data;
+                $totalSel = new Select($this->mUsrStatsTbl->getTable());
+                $totalSel->join(['u' => 'user'],'u.User_ID = user_faucet_stat.user_idfs', ['username','avatar','xp_level']);
+                $totalSel->where(['stat_key' => 'user-dailys-m-'.date('n-Y', time())]);
+                $totalSel->order('u.xp_level DESC');
+                $totalUserShorts = $this->mUsrStatsTbl->selectWith($totalSel);
+                $shortsByUser = [];
+                $infoByUserId = [];
+                if(count($totalUserShorts) > 0) {
+                    foreach($totalUserShorts as $shd) {
+                        $shortsByUser['user-'.$shd->user_idfs] = (int)$shd->stat_data.$shd->xp_level;
+                        $infoByUserId['user-'.$shd->user_idfs] = (object)[
+                            'name' => $shd->username,
+                            'xp_level' => $shd->xp_level,
+                            'avatar' => ($shd->avatar != '') ? $shd->avatar : $shd->username,
+                            'id' => $shd->user_idfs,
+                            'count' => (int)$shd->stat_data
+                        ];
                     }
-                    arsort($top3ShById);
-                    $iCount = 0;
-                    foreach(array_keys($top3ShById) as $topId) {
-                        $topInfo = $this->mUserTbl->select(['User_ID' => $topId]);
-                        if($topInfo->count() > 0) {
-                            $topInfo = $topInfo->current();
-                            $top10Contest['contest-13'][] = (object)[
-                                'id' => $topId,
-                                'rank' => ($iCount+1),
-                                'count' => $top3ShById[$topId],
-                                'name' => $topInfo->username,
-                                'avatar' => ($topInfo->avatar == '') ? $topInfo->username : $topInfo->avatar,
-                            ];
-                            if($iCount == 10) {
-                                break;
-                            }
-                            $iCount++;
+                }
+                arsort($shortsByUser);
+                $rank = 1;
+                $myRankM = "-";
+                $myShortsM = 0;
+                foreach(array_keys($shortsByUser) as $claimUser) {
+                    if($claimUser == 'user-'.$me->User_ID) {
+                        $myRankM = $rank;
+                        $myShortsM = $infoByUserId[$claimUser]->count;
+                    }
+                    if($rank <= 10) {
+                        if(array_key_exists($claimUser,$infoByUserId)) {
+                            $infoByUserId[$claimUser]->rank = $rank;
+                            $top10Contest['contest-13'][] = $infoByUserId[$claimUser];
                         }
                     }
+                    $rank++;
                 }
 
-                $myStatSel = new Select($this->mUsrStatsTbl->getTable());
-                $myStatSel->where(['stat_key' => 'user-dailys-m-'.date('n-Y', time()), 'user_idfs' => $me->User_ID]);
-                $myStat = $this->mUsrStatsTbl->selectWith($myStatSel);
-                if($myStat->count() > 0) {
-                    $myContestStats[13] = $myStat->current()->stat_data;
-                } else {
-                    $myContestStats[13] = 0;
-                }
+                $myContestStats[13] = $myShortsM;
+                $myContestRanks[13] = $myRankM;
 
                 /**
                  * Offerwalls BIG
                  */
-                $statSel = new Select($this->mUsrStatsTbl->getTable());
-                $statSel->order('date DESC');
-                $statSel->where(['stat_key' => 'user-offerbig-m-'.date('n-Y',time())]);
-                $statFound = $this->mUsrStatsTbl->selectWith($statSel);
-                if($statFound->count() > 0) {
-                    $top3ShById = [];
-                    foreach($statFound as $statUser) {
-                        $top3ShById[$statUser->user_idfs] = $statUser->stat_data;
+                $totalSel = new Select($this->mUsrStatsTbl->getTable());
+                $totalSel->join(['u' => 'user'],'u.User_ID = user_faucet_stat.user_idfs', ['username','avatar','xp_level']);
+                $totalSel->where(['stat_key' => 'user-offerbig-m-'.date('n-Y', time())]);
+                $totalSel->order('u.xp_level DESC');
+                $totalUserShorts = $this->mUsrStatsTbl->selectWith($totalSel);
+                $shortsByUser = [];
+                $infoByUserId = [];
+                if(count($totalUserShorts) > 0) {
+                    foreach($totalUserShorts as $shd) {
+                        $shortsByUser['user-'.$shd->user_idfs] = (int)$shd->stat_data.$shd->xp_level;
+                        $infoByUserId['user-'.$shd->user_idfs] = (object)[
+                            'name' => $shd->username,
+                            'xp_level' => $shd->xp_level,
+                            'avatar' => ($shd->avatar != '') ? $shd->avatar : $shd->username,
+                            'id' => $shd->user_idfs,
+                            'count' => (int)$shd->stat_data
+                        ];
                     }
-                    arsort($top3ShById);
-                    $iCount = 0;
-                    foreach(array_keys($top3ShById) as $topId) {
-                        $topInfo = $this->mUserTbl->select(['User_ID' => $topId]);
-                        if($topInfo->count() > 0) {
-                            $topInfo = $topInfo->current();
-                            $top10Contest['contest-11'][] = (object)[
-                                'id' => $topId,
-                                'rank' => ($iCount+1),
-                                'count' => $top3ShById[$topId],
-                                'name' => $topInfo->username,
-                                'avatar' => ($topInfo->avatar == '') ? $topInfo->username : $topInfo->avatar,
-                            ];
-                            if($iCount == 10) {
-                                break;
-                            }
-                            $iCount++;
+                }
+                arsort($shortsByUser);
+                $rank = 1;
+                $myRankM = "-";
+                $myShortsM = 0;
+                foreach(array_keys($shortsByUser) as $claimUser) {
+                    if($claimUser == 'user-'.$me->User_ID) {
+                        $myRankM = $rank;
+                        $myShortsM = $infoByUserId[$claimUser]->count;
+                    }
+                    if($rank <= 10) {
+                        if(array_key_exists($claimUser,$infoByUserId)) {
+                            $infoByUserId[$claimUser]->rank = $rank;
+                            $top10Contest['contest-11'][] = $infoByUserId[$claimUser];
                         }
                     }
+                    $rank++;
                 }
 
-                $myStatSel = new Select($this->mUsrStatsTbl->getTable());
-                $myStatSel->where(['stat_key' => 'user-offerbig-m-'.date('n-Y', time()), 'user_idfs' => $me->User_ID]);
-                $myStat = $this->mUsrStatsTbl->selectWith($myStatSel);
-                if($myStat->count() > 0) {
-                    $myContestStats[11] = $myStat->current()->stat_data;
-                } else {
-                    $myContestStats[11] = 0;
-                }
+                $myContestStats[11] = $myShortsM;
+                $myContestRanks[11] = $myRankM;
 
                 /**
                  * Offerwalls Small
                  */
-                $statSel = new Select($this->mUsrStatsTbl->getTable());
-                $statSel->order('date DESC');
-                $statSel->where(['stat_key' => 'user-offersmall-m-'.date('n-Y',time())]);
-                $statFound = $this->mUsrStatsTbl->selectWith($statSel);
-                if($statFound->count() > 0) {
-                    $top3ShById = [];
-                    foreach($statFound as $statUser) {
-                        $top3ShById[$statUser->user_idfs] = $statUser->stat_data;
+                $totalSel = new Select($this->mUsrStatsTbl->getTable());
+                $totalSel->join(['u' => 'user'],'u.User_ID = user_faucet_stat.user_idfs', ['username','avatar','xp_level']);
+                $totalSel->where(['stat_key' => 'user-offersmall-m-'.date('n-Y', time())]);
+                $totalSel->order('u.xp_level DESC');
+                $totalUserShorts = $this->mUsrStatsTbl->selectWith($totalSel);
+                $shortsByUser = [];
+                $infoByUserId = [];
+                if(count($totalUserShorts) > 0) {
+                    foreach($totalUserShorts as $shd) {
+                        $shortsByUser['user-'.$shd->user_idfs] = (int)$shd->stat_data.$shd->xp_level;
+                        $infoByUserId['user-'.$shd->user_idfs] = (object)[
+                            'name' => $shd->username,
+                            'xp_level' => $shd->xp_level,
+                            'avatar' => ($shd->avatar != '') ? $shd->avatar : $shd->username,
+                            'id' => $shd->user_idfs,
+                            'count' => (int)$shd->stat_data
+                        ];
                     }
-                    arsort($top3ShById);
-                    $iCount = 0;
-                    foreach(array_keys($top3ShById) as $topId) {
-                        $topInfo = $this->mUserTbl->select(['User_ID' => $topId]);
-                        if($topInfo->count() > 0) {
-                            $topInfo = $topInfo->current();
-                            $top10Contest['contest-12'][] = (object)[
-                                'id' => $topId,
-                                'rank' => ($iCount+1),
-                                'count' => $top3ShById[$topId],
-                                'name' => $topInfo->username,
-                                'avatar' => ($topInfo->avatar == '') ? $topInfo->username : $topInfo->avatar,
-                            ];
-                            if($iCount == 10) {
-                                break;
-                            }
-                            $iCount++;
+                }
+                arsort($shortsByUser);
+                $rank = 1;
+                $myRankM = "-";
+                $myShortsM = 0;
+                foreach(array_keys($shortsByUser) as $claimUser) {
+                    if($claimUser == 'user-'.$me->User_ID) {
+                        $myRankM = $rank;
+                        $myShortsM = $infoByUserId[$claimUser]->count;
+                    }
+                    if($rank <= 10) {
+                        if(array_key_exists($claimUser,$infoByUserId)) {
+                            $infoByUserId[$claimUser]->rank = $rank;
+                            $top10Contest['contest-12'][] = $infoByUserId[$claimUser];
                         }
                     }
+                    $rank++;
                 }
 
-                $myStatSel = new Select($this->mUsrStatsTbl->getTable());
-                $myStatSel->where(['stat_key' => 'user-offersmall-m-'.date('n-Y', time()), 'user_idfs' => $me->User_ID]);
-                $myStat = $this->mUsrStatsTbl->selectWith($myStatSel);
-                if($myStat->count() > 0) {
-                    $myContestStats[12] = $myStat->current()->stat_data;
-                } else {
-                    $myContestStats[12] = 0;
-                }
+                $myContestStats[12] = $myShortsM;
+                $myContestRanks[12] = $myRankM;
 
                 /**
                  * Offerwalls Tiny
                  */
-                $statSel = new Select($this->mUsrStatsTbl->getTable());
-                $statSel->order('date DESC');
-                $statSel->where(['stat_key' => 'user-offertiny-m-'.date('n-Y',time())]);
-                $statFound = $this->mUsrStatsTbl->selectWith($statSel);
-                if($statFound->count() > 0) {
-                    $top3ShById = [];
-                    foreach($statFound as $statUser) {
-                        $top3ShById[$statUser->user_idfs] = $statUser->stat_data;
+                $totalSel = new Select($this->mUsrStatsTbl->getTable());
+                $totalSel->join(['u' => 'user'],'u.User_ID = user_faucet_stat.user_idfs', ['username','avatar','xp_level']);
+                $totalSel->where(['stat_key' => 'user-offertiny-m-'.date('n-Y', time())]);
+                $totalSel->order('u.xp_level DESC');
+                $totalUserShorts = $this->mUsrStatsTbl->selectWith($totalSel);
+                $shortsByUser = [];
+                $infoByUserId = [];
+                if(count($totalUserShorts) > 0) {
+                    foreach($totalUserShorts as $shd) {
+                        $shortsByUser['user-'.$shd->user_idfs] = (int)$shd->stat_data.$shd->xp_level;
+                        $infoByUserId['user-'.$shd->user_idfs] = (object)[
+                            'name' => $shd->username,
+                            'xp_level' => $shd->xp_level,
+                            'avatar' => ($shd->avatar != '') ? $shd->avatar : $shd->username,
+                            'id' => $shd->user_idfs,
+                            'count' => (int)$shd->stat_data
+                        ];
                     }
-                    arsort($top3ShById);
-                    $iCount = 0;
-                    foreach(array_keys($top3ShById) as $topId) {
-                        $topInfo = $this->mUserTbl->select(['User_ID' => $topId]);
-                        if($topInfo->count() > 0) {
-                            $topInfo = $topInfo->current();
-                            $top10Contest['contest-14'][] = (object)[
-                                'id' => $topId,
-                                'rank' => ($iCount+1),
-                                'count' => $top3ShById[$topId],
-                                'name' => $topInfo->username,
-                                'avatar' => ($topInfo->avatar == '') ? $topInfo->username : $topInfo->avatar,
-                            ];
-                            if($iCount == 10) {
-                                break;
-                            }
-                            $iCount++;
+                }
+                arsort($shortsByUser);
+                $rank = 1;
+                $myRankM = "-";
+                $myShortsM = 0;
+                foreach(array_keys($shortsByUser) as $claimUser) {
+                    if($claimUser == 'user-'.$me->User_ID) {
+                        $myRankM = $rank;
+                        $myShortsM = $infoByUserId[$claimUser]->count;
+                    }
+                    if($rank <= 10) {
+                        if(array_key_exists($claimUser,$infoByUserId)) {
+                            $infoByUserId[$claimUser]->rank = $rank;
+                            $top10Contest['contest-14'][] = $infoByUserId[$claimUser];
                         }
                     }
+                    $rank++;
                 }
 
-                $myStatSel = new Select($this->mUsrStatsTbl->getTable());
-                $myStatSel->where(['stat_key' => 'user-offertiny-m-'.date('n-Y', time()), 'user_idfs' => $me->User_ID]);
-                $myStat = $this->mUsrStatsTbl->selectWith($myStatSel);
-                if($myStat->count() > 0) {
-                    $myContestStats[14] = $myStat->current()->stat_data;
-                } else {
-                    $myContestStats[14] = 0;
-                }
+                $myContestStats[14] = $myShortsM;
+                $myContestRanks[14] = $myRankM;
 
                 /**
                  * Offerwalls Medium
                  */
-                $statSel = new Select($this->mUsrStatsTbl->getTable());
-                $statSel->order('date DESC');
-                $statSel->where(['stat_key' => 'user-offermed-m-'.date('n-Y',time())]);
-                $statFound = $this->mUsrStatsTbl->selectWith($statSel);
-                if($statFound->count() > 0) {
-                    $top3ShById = [];
-                    foreach($statFound as $statUser) {
-                        $top3ShById[$statUser->user_idfs] = $statUser->stat_data;
+                $totalSel = new Select($this->mUsrStatsTbl->getTable());
+                $totalSel->join(['u' => 'user'],'u.User_ID = user_faucet_stat.user_idfs', ['username','avatar','xp_level']);
+                $totalSel->where(['stat_key' => 'user-offermed-m-'.date('n-Y', time())]);
+                $totalSel->order('u.xp_level DESC');
+                $totalUserShorts = $this->mUsrStatsTbl->selectWith($totalSel);
+                $shortsByUser = [];
+                $infoByUserId = [];
+                if(count($totalUserShorts) > 0) {
+                    foreach($totalUserShorts as $shd) {
+                        $shortsByUser['user-'.$shd->user_idfs] = (int)$shd->stat_data.$shd->xp_level;
+                        $infoByUserId['user-'.$shd->user_idfs] = (object)[
+                            'name' => $shd->username,
+                            'xp_level' => $shd->xp_level,
+                            'avatar' => ($shd->avatar != '') ? $shd->avatar : $shd->username,
+                            'id' => $shd->user_idfs,
+                            'count' => (int)$shd->stat_data
+                        ];
                     }
-                    arsort($top3ShById);
-                    $iCount = 0;
-                    foreach(array_keys($top3ShById) as $topId) {
-                        $topInfo = $this->mUserTbl->select(['User_ID' => $topId]);
-                        if($topInfo->count() > 0) {
-                            $topInfo = $topInfo->current();
-                            $top10Contest['contest-15'][] = (object)[
-                                'id' => $topId,
-                                'rank' => ($iCount+1),
-                                'count' => $top3ShById[$topId],
-                                'name' => $topInfo->username,
-                                'avatar' => ($topInfo->avatar == '') ? $topInfo->username : $topInfo->avatar,
-                            ];
-                            if($iCount == 10) {
-                                break;
-                            }
-                            $iCount++;
+                }
+                arsort($shortsByUser);
+                $rank = 1;
+                $myRankM = "-";
+                $myShortsM = 0;
+                foreach(array_keys($shortsByUser) as $claimUser) {
+                    if($claimUser == 'user-'.$me->User_ID) {
+                        $myRankM = $rank;
+                        $myShortsM = $infoByUserId[$claimUser]->count;
+                    }
+                    if($rank <= 10) {
+                        if(array_key_exists($claimUser,$infoByUserId)) {
+                            $infoByUserId[$claimUser]->rank = $rank;
+                            $top10Contest['contest-15'][] = $infoByUserId[$claimUser];
                         }
                     }
+                    $rank++;
                 }
 
-                $myStatSel = new Select($this->mUsrStatsTbl->getTable());
-                $myStatSel->where(['stat_key' => 'user-offermed-m-'.date('n-Y', time()), 'user_idfs' => $me->User_ID]);
-                $myStat = $this->mUsrStatsTbl->selectWith($myStatSel);
-                if($myStat->count() > 0) {
-                    $myContestStats[15] = $myStat->current()->stat_data;
-                } else {
-                    $myContestStats[15] = 0;
-                }
+                $myContestStats[15] = $myShortsM;
+                $myContestRanks[15] = $myRankM;
 
                 // nano-coin-m-rvn-5-2022
                 /**
                  * GPU Miners
                  */
+                $totalSel = new Select($this->mUsrStatsTbl->getTable());
+                $totalSel->join(['u' => 'user'],'u.User_ID = user_faucet_stat.user_idfs', ['username','avatar','xp_level']);
                 $statWh = new Where();
                 $statWh->NEST
                     ->like('stat_key', 'user-nano-etc-coin-m-'.date('n-Y',time()))
                     ->OR
                     ->like('stat_key', 'user-nano-rvn-coin-m-'.date('n-Y',time()))
                     ->UNNEST;
-                $statSel = new Select($this->mUsrStatsTbl->getTable());
-                $statSel->order('date DESC');
-                $statSel->where($statWh);
-                $statFound = $this->mUsrStatsTbl->selectWith($statSel);
-                if($statFound->count() > 0) {
-                    $top3ShById = [];
-                    foreach($statFound as $statUser) {
-                        if(!array_key_exists($statUser->user_idfs, $top3ShById)) {
-                            $top3ShById[$statUser->user_idfs] = $statUser->stat_data;
-                        } else {
-                            $top3ShById[$statUser->user_idfs] += $statUser->stat_data;
-                        }
-                    }
-                    arsort($top3ShById);
-                    $iCount = 0;
-                    foreach(array_keys($top3ShById) as $topId) {
-                        $topInfo = $this->mUserTbl->select(['User_ID' => $topId]);
-                        if($topInfo->count() > 0) {
-                            $topInfo = $topInfo->current();
-                            $top10Contest['contest-5'][] = (object)[
-                                'id' => $topId,
-                                'rank' => ($iCount+1),
-                                'count' => round($top3ShById[$topId]),
-                                'name' => $topInfo->username,
-                                'avatar' => ($topInfo->avatar == '') ? $topInfo->username : $topInfo->avatar,
+                $totalSel->where($statWh);
+                $totalSel->order('u.xp_level DESC');
+                $totalUserShorts = $this->mUsrStatsTbl->selectWith($totalSel);
+                $shortsByUser = [];
+                $infoByUserId = [];
+                if(count($totalUserShorts) > 0) {
+                    foreach($totalUserShorts as $shd) {
+                        if(!array_key_exists('user-'.$shd->user_idfs, $shortsByUser)) {
+                            $shortsByUser['user-'.$shd->user_idfs] = (int)$shd->stat_data.$shd->xp_level;
+                            $infoByUserId['user-'.$shd->user_idfs] = (object)[
+                                'name' => $shd->username,
+                                'xp_level' => $shd->xp_level,
+                                'avatar' => ($shd->avatar != '') ? $shd->avatar : $shd->username,
+                                'id' => $shd->user_idfs,
+                                'count' => (int)$shd->stat_data,
                             ];
-                            if($iCount == 10) {
-                                break;
-                            }
-                            $iCount++;
+                        } else {
+                            $shortsByUser['user-'.$shd->user_idfs]+= (int)$shd->stat_data.$shd->xp_level;
+                            $infoByUserId['user-'.$shd->user_idfs]->count += (int)$shd->stat_data;
                         }
+
                     }
                 }
-                $statWh = new Where();
-                $statWh->NEST
-                    ->like('stat_key', 'user-nano-etc-coin-m-'.date('n-Y',time()))
-                    ->OR
-                    ->like('stat_key', 'user-nano-rvn-coin-m-'.date('n-Y',time()))
-                    ->UNNEST;
-                $statWh->equalTo('user_idfs', $me->User_ID);
-                $myStatSel = new Select($this->mUsrStatsTbl->getTable());
-                $myStatSel->where($statWh);
-                $myStat = $this->mUsrStatsTbl->selectWith($myStatSel);
-                if($myStat->count() > 0) {
-                    $total = 0;
-                    foreach($myStat as $ms) {
-                        $total += (int)$ms->stat_data;
+                arsort($shortsByUser);
+                $rank = 1;
+                $myRankM = "-";
+                $myShortsM = 0;
+                foreach(array_keys($shortsByUser) as $claimUser) {
+                    if($claimUser == 'user-'.$me->User_ID) {
+                        $myRankM = $rank;
+                        $myShortsM = $infoByUserId[$claimUser]->count;
                     }
-                    $myContestStats[5] = $total;
-                } else {
-                    $myContestStats[5] = 0;
+                    if($rank <= 10) {
+                        if(array_key_exists($claimUser,$infoByUserId)) {
+                            $infoByUserId[$claimUser]->rank = $rank;
+                            $top10Contest['contest-5'][] = $infoByUserId[$claimUser];
+                        }
+                    }
+                    $rank++;
                 }
 
+                $myContestStats[5] = $myShortsM;
+                $myContestRanks[5] = $myRankM;
 
                 /**
                  * CPU Miners
                  */
-                $statWh = new Where();
-                $statWh->like('stat_key', 'user-nano-xmr-coin-m-'.date('n-Y',time()));
-                $statSel = new Select($this->mUsrStatsTbl->getTable());
-                $statSel->order('date DESC');
-                $statSel->where($statWh);
-                $statFound = $this->mUsrStatsTbl->selectWith($statSel);
-                if($statFound->count() > 0) {
-                    $top3ShById = [];
-                    foreach($statFound as $statUser) {
-                        $top3ShById[$statUser->user_idfs] = $statUser->stat_data;
+                $totalSel = new Select($this->mUsrStatsTbl->getTable());
+                $totalSel->join(['u' => 'user'],'u.User_ID = user_faucet_stat.user_idfs', ['username','avatar','xp_level']);
+                $totalSel->where(['stat_key' => 'user-nano-xmr-coin-m-'.date('n-Y', time())]);
+                $totalSel->order('u.xp_level DESC');
+                $totalUserShorts = $this->mUsrStatsTbl->selectWith($totalSel);
+                $shortsByUser = [];
+                $infoByUserId = [];
+                if(count($totalUserShorts) > 0) {
+                    foreach($totalUserShorts as $shd) {
+                        $shortsByUser['user-'.$shd->user_idfs] = (int)$shd->stat_data.$shd->xp_level;
+                        $infoByUserId['user-'.$shd->user_idfs] = (object)[
+                            'name' => $shd->username,
+                            'xp_level' => $shd->xp_level,
+                            'avatar' => ($shd->avatar != '') ? $shd->avatar : $shd->username,
+                            'id' => $shd->user_idfs,
+                            'count' => (int)$shd->stat_data,
+                        ];
                     }
-                    arsort($top3ShById);
-                    $iCount = 0;
-                    foreach(array_keys($top3ShById) as $topId) {
-                        $topInfo = $this->mUserTbl->select(['User_ID' => $topId]);
-                        if($topInfo->count() > 0) {
-                            $topInfo = $topInfo->current();
-                            $top10Contest['contest-6'][] = (object)[
-                                'id' => $topId,
-                                'rank' => ($iCount+1),
-                                'count' => round($top3ShById[$topId]),
-                                'name' => $topInfo->username,
-                                'avatar' => ($topInfo->avatar == '') ? $topInfo->username : $topInfo->avatar,
-                            ];
-                            if($iCount == 10) {
-                                break;
-                            }
-                            $iCount++;
+                }
+                arsort($shortsByUser);
+                $rank = 1;
+                $myRankM = "-";
+                $myShortsM = 0;
+                foreach(array_keys($shortsByUser) as $claimUser) {
+                    if($claimUser == 'user-'.$me->User_ID) {
+                        $myRankM = $rank;
+                        $myShortsM = $infoByUserId[$claimUser]->count;
+                    }
+                    if($rank <= 10) {
+                        if(array_key_exists($claimUser,$infoByUserId)) {
+                            $infoByUserId[$claimUser]->rank = $rank;
+                            $top10Contest['contest-6'][] = $infoByUserId[$claimUser];
                         }
                     }
+                    $rank++;
                 }
 
-                $myStatSel = new Select($this->mUsrStatsTbl->getTable());
-                $myStatSel->where(['stat_key' => 'user-nano-xmr-coin-m-'.date('n-Y', time()), 'user_idfs' => $me->User_ID]);
-                $myStat = $this->mUsrStatsTbl->selectWith($myStatSel);
-                if($myStat->count() > 0) {
-                    $myContestStats[6] = $myStat->current()->stat_data;
-                } else {
-                    $myContestStats[6] = 0;
-                }
+                $myContestStats[6] = $myShortsM;
+                $myContestRanks[6] = $myRankM;
 
                 /**
                  * Top Guilds
                  */
-                $statSel = new Select($this->mStatsTbl->getTable());
+                $statSel = new Select($this->mGuildStatsTbl->getTable());
+                $statSel->join(['fg' => 'faucet_guild'],'fg.Guild_ID = faucet_guild_statistic.guild_idfs', ['label', 'emblem_shield', 'emblem_icon']);
                 $statSel->order('date DESC');
-                $statSel->where(['stat-key' => 'guild-top-'.date('m', time())]);
-                $statSel->limit(1);
+                $statSel->where(['stat_key' => 'guild-weeklys-m-'.date('n-Y', time())]);
                 $statFound = $this->mStatsTbl->selectWith($statSel);
+
+                $tasksByGuild = [];
+                $guildInfoByGuildId = [];
+                foreach($statFound as $guild) {
+                    $tasksByGuild['guild-'.$guild->guild_idfs] = (int)$guild->data;
+                    $guildInfoByGuildId['guild-'.$guild->guild_idfs] = (object)[
+                        'id' => $guild->guild_idfs,
+                        'name' => $guild->label,
+                        'shield' => $guild->emblem_shield,
+                        'icon' => $guild->emblem_icon,
+                        'count' => (int)$guild->data
+                    ];
+                }
+
+                arsort($tasksByGuild);
+
+                $rank = 1;
+                foreach($tasksByGuild as $gKey => $gCount) {
+                    if($rank == 5) {
+                        break;
+                    }
+                    $guildInfoByGuildId[$gKey]->rank = $rank;
+                    $top10Contest['contest-1'][] = $guildInfoByGuildId[$gKey];
+                    $rank++;
+                }
+
+                /**
                 if($statFound->count() > 0) {
                     $statFound = (array)$statFound->current();
                     $topList = json_decode($statFound['stat-data']);
-                    $iCount = 0;
+
                     foreach($topList as $top) {
                         if($iCount == 5) {
                             break;
@@ -940,7 +974,7 @@ class HallOfFameController extends AbstractActionController
                             $iCount++;
                         }
                     }
-                }
+                } **/
 
                 $conSel = new Select($this->mContest->getTable());
                 $conSel->join(['fcr' => 'faucet_contest_reward'], 'fcr.contest_idfs = faucet_contest.Contest_ID');
@@ -972,13 +1006,20 @@ class HallOfFameController extends AbstractActionController
                     if(array_key_exists($con->Contest_ID,$myContestStats)) {
                         $me = $myContestStats[$con->Contest_ID];
                     }
+                    $meRank = '-';
+                    if(array_key_exists($con->Contest_ID,$myContestRanks)) {
+                        $meRank = $myContestRanks[$con->Contest_ID];
+                    }
                     $contestsData[] = [
                         'id' => $con->Contest_ID,
                         'name' => $con->contest_name,
                         'type' => $con->contest_type,
                         'reward' => $contestRewards,
                         'winners' => $winners,
-                        'me' => $me
+                        'me' => $me,
+                        'me_rank' => $meRank,
+                        'unit_label' => $con->unit_label,
+                        'earn_label' => $con->earn_label
                     ];
                 }
 
@@ -1074,11 +1115,21 @@ class HallOfFameController extends AbstractActionController
             }
 
             if($detail == 'shortlinks') {
-                $totalUserShorts = $this->mUsrStatsTbl->select(['stat_key' => 'shdone-total']);
+                $totalSel = new Select($this->mUsrStatsTbl->getTable());
+                $totalSel->join(['u' => 'user'],'u.User_ID = user_faucet_stat.user_idfs', ['username','avatar']);
+                $totalSel->where(['stat_key' => 'user-shortlink-total']);
+                $totalUserShorts = $this->mUsrStatsTbl->selectWith($totalSel);
                 $shortsByUser = [];
+                $infoByUserId = [];
                 if(count($totalUserShorts) > 0) {
                     foreach($totalUserShorts as $shd) {
-                        $shortsByUser[$shd->user_idfs] = (int)$shd->stat_data;
+                        $shortsByUser['user-'.$shd->user_idfs] = (int)$shd->stat_data;
+                        $infoByUserId['user-'.$shd->user_idfs] = (object)[
+                            'name' => $shd->username,
+                            'avatar' => ($shd->avatar != '') ? $shd->avatar : $shd->username,
+                            'id' => $shd->user_idfs,
+                            'links' => (int)$shd->stat_data
+                        ];
                     }
                 }
                 arsort($shortsByUser);
@@ -1087,57 +1138,51 @@ class HallOfFameController extends AbstractActionController
                 $myRank = "-";
                 $myShorts = 0;
                 foreach(array_keys($shortsByUser) as $claimUser) {
-                    if($claimUser == $me->User_ID) {
+                    if($claimUser == 'user-'.$me->User_ID) {
                         $myRank = $rank;
                         $myShorts = $shortsByUser[$claimUser];
                     }
                     if($rank <= 50) {
-                        $userInfo = $this->mUserTbl->select(['User_ID' => $claimUser]);
-                        if(count($userInfo) > 0) {
-                            $userInfo = $userInfo->current();
-                            $topShorters[] = (object)[
-                                'name' => $userInfo->username,
-                                'avatar' => ($userInfo->avatar != '') ? $userInfo->avatar : $userInfo->username,
-                                'id' => $userInfo->User_ID,
-                                'rank' => $rank,
-                                'links' => (int)$shortsByUser[$claimUser],
-                            ];
+                        if(array_key_exists($claimUser,$infoByUserId)) {
+                            $infoByUserId[$claimUser]->rank = $rank;
+                            $topShorters[] = $infoByUserId[$claimUser];
                         }
-
                     }
                     $rank++;
                 }
 
-                $totalUserShorts = $this->mUsrStatsTbl->select(['stat_key' => 'shdone-m-'.date('n-Y',time())]);
+                $totalSel = new Select($this->mUsrStatsTbl->getTable());
+                $totalSel->join(['u' => 'user'],'u.User_ID = user_faucet_stat.user_idfs', ['username','avatar']);
+                $totalSel->where(['stat_key' => 'user-shortlink-m-'.date('n-Y', time())]);
+                $totalUserShorts = $this->mUsrStatsTbl->selectWith($totalSel);
                 $shortsByUser = [];
+                $infoByUserId = [];
                 if(count($totalUserShorts) > 0) {
                     foreach($totalUserShorts as $shd) {
-                        $shortsByUser[$shd->user_idfs] = (int)$shd->stat_data;
+                        $shortsByUser['user-'.$shd->user_idfs] = (int)$shd->stat_data;
+                        $infoByUserId['user-'.$shd->user_idfs] = (object)[
+                            'name' => $shd->username,
+                            'avatar' => ($shd->avatar != '') ? $shd->avatar : $shd->username,
+                            'id' => $shd->user_idfs,
+                            'links' => (int)$shd->stat_data
+                        ];
                     }
                 }
                 arsort($shortsByUser);
-                $topShortersMonth = [];
+                $topShortersM = [];
                 $rank = 1;
                 $myRankM = "-";
                 $myShortsM = 0;
                 foreach(array_keys($shortsByUser) as $claimUser) {
-                    if($claimUser == $me->User_ID) {
+                    if($claimUser == 'user-'.$me->User_ID) {
                         $myRankM = $rank;
                         $myShortsM = $shortsByUser[$claimUser];
                     }
                     if($rank <= 50) {
-                        $userInfo = $this->mUserTbl->select(['User_ID' => $claimUser]);
-                        if(count($userInfo) > 0) {
-                            $userInfo = $userInfo->current();
-                            $topShortersMonth[] = (object)[
-                                'name' => $userInfo->username,
-                                'avatar' => ($userInfo->avatar != '') ? $userInfo->avatar : $userInfo->username,
-                                'id' => $userInfo->User_ID,
-                                'rank' => $rank,
-                                'links' => (int)$shortsByUser[$claimUser],
-                            ];
+                        if(array_key_exists($claimUser,$infoByUserId)) {
+                            $infoByUserId[$claimUser]->rank = $rank;
+                            $topShortersM[] = $infoByUserId[$claimUser];
                         }
-
                     }
                     $rank++;
                 }
@@ -1146,7 +1191,7 @@ class HallOfFameController extends AbstractActionController
                 return new ViewModel([
                     'date' => date('Y-m-d H:i:s'),
                     'player_list' => [
-                        'month' => $topShortersMonth,
+                        'month' => $topShortersM,
                         'all' => $topShorters,
                     ],
                     'me_month' => ['links' => $myShortsM,'rank' => $myRankM],

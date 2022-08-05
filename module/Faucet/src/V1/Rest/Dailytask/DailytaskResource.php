@@ -216,8 +216,12 @@ class DailytaskResource extends AbstractResourceListener
         $oWh = new Where();
         $oWh->equalTo('user_idfs', $me->User_ID);
         $oWh->like('date', $sDate.'%');
-        $oWh->like('platform', 'web');
-        $dailysDone = $this->mTaskDoneTbl->select($oWh)->count();
+        $dailysToday = $this->mTaskDoneTbl->select($oWh);
+        $dailyDoneById = [];
+        foreach($dailysToday as $daily) {
+            $dailyDoneById['task-'.$daily->task_idfs] = 1;
+        }
+        $dailysDone = $dailysToday->count();
 
         # Load Dailytasks
         $oWh = new Where();
@@ -246,12 +250,6 @@ class DailytaskResource extends AbstractResourceListener
                     $progress = 0;
                     break;
             }
-            # Check if task is already claimed today
-            $oWh = new Where();
-            $oWh->equalTo('user_idfs', $me->User_ID);
-            $oWh->equalTo('task_idfs', $achiev->Dailytask_ID);
-            $oWh->like('date', $sDate.'%');
-            $oDailysDone = $this->mTaskDoneTbl->select($oWh);
 
             $achievements[] = (object)[
                 'id' => $achiev->Dailytask_ID,
@@ -260,7 +258,7 @@ class DailytaskResource extends AbstractResourceListener
                 'reward' => $achiev->reward,
                 'mode' => $achiev->mode,
                 'progress' => $progress,
-                'done' => (count($oDailysDone) == 0) ? 0 : 1
+                'done' => (!array_key_exists('task-'.$achiev->Dailytask_ID, $dailyDoneById)) ? 0 : 1
             ];
         }
 
@@ -401,7 +399,7 @@ class DailytaskResource extends AbstractResourceListener
                 }
 
                 # Transaction
-                $this->mUserTools->getItemDropChance('dailytask', $me->User_ID);
+                //$this->mUserTools->getItemDropChance('dailytask', $me->User_ID);
                 $newBalance = $this->mTransaction->executeTransaction($dailyTask->reward, false, $me->User_ID, $iTaskID, 'dailytask-claim', 'Daily Task '.$dailyTask->label.' completed');
                 if($newBalance !== false) {
                     # Add Done
@@ -432,7 +430,12 @@ class DailytaskResource extends AbstractResourceListener
             $oWh = new Where();
             $oWh->equalTo('user_idfs', $me->User_ID);
             $oWh->like('date', $sDate.'%');
-            $dailysDone = $this->mTaskDoneTbl->select($oWh)->count();
+            $dailysToday = $this->mTaskDoneTbl->select($oWh);
+            $dailyDoneById = [];
+            foreach($dailysToday as $daily) {
+                $dailyDoneById['task-'.$daily->task_idfs] = 1;
+            }
+            $dailysDone = $dailysToday->count();
 
             # Load Dailytasks
             $oWh = new Where();
@@ -446,6 +449,8 @@ class DailytaskResource extends AbstractResourceListener
             $dailySel->order('sort_id ASC');
             $achievementsDB = $this->mTaskTbl->selectWith($dailySel);
             $achievements = [];
+            $readyToClaim = 0;
+
             foreach($achievementsDB as $achiev) {
                 switch($achiev->type) {
                     case 'shortlink':
@@ -461,12 +466,6 @@ class DailytaskResource extends AbstractResourceListener
                         $progress = 0;
                         break;
                 }
-                # Check if task is already claimed today
-                $oWh = new Where();
-                $oWh->equalTo('user_idfs', $me->User_ID);
-                $oWh->equalTo('task_idfs', $achiev->Dailytask_ID);
-                $oWh->like('date', $sDate.'%');
-                $oDailysDone = $this->mTaskDoneTbl->select($oWh);
 
                 $achievements[] = (object)[
                     'id' => $achiev->Dailytask_ID,
@@ -475,8 +474,12 @@ class DailytaskResource extends AbstractResourceListener
                     'reward' => $achiev->reward,
                     'mode' => $achiev->mode,
                     'progress' => $progress,
-                    'done' => (count($oDailysDone) == 0) ? 0 : 1
+                    'done' => (!array_key_exists('task-'.$achiev->Dailytask_ID, $dailyDoneById)) ? 0 : 1
                 ];
+
+                if($progress >= $achiev->goal && !array_key_exists('task-'.$achiev->Dailytask_ID, $dailyDoneById)) {
+                    $readyToClaim++;
+                }
             }
 
             # Return referall info
@@ -484,6 +487,7 @@ class DailytaskResource extends AbstractResourceListener
                 '_links' => [],
                 'total_items' => count($achievements),
                 'user_task' => [],
+                'daily_claim_count' => $readyToClaim,
                 'reward' => $dailyTask->reward,
                 'token_balance' => $newBalance,
                 'task' => $achievements

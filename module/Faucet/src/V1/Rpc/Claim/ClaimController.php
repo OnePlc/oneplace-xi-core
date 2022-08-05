@@ -18,6 +18,7 @@ use Application\Controller\IndexController;
 use Faucet\Tools\SecurityTools;
 use Faucet\Tools\UserTools;
 use Faucet\Transaction\TransactionHelper;
+use Laminas\Db\Sql\Select;
 use Laminas\Http\ClientStatic;
 use Laminas\Mvc\Controller\AbstractActionController;
 use Laminas\ApiTools\ContentNegotiation\ViewModel;
@@ -76,6 +77,14 @@ class ClaimController extends AbstractActionController
      * @since 1.0.0
      */
     protected $mAchievementPoints;
+    /**
+     * @var TableGateway
+     */
+    private $mTaskDoneTbl;
+    /**
+     * @var TableGateway
+     */
+    private $mTaskTbl;
 
     /**
      * Constructor
@@ -91,6 +100,8 @@ class ClaimController extends AbstractActionController
         $this->mSecTools = new SecurityTools($mapper);
         $this->mUserTools = new UserTools($mapper);
         $this->mMapper = $mapper;
+        $this->mTaskDoneTbl = new TableGateway('faucet_dailytask_user', $mapper);
+        $this->mTaskTbl = new TableGateway('faucet_dailytask', $mapper);
 
         /**
          * Load Achievements to Cache
@@ -339,10 +350,70 @@ class ClaimController extends AbstractActionController
                     'xp_current' => $me->xp_current,
                     'xp_percent' => $me->xp_percent,
                     'achievement' => $achievDone,
+                    'daily_claim_count' => $this->getDailyTasksReadyToClaim($me),
                 ]);
             } else {
                 return new ApiProblemResponse(new ApiProblem(409, 'Transaction Error Please contact admin'));
             }
         }
+    }
+
+    private function getDailyTasksReadyToClaim($me) {
+        $sDate = date('Y-m-d', time());
+
+        /**
+         * Gather relevant data for progress
+         */
+        $shortlinksDone = 0;
+
+        $oWh = new Where();
+        $oWh->equalTo('user_idfs', $me->User_ID);
+        $oWh->like('date', $sDate.'%');
+        $claimsDone = $this->mClaimTbl->select($oWh)->count();
+
+        $oWh = new Where();
+        $oWh->equalTo('user_idfs', $me->User_ID);
+        $oWh->like('date', $sDate.'%');
+        $dailysToday = $this->mTaskDoneTbl->select($oWh);
+        $dailyDoneById = [];
+        foreach($dailysToday as $daily) {
+            $dailyDoneById['task-'.$daily->task_idfs] = 1;
+        }
+        $dailysDone = $dailysToday->count();
+
+        # Load Dailytasks
+        $oWh = new Where();
+        $oWh->NEST
+            ->equalTo('mode', 'website')
+            ->OR
+            ->equalTo('mode', 'global')
+            ->UNNEST;
+        $dailySel = new Select($this->mTaskTbl->getTable());
+        $dailySel->where($oWh);
+        $dailySel->order('sort_id ASC');
+        $achievementsDB = $this->mTaskTbl->selectWith($dailySel);
+        $readyToClaim = 0;
+        foreach($achievementsDB as $achiev) {
+            switch($achiev->type) {
+                case 'shortlink':
+                    $progress = $shortlinksDone;
+                    break;
+                case 'claim':
+                    $progress = $claimsDone;
+                    break;
+                case 'daily':
+                    $progress = $dailysDone;
+                    break;
+                default:
+                    $progress = 0;
+                    break;
+            }
+
+            if($progress >= $achiev->goal && !array_key_exists('task-'.$achiev->Dailytask_ID, $dailyDoneById)) {
+                $readyToClaim++;
+            }
+        }
+
+        return $readyToClaim;
     }
 }

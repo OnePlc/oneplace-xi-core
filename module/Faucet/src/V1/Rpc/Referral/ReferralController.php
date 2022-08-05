@@ -72,7 +72,7 @@ class ReferralController extends AbstractActionController
     public function __construct($mapper)
     {
         $this->mUserTbl = new TableGateway('user', $mapper);
-        $this->mUserStatsTbl = new TableGateway('user_statistic', $mapper);
+        $this->mUserStatsTbl = new TableGateway('user_faucet_stat', $mapper);
         $this->mWthTbl = new TableGateway('faucet_withdraw', $mapper);
         $this->mSecTools = new SecurityTools($mapper);
     }
@@ -115,23 +115,41 @@ class ReferralController extends AbstractActionController
         $membersPaginated->setCurrentPageNumber($page);
         $membersPaginated->setItemCountPerPage($pageSize);
         foreach($membersPaginated as $ref) {
+            $withdrawn = 0;
+            $bonus = 0;
+            $refStat = $this->mUserStatsTbl->select(['stat_key' => 'user-wth-coins-total','user_idfs' => $ref->User_ID]);
+            if($refStat->count() > 0) {
+                $withdrawn = $refStat->current()->stat_data;
+                $bonus = $withdrawn*0.1;
+            }
+            $lastAction = '-';
+            if($ref->last_action != '0000-00-00 00:00:00') {
+                $lastAction = date('Y-m-d', strtotime($ref->last_action));
+            }
             $myRefs[] = (object)[
                 'id' => $ref->User_ID,
                 'name' => $ref->username,
                 'xp_level' => $ref->xp_level,
-                'signup' => $ref->created_date,
-                'withdrawn' => 0,
-                'bonus' => 0,
+                'signup' => date('Y-m-d', strtotime($ref->created_date)),
+                'active' => $lastAction,
+                'withdrawn' => $withdrawn,
+                'bonus' => $bonus,
                 'source' => $ref->ref_source
             ];
         }
 
-        $myRefCount = $this->mUserTbl->select($checkWh)->count();
+        $myRefCount = 0;
+        $refDate = "";
+        $myRefStat = $this->mUserStatsTbl->select(['stat_key' => 'user-referral-total', 'user_idfs' => $me->User_ID]);
+        if($myRefStat->count() > 0) {
+            $myRefStat = $myRefStat->current();
+            $myRefCount = $myRefStat->stat_data;
+            $refDate = $myRefStat->date;
+        }
 
         # get latest withdrawal stat
         $statSel = new Select($this->mUserStatsTbl->getTable());
-        $statSel->where(['stat_key' => 'user-ref-bonus', 'user_idfs' => $me->User_ID]);
-        $statSel->order('date DESC');
+        $statSel->where(['stat_key' => 'user-ref-bonus-total', 'user_idfs' => $me->User_ID]);
         $statSel->limit(1);
         $lastStat = $this->mUserStatsTbl->selectWith($statSel);
 
@@ -139,9 +157,7 @@ class ReferralController extends AbstractActionController
         $bonusDate = "";
         if(count($lastStat) > 0) {
             $lastStat = $lastStat->current();
-            $refStat = json_decode($lastStat->data);
-            $myRefWithdrawn = round($refStat->withdrawn,2);
-            $myRefBonus = round($refStat->bonus,2);
+            $myRefBonus = round($lastStat->stat_data,2);
             $bonusDate = $lastStat->date;
         }
 
@@ -155,13 +171,14 @@ class ReferralController extends AbstractActionController
                 ]
             ],
             'total_items' => $myRefCount,
+            'total_date' => $refDate,
             'withdrawn' => $myRefWithdrawn,
             'bonus' => $myRefBonus,
             'bonus_date' => $bonusDate,
             'referrals' => $myRefs,
             'link' => $myRefLink,
             'page' => $page,
-            'page_count' => (round($myRefCount/$pageSize) > 0) ? round($myRefCount/$pageSize) : 1,
+            'page_count' => (ceil($myRefCount/$pageSize) > 0) ? ceil($myRefCount/$pageSize) : 1,
             'page_size' => $pageSize,
         ]);
     }

@@ -61,26 +61,19 @@ class WebstatsController extends AbstractActionController
             # get users
             $usersOnline = 0;
             $usrSel = new Select($this->mStatisticsTbl->getTable());
-            $usrSel->where(['stats_key' => 'userstats-daily']);
-            $usrSel->order('date DESC');
-            $usrSel->limit(1);
+            $usrSel->where(['stats_key' => 'users-total']);
             $usersStats = $this->mStatisticsTbl->selectWith($usrSel);
             if(count($usersStats) > 0) {
                 $usersOnline = $usersStats->current()->data;
             }
 
-            # get games
-            $games = 0;
-
             # withdrawn total in usd
             $withdrawn = 0;
             $wthSel = new Select($this->mStatisticsTbl->getTable());
-            $wthSel->where(['stats_key' => 'tokenmetrics-daily']);
-            $wthSel->order('date DESC');
-            $wthSel->limit(1);
+            $wthSel->where(['stats_key' => 'wth-coins-total']);
             $withdrawnDB = $this->mStatisticsTbl->selectWith($wthSel);
             if(count($withdrawnDB) > 0) {
-                $withdrawn = round(json_decode($withdrawnDB->current()->data)->withdraw_total*0.00004,2);
+                $withdrawn = round($withdrawnDB->current()->data*0.00004,2);
             }
 
             # get shortlinks done
