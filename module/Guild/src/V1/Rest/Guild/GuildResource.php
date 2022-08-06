@@ -278,10 +278,15 @@ class GuildResource extends AbstractResourceListener
                     # create guild ranks
                     $guildRanks = [0 => 'Guildmaster',1 => 'Officer',2 => 'Veteran', 3 => 'Member',9 => 'Newbie'];
                     foreach(array_keys($guildRanks) as $rankLevel) {
+                        $isDefault = 0;
+                        if($rankLevel == 9) {
+                            $isDefault = 1;
+                        }
                         $this->mGuildRankTbl->insert([
                             'guild_idfs' => $newGuildId,
                             'level' => $rankLevel,
                             'label' => $guildRanks[$rankLevel],
+                            'is_default' => $isDefault
                         ]);
                     }
 
@@ -519,6 +524,7 @@ class GuildResource extends AbstractResourceListener
                 $ranks[] = (object)[
                     'id' => $rank->level,
                     'name' => $rank->label,
+                    'is_default' => $rank->is_default
                 ];
                 $guildRanks[$rank->level] = $rank->label;
             }

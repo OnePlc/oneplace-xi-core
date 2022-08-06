@@ -383,6 +383,11 @@ class RankResource extends AbstractResourceListener
             return new ApiProblem(400, 'Invalid rank');
         }
 
+        $secResult = $this->mSecTools->basicInputCheck([$rankId]);
+        if ($secResult !== 'ok') {
+            return new ApiProblem(418, 'Potential ' . $secResult . ' Attack - Goodbye');
+        }
+
         # check if user already has joined or created a guild
         $checkWh = new Where();
         $checkWh->equalTo('user_idfs', $me->User_ID);
@@ -404,6 +409,17 @@ class RankResource extends AbstractResourceListener
                     $secResult = $this->mSecTools->basicInputCheck([$data->cmd]);
                     if ($secResult !== 'ok') {
                         return new ApiProblem(418, 'Potential ' . $secResult . ' Attack - Goodbye');
+                    }
+                    if($cmd == 'default') {
+                        $this->mGuildRankTbl->update(['is_default' => 0],['guild_idfs' => $userGuildInfo->guild_idfs]);
+                        $this->mGuildRankTbl->update(['is_default' => 1],['guild_idfs' => $userGuildInfo->guild_idfs, 'level' => $rankId]);
+
+                        $ranks = $this->loadGuildRanks($userGuildInfo->guild_idfs);
+
+                        return [
+                            'state' => 'done',
+                            'ranks' => $ranks
+                        ];
                     }
                     if($cmd == 'update') {
                         $secResult = $this->mSecTools->basicInputCheck([$data->daily_limit, $data->invite]);
@@ -493,16 +509,7 @@ class RankResource extends AbstractResourceListener
                                 return new ApiProblem(404, 'invalid sort command.');
                         }
 
-                        $ranks = [];
-                        $guildRanks = $this->mGuildRankTbl->select(['guild_idfs' => $userGuildInfo->guild_idfs]);
-                        if(count($guildRanks) > 0) {
-                            foreach($guildRanks as $rank) {
-                                $ranks[] = (object)[
-                                    'id' => $rank->level,
-                                    'name' => $rank->label,
-                                ];
-                            }
-                        }
+                        $ranks = $this->loadGuildRanks($userGuildInfo->guild_idfs);
 
                         return [
                             'state' => 'done',
@@ -517,5 +524,21 @@ class RankResource extends AbstractResourceListener
                 return new ApiProblem(403, 'You must own a guild to delete it.');
             }
         }
+    }
+
+    private function loadGuildRanks($guildId) {
+        $ranks = [];
+        $guildRanks = $this->mGuildRankTbl->select(['guild_idfs' => $guildId]);
+        if(count($guildRanks) > 0) {
+            foreach($guildRanks as $rank) {
+                $ranks[] = (object)[
+                    'id' => $rank->level,
+                    'name' => $rank->label,
+                    'is_default' => $rank->is_default,
+                ];
+            }
+        }
+
+        return $ranks;
     }
 }

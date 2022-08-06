@@ -339,6 +339,10 @@ class ClaimController extends AbstractActionController
                     $this->mUserTools->completeAchievement($this->mAchievementPoints[$currentClaimsDone]->Achievement_ID, $me->User_ID);
                 }
 
+                if($me->client_version == '2.0') {
+                    return new ApiProblemResponse(new ApiProblem(409, 'You are using an old version of the faucet. Please reload the website to update the site'));
+                }
+
                 # Show Timer
                 return new ViewModel([
                     'status' => 'done',

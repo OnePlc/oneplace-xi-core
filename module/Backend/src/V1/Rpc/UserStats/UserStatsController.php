@@ -146,6 +146,9 @@ class UserStatsController extends AbstractActionController
             $muuStats['labels'] = array_reverse($muuStats['labels']);
             $muuStats['data'] = array_reverse($muuStats['data']);
 
+            /**
+             * Client Version and Country for Monthly Unique Users
+             */
             $clientWh = new Where();
             $clientWh->like('last_action', date('Y-m', time()).'%');
             $mauClients = $this->mUserTbl->select($clientWh);
@@ -156,6 +159,13 @@ class UserStatsController extends AbstractActionController
             ];
             $labelsTmp = [];
             $dataTmp = [];
+
+            $countryStats = [
+                'labels' => [],
+                'data' => []
+            ];
+            $countryLabelsTmp = [];
+            $countryDataTmp = [];
             foreach($mauClients as $cl) {
                 if(!array_key_exists('v-'.$cl->client_version,$labelsTmp)) {
                     $labelsTmp['v-'.$cl->client_version] = $cl->client_version;
@@ -164,11 +174,24 @@ class UserStatsController extends AbstractActionController
                     $dataTmp['v-'.$cl->client_version] = 0;
                 }
                 $dataTmp['v-'.$cl->client_version]++;
+
+                if(!array_key_exists('c-'.$cl->country,$countryLabelsTmp)) {
+                    $countryLabelsTmp['c-'.$cl->country] = $cl->country;
+                }
+                if(!array_key_exists('c-'.$cl->country,$countryDataTmp)) {
+                    $countryDataTmp['c-'.$cl->country] = 0;
+                }
+                $countryDataTmp['c-'.$cl->country]++;
             }
 
             foreach($labelsTmp as $vKey => $vName) {
                 $clientStats['labels'][] = $vName;
                 $clientStats['data'][] = $dataTmp[$vKey];
+            }
+
+            foreach($countryLabelsTmp as $cKey => $cName) {
+                $countryStats['labels'][] = $cName;
+                $countryStats['data'][] = $countryDataTmp[$cKey];
             }
 
             /**
@@ -201,7 +224,8 @@ class UserStatsController extends AbstractActionController
                 'mau' => $mauStats,
                 'muu' => $muuStats,
                 'clv' => $clientStats,
-                'dcu' => $dcuStats
+                'dcu' => $dcuStats,
+                'mcd' => $countryStats
             ];
         }
     }

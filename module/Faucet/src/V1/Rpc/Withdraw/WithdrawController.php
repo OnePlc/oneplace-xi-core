@@ -486,6 +486,10 @@ class WithdrawController extends AbstractActionController
                 return new ApiProblemResponse(new ApiProblem(400, 'Account is not verified. Please verify E-Mail before submitting Withdrawal Request.'));
             }
 
+            if($this->mUserTools->getSetting($me->User_ID, 'user-tempban')) {
+                return new ApiProblemResponse(new ApiProblem(400, 'You are temporarly banned and cannot place any withdrawals. Please contact admin@swissfaucet.io'));
+            }
+
             /**
              * Get Coin Info
              */
@@ -823,10 +827,23 @@ class WithdrawController extends AbstractActionController
                                 }
                             }
 
+                            $cryptoBalance = $newBalance*$tokenValue;
+                            if($coinInfo->dollar_val > 0) {
+                                $cryptoBalance = $cryptoBalance/$coinInfo->dollar_val;
+                            } else {
+                                $cryptoBalance = $cryptoBalance*$coinInfo->dollar_val;
+                            }
+                            $cryptoBalance = number_format($cryptoBalance,8,'.','');
+
+                            if($me->client_version == '2.0') {
+                                return new ApiProblemResponse(new ApiProblem(409, 'You are using an old version of the faucet. Please reload the website to update the site'));
+                            }
+
                             # push new info to view
                             return new ViewModel([
                                 'daily_left' => ($withdrawLimit - $json->amount - $coinsWithdrawnToday),
                                 'token_balance' => $newBalance,
+                                'crypto_balance' => $cryptoBalance,
                                 'withdrawals' => $withdrawals,
                             ]);
                         } else {

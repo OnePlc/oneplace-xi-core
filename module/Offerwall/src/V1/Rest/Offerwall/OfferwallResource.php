@@ -64,6 +64,11 @@ class OfferwallResource extends AbstractResourceListener
     protected $mTransaction;
 
     /**
+     * @var TableGateway
+     */
+    private $mOfferwallRatingTbl;
+
+    /**
      * Constructor
      *
      * AchievementResource constructor.
@@ -75,6 +80,8 @@ class OfferwallResource extends AbstractResourceListener
         # Init Tables for this API
         $this->mOfferwallTbl = new TableGateway('offerwall', $mapper);
         $this->mOfferwallUserTbl = new TableGateway('offerwall_user', $mapper);
+        $this->mOfferwallRatingTbl = new TableGateway('offerwall_rating', $mapper);
+
         $this->mSecTools = new SecurityTools($mapper);
         $this->mTransaction = new TransactionHelper($mapper);
     }
@@ -145,6 +152,25 @@ class OfferwallResource extends AbstractResourceListener
             //return new ApiProblem(401, 'Your Account must be verified to access Offerwalls. Please check your Inbox for Verification E-Mail');
         }
 
+        $ofrSel = new Select($this->mOfferwallRatingTbl->getTable());
+        $ofrSel->join(['u' => 'user'], 'u.User_ID = offerwall_rating.user_idfs', ['username']);
+        $ofRatings = $this->mOfferwallRatingTbl->selectWith($ofrSel);
+        $ofRatingsByOfferWallId = [];
+        foreach($ofRatings as $ofr) {
+            $rating = ceil($ofr->rating);
+            if(!array_key_exists('of-'.$ofr->offerwall_idfs, $ofRatingsByOfferWallId)) {
+                $ofRatingsByOfferWallId['of-'.$ofr->offerwall_idfs] = ['total' => 0, 'ratings' => [], 'comments' => []];
+            }
+            if(!array_key_exists('r-'.$rating, $ofRatingsByOfferWallId['of-'.$ofr->offerwall_idfs]['ratings'])) {
+                $ofRatingsByOfferWallId['of-'.$ofr->offerwall_idfs]['ratings']['r-'.$rating] = 0;
+            }
+            $ofRatingsByOfferWallId['of-'.$ofr->offerwall_idfs]['ratings']['r-'.$rating]++;
+            $ofRatingsByOfferWallId['of-'.$ofr->offerwall_idfs]['total']++;
+            if(strlen($ofr->comment) > 5) {
+                $ofRatingsByOfferWallId['of-'.$ofr->offerwall_idfs]['comments'][] = ['comment' => $ofr->comment, 'username' => $ofr->username, 'rating' => $rating, 'id' => $ofr->user_idfs];
+            }
+        }
+
         # Compile list of all offerwall providers
         $offerwalls = [];
         $offerwallsById = [];
@@ -154,6 +180,14 @@ class OfferwallResource extends AbstractResourceListener
         }
         $offerwallsDB = $this->mOfferwallTbl->select($ofWh);
         foreach($offerwallsDB as $offerwall) {
+            $rDetail = [];
+            $rTotal = 0;
+            $rComments = [];
+            if(array_key_exists('of-'.$offerwall->Offerwall_ID, $ofRatingsByOfferWallId)) {
+                $rDetail = $ofRatingsByOfferWallId['of-'.$offerwall->Offerwall_ID]['ratings'];
+                $rTotal = $ofRatingsByOfferWallId['of-'.$offerwall->Offerwall_ID]['total'];
+                $rComments = $ofRatingsByOfferWallId['of-'.$offerwall->Offerwall_ID]['comments'];
+            }
             $offerwalls[] = (object)[
                 'id' => $offerwall->Offerwall_ID,
                 'url' => $offerwall->wall_name,
@@ -161,7 +195,9 @@ class OfferwallResource extends AbstractResourceListener
                 'name' => $offerwall->label,
                 'time' => $offerwall->time,
                 'rating' => $offerwall->rating,
-                'rating_count' => $offerwall->rating_count,
+                'rating_count' => $rTotal,
+                'rating_detail' => $rDetail,
+                'rating_comments' => $rComments,
                 'reward' => $offerwall->reward
             ];
             $offerwallsById[$offerwall->Offerwall_ID] = $offerwall->label;

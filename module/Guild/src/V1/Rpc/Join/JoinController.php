@@ -246,9 +246,18 @@ class JoinController extends AbstractActionController
                 $delWh->notEqualTo('guild_idfs', $guild->Guild_ID);
                 $this->mGuildUserTbl->delete($delWh);
 
+                # get guild default rank
+                $rankId = 9;
+                $defRank = $this->mGuildRankTbl->select(['is_default' => 1, 'guild_idfs' => $guild->Guild_ID]);
+                if($defRank->count() > 0) {
+                    $rankId = $defRank->current()->level;
+                }
+
                 # join guild
                 $this->mGuildUserTbl->update([
                     'date_joined' => date('Y-m-d H:i:s', time()),
+                    'join_level' => $userFound->xp_level,
+                    'rank' => $rankId,
                 ], [
                     'guild_idfs' => $guild->Guild_ID,
                     'user_idfs' => $userId

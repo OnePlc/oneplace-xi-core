@@ -2,6 +2,7 @@
 namespace Backend\V1\Rest\Withdraw;
 
 use Faucet\Tools\SecurityTools;
+use Faucet\Transaction\TransactionHelper;
 use Laminas\ApiTools\ApiProblem\ApiProblem;
 use Laminas\ApiTools\Rest\AbstractResourceListener;
 use Laminas\Db\Sql\Select;
@@ -34,6 +35,19 @@ class WithdrawResource extends AbstractResourceListener
      * @var TableGateway
      */
     private $mWalletTbl;
+    /**
+     * @var TableGateway
+     */
+    private $mUserTbl;
+    /**
+     * @var TransactionHelper
+     */
+    private $mTransHelper;
+
+    /**
+     * @var TableGateway
+     */
+    private $mUserStatsTbl;
 
     /**
      * Constructor
@@ -47,8 +61,12 @@ class WithdrawResource extends AbstractResourceListener
         $this->mWithdrawTbl = new TableGateway('faucet_withdraw', $mapper);
         $this->mUserSettingsTbl = new TableGateway('user_setting', $mapper);
         $this->mWalletTbl = new TableGateway('faucet_wallet', $mapper);
+        $this->mUserStatsTbl = new TableGateway('user_faucet_stat', $mapper);
+
+        $this->mUserTbl = new TableGateway('user', $mapper);
 
         $this->mSecTools = new SecurityTools($mapper);
+        $this->mTransHelper = new TransactionHelper($mapper);
     }
 
     /**
@@ -59,7 +77,83 @@ class WithdrawResource extends AbstractResourceListener
      */
     public function create($data)
     {
-        return new ApiProblem(405, 'The POST method has not been defined');
+        # Prevent 500 error
+        if(!$this->getIdentity()) {
+            return new ApiProblem(401, 'Not logged in');
+        }
+        $me = $this->mSecTools->getSecuredUserSession($this->getIdentity()->getName());
+        if(get_class($me) == 'Laminas\\ApiTools\\ApiProblem\\ApiProblem') {
+            return $me;
+        }
+
+        if((int)$me->is_employee !== 1) {
+            return new ApiProblem(403, 'You have no permission to do that ('.$me->is_employee.')');
+        }
+
+        $ipWhiteList = $this->mSecTools->getCoreSetting('backend-ip-whitelist');
+        $ipWhiteList = json_decode($ipWhiteList);
+        if(!in_array($_SERVER['REMOTE_ADDR'], $ipWhiteList)) {
+            return new ApiProblem(400, 'You are not allowed this access this api');
+        }
+
+        $currency = strtoupper(filter_var($data->currency, FILTER_SANITIZE_STRING));
+        if(strlen($currency) != 3 && strlen($currency) != 4) {
+            return new ApiProblem(400, 'Invalid Currency');
+        }
+
+        $bannedUsers = $this->mUserSettingsTbl->select(['setting_name' => 'user-tempban']);
+        $bannedUsersByUserId = [];
+        foreach($bannedUsers as $ban) {
+            $bannedUsersByUserId['ban-'.$ban->user_idfs] = 1;
+        }
+
+        $wthSel = new Select($this->mWithdrawTbl->getTable());
+        $wthSel->join(['u' => 'user'],'u.User_ID = faucet_withdraw.user_idfs', ['username', 'token_balance']);
+        $wthSel->where(['state' => 'new', 'currency' => $currency]);
+        $openWithdraws = $this->mWithdrawTbl->selectWith($wthSel);
+        $withdrawalsByWallet = [];
+        $withdrawals = [];
+        $duplicates = 0;
+
+        $userWthStats = $this->mUserStatsTbl->select(['stat_key' => 'user-wth-amount-total']);
+        $wthAmountByUserId = [];
+        foreach($userWthStats as $wthS) {
+            $wthAmountByUserId['user-'.$wthS->user_idfs] = $wthS->stat_data;
+        }
+        foreach($openWithdraws as $wth) {
+            if (!array_key_exists('ban-' . $wth->user_idfs, $bannedUsersByUserId)) {
+                if(!in_array($wth->wallet, $withdrawalsByWallet)) {
+                    $withdrawalsByWallet[] = $wth->wallet;
+
+                    $totalWth = 0;
+                    if(array_key_exists('user-'.$wth->user_idfs, $wthAmountByUserId)) {
+                        $totalWth = $wthAmountByUserId['user-'.$wth->user_idfs];
+                    }
+
+                    $withdrawals[] = [
+                        'id' => $wth->Withdraw_ID,
+                        'amount_coins' => $wth->amount,
+                        'amount_crypto' => $wth->amount_paid,
+                        'currency' => strtolower($wth->currency),
+                        'wallet' => $wth->wallet,
+                        'user' => [
+                            'id' => $wth->user_idfs,
+                            'name' => $wth->username,
+                            'balance' => $wth->token_balance,
+                            'withdrawals' => $totalWth
+                        ],
+                        'date' => date('Y-m-d H:i', strtotime($wth->date_requested))
+                    ];
+                } else {
+                    $duplicates++;
+                }
+            }
+        }
+
+        return [
+            'list' => $withdrawals,
+            'duplicates' => $duplicates
+        ];
     }
 
     /**
@@ -280,6 +374,87 @@ class WithdrawResource extends AbstractResourceListener
      */
     public function update($id, $data)
     {
-        return new ApiProblem(405, 'The PUT method has not been defined for individual resources');
+        # Prevent 500 error
+        if(!$this->getIdentity()) {
+            return new ApiProblem(401, 'Not logged in');
+        }
+        $me = $this->mSecTools->getSecuredUserSession($this->getIdentity()->getName());
+        if(get_class($me) == 'Laminas\\ApiTools\\ApiProblem\\ApiProblem') {
+            return $me;
+        }
+
+        if((int)$me->is_employee !== 1) {
+            return new ApiProblem(403, 'You have no permission to do that ('.$me->is_employee.')');
+        }
+
+        $ipWhiteList = $this->mSecTools->getCoreSetting('backend-ip-whitelist');
+        $ipWhiteList = json_decode($ipWhiteList);
+        if(!in_array($_SERVER['REMOTE_ADDR'], $ipWhiteList)) {
+            return new ApiProblem(400, 'You are not allowed this access this api');
+        }
+
+        $wthId = filter_var($id, FILTER_SANITIZE_NUMBER_INT);
+        if($wthId <= 0 || empty($wthId)) {
+            return new ApiProblem(400, 'Invalid Withdrawal ID');
+        }
+        $wthSel = new Select($this->mWithdrawTbl->getTable());
+        $wthSel->join(['u' => 'user'],'u.User_ID = faucet_withdraw.user_idfs', ['ref_user_idfs', 'username']);
+        $wthSel->where(['Withdraw_ID' => $wthId]);
+        $wth = $this->mWithdrawTbl->selectWith($wthSel);
+        if($wth->count() == 0) {
+            return new ApiProblem(404, 'Withdrawal not found');
+        }
+        $wth = $wth->current();
+        if($wth->state != 'new') {
+            return new ApiProblem(400, 'Withdrawal is already processed');
+        }
+
+        $cmd = filter_var($data->cmd, FILTER_SANITIZE_STRING);
+        if($cmd != 'send' && $cmd != 'cancel') {
+            return new ApiProblem(400, 'Invalid Command');
+        }
+
+        if($cmd == 'send') {
+            $txId = substr(filter_var($data->tx_id, FILTER_SANITIZE_STRING), 0, 255);
+            if(strlen($txId) < 10) {
+                return new ApiProblem(400, 'Please provide a valid transaction id');
+            }
+
+            $this->mWithdrawTbl->update([
+                'transaction_id' => $txId,
+                'date_sent' => date('Y-m-d H:i:s', time()),
+                'state' => 'done'
+            ],['Withdraw_ID' => $wth->Withdraw_ID]);
+
+            # referral bonus
+            if($wth->ref_user_idfs != 0) {
+                # make sure referral still exists and is not banned
+                $refInfo = $this->mUserTbl->select(['User_ID' => $wth->ref_user_idfs]);
+                if($refInfo->count() > 0) {
+                    $isBanned = $this->mUserSettingsTbl->select(['setting_name' => 'user-tempban', 'user_idfs' => $wth->ref_user_idfs]);
+                    if($isBanned->count() == 0) {
+                        $refBonus = $wth->amount*0.1;
+                        $refName = $wth->username;
+                        $newBalance = $this->mTransHelper->executeTransaction($refBonus, false, $wth->ref_user_idfs, $wth->Withdraw_ID, 'ref-bonus', 'Referral Bonus for User '.$refName.' received');
+                    }
+                }
+            }
+
+        } else {
+            $comment = substr(filter_var($data->comment, FILTER_SANITIZE_STRING), 0, 255);
+            if(strlen($comment) < 10) {
+                return new ApiProblem(400, 'Please provide a comment when cancelling a withdrawal');
+            }
+            $newBalance = $this->mTransHelper->executeTransaction($wth->amount, false, $wth->user_idfs, $wth->Withdraw_ID, 'wth-refund', 'Refund for cancelled Withdrawal');
+
+            $this->mWithdrawTbl->update([
+                'transaction_id' => $comment,
+                'state' => 'cancel'
+            ],['Withdraw_ID' => $wth->Withdraw_ID]);
+
+        }
+        return [
+            'state' => 'done'
+        ];
     }
 }
