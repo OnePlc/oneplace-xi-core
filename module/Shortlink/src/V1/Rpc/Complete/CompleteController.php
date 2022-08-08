@@ -220,7 +220,7 @@ class CompleteController extends AbstractActionController
                             return $this->redirect()->toUrl($redirectUrl);
                         }
                     } else {
-                        echo 'already done';
+                        echo 'Shortlink is already claimed. <a href="https://swissfaucet.io/shortlinks">Back to Swissfaucet.io</a>';
                     }
                 }
             }

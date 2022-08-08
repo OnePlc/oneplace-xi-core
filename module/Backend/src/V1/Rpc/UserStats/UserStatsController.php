@@ -228,5 +228,7 @@ class UserStatsController extends AbstractActionController
                 'mcd' => $countryStats
             ];
         }
+
+        return new ApiProblemResponse(new ApiProblem(403, 'Not alloawed'));
     }
 }

@@ -78,38 +78,38 @@ class WebstatsController extends AbstractActionController
 
             # get shortlinks done
             $shortlinks = 0;
-            $wthSel = new Select($this->mFaucetStatsTbl->getTable());
-            $wthSel->where(['stat-key' => 'shdone-total']);
-            $wthSel->order('date DESC');
-            $wthSel->limit(1);
+            $wthSel = new Select($this->mStatisticsTbl->getTable());
+            $wthSel->where(['stats_key' => 'shortlinks-total-links']);
             $withdrawnDB = $this->mFaucetStatsTbl->selectWith($wthSel);
             if(count($withdrawnDB) > 0) {
-                $shortlinksDB = (array)$withdrawnDB->current();
-                $shortlinks = $shortlinksDB['stat-data'];
+                $shortlinks = $withdrawnDB->current()->data;
+                if($shortlinks > 1000000) {
+                    $shortlinks = substr($shortlinks, 0, 1).'.'.substr($shortlinks, 1, 1).'M';
+                }
             }
 
             # get offerwalls done
             $offers = 0;
-            $wthSel = new Select($this->mFaucetStatsTbl->getTable());
-            $wthSel->where(['stat-key' => 'ofdone-total']);
-            $wthSel->order('date DESC');
-            $wthSel->limit(1);
+            $wthSel = new Select($this->mStatisticsTbl->getTable());
+            $wthSel->where(['stats_key' => 'offerwalls-total-offers']);
             $withdrawnDB = $this->mFaucetStatsTbl->selectWith($wthSel);
             if(count($withdrawnDB) > 0) {
-                $shortlinksDB = (array)$withdrawnDB->current();
-                $offers = $shortlinksDB['stat-data'];
+                $offers = $withdrawnDB->current()->data;
+                if($offers > 100000 && $offers < 1000000) {
+                    $offers = substr($offers, 0, 3).'K';
+                }
             }
 
             # get faucet claims
             $claims = 0;
-            $wthSel = new Select($this->mFaucetStatsTbl->getTable());
-            $wthSel->where(['stat-key' => 'claim-total']);
-            $wthSel->order('date DESC');
-            $wthSel->limit(1);
+            $wthSel = new Select($this->mStatisticsTbl->getTable());
+            $wthSel->where(['stats_key' => 'faucet-claims-total']);
             $withdrawnDB = $this->mFaucetStatsTbl->selectWith($wthSel);
             if(count($withdrawnDB) > 0) {
-                $shortlinksDB = (array)$withdrawnDB->current();
-                $claims = $shortlinksDB['stat-data'];
+                $claims = $withdrawnDB->current()->data;
+                if($claims > 1000000) {
+                    $claims = substr($claims, 0, 1).'.'.substr($claims, 1, 1).'M';
+                }
             }
 
             # get days online

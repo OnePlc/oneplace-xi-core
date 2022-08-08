@@ -550,6 +550,7 @@ class WithdrawController extends AbstractActionController
 
                 # double check if user has enough balance for withdrawal
                 if($this->mTransaction->checkUserBalance($amount,$me->User_ID)) {
+                    $ip = substr(filter_var($_SERVER['REMOTE_ADDR'], FILTER_SANITIZE_STRING),0,30);
                     # insert to withdrawal history
                     if($this->mWithdrawTbl->insert([
                         'user_idfs' => $me->User_ID,
@@ -563,7 +564,8 @@ class WithdrawController extends AbstractActionController
                         'currency' => 'GAT',
                         'state' => 'done',
                         'transaction_id' => '',
-                        'hash' => password_hash($me->User_ID.$timeNow.$amount.$amountCrypto.$amountCrypto.'GAT', PASSWORD_DEFAULT)
+                        'hash' => password_hash($me->User_ID.$timeNow.$amount.$amountCrypto.$amountCrypto.'GAT', PASSWORD_DEFAULT),
+                        'ip' => $ip
                     ])) {
                         $this->mGachaDepositTbl->insert([
                             'user_idfs' => $gachaUser->User_ID,
@@ -794,6 +796,8 @@ class WithdrawController extends AbstractActionController
 
                 # double check if user has enough balance for withdrawal
                 if($this->mTransaction->checkUserBalance($amount,$me->User_ID)) {
+                    $ip = substr(filter_var($_SERVER['REMOTE_ADDR'], FILTER_SANITIZE_STRING),0,30);
+
                     # insert to withdrawal history
                     if($this->mWithdrawTbl->insert([
                         'user_idfs' => $me->User_ID,
@@ -806,7 +810,8 @@ class WithdrawController extends AbstractActionController
                         'date_sent' => '0000-00-00 00:00:00',
                         'currency' => $coinInfo->coin_sign,
                         'transaction_id' => '',
-                        'hash' => password_hash($wallet.$me->User_ID.$timeNow.$amount.$amountCrypto.$amountCrypto.$coinInfo->dollar_val, PASSWORD_DEFAULT)
+                        'hash' => password_hash($wallet.$me->User_ID.$timeNow.$amount.$amountCrypto.$amountCrypto.$coinInfo->dollar_val, PASSWORD_DEFAULT),
+                        'ip' => $ip
                     ])) {
                         # execute transaction
                         $withdrawalID = $this->mWithdrawTbl->lastInsertValue;

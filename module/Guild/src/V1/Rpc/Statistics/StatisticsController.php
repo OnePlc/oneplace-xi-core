@@ -131,14 +131,14 @@ class StatisticsController extends AbstractActionController
             $gWh->notLike('date_joined', '0000-00-00 00:00:00');
             $gWh->equalTo('guild_idfs', $guildId);
             if($mode == 'month') {
-                $gWh->like('ufs.stat_key', 'shdone-m-'.date('n-Y', time()));
+                $gWh->like('ufs.stat_key', 'user-shortlink-m-'.date('n-Y', time()));
             }
             if($mode == 'week') {
                 $week = $this->getCurrentWeekNumber();
-                $gWh->like('ufs.stat_key', 'shdone-w-'.$week);
+                $gWh->like('ufs.stat_key', 'user-shortlink-w-'.$week);
             }
             if($mode == 'total') {
-                $gWh->like('ufs.stat_key', 'shdone-total');
+                $gWh->like('ufs.stat_key', 'user-shortlink-total');
             }
 
             /**
