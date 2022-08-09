@@ -219,42 +219,66 @@ class GuildResource extends AbstractResourceListener
 
         if(count($userHasGuild) == 0) {
             # check if user has enough funds to create a guild
-            $guildPrice = 1500;
+            $guildPrice = 5000;
             if($this->mTransaction->checkUserBalance($guildPrice,$me->User_ID)) {
                 # create guild
                 $guildName = $data->name;
+                $guildMessage = $data->welcome_message;
+                $guildDescription = $data->description;
+                $guildLanguage = $data->language;
+                $guildShield = $data->shield;
                 $guildIcon = $data->icon;
 
-                $secResult = $this->mSecTools->basicInputCheck([$guildName,$guildIcon]);
+                $secResult = $this->mSecTools->basicInputCheck([$guildName,$guildIcon,$guildMessage,$guildDescription,$guildShield,$guildLanguage]);
                 if($secResult !== 'ok') {
-                    # ban user and force logout on client
-                    $this->mUserSetTbl->insert([
-                        'user_idfs' => $me->User_ID,
-                        'setting_name' => 'user-tempban',
-                        'setting_value' => 'Potential '.$secResult.' Attack @ '.date('Y-m-d H:i:s').' Guild Create',
-                    ]);
                     return new ApiProblem(418, 'Potential '.$secResult.' Attack - Goodbye');
                 }
 
-                $guildName = filter_var($guildName, FILTER_SANITIZE_STRING);
-                $guildIcon = filter_var($guildIcon, FILTER_SANITIZE_STRING);
+                $guildName = substr(filter_var($guildName, FILTER_SANITIZE_STRING),0,150);
+                $guildMessage = substr(filter_var($guildMessage, FILTER_SANITIZE_STRING),0,250);
+                $guildDescription = substr(filter_var($guildDescription, FILTER_SANITIZE_STRING),0,250);
+                $guildIcon = filter_var($guildIcon, FILTER_SANITIZE_NUMBER_INT);
+                $guildShield = filter_var($guildShield, FILTER_SANITIZE_NUMBER_INT);
+                $guildLanguage = substr(filter_var($guildLanguage, FILTER_SANITIZE_STRING),0,2);
 
                 # remove all join requests
                 if($me->User_ID != 0) {
                     $this->mGuildUserTbl->delete(['user_idfs' => $me->User_ID]);
                 }
 
+                $fFaucet = filter_var($data->focus_faucet, FILTER_SANITIZE_NUMBER_INT);
+                $fSH = filter_var($data->focus_shortlinks, FILTER_SANITIZE_NUMBER_INT);
+                $fOF = filter_var($data->focus_offerwalls, FILTER_SANITIZE_NUMBER_INT);
+                $fLot = filter_var($data->focus_lottery, FILTER_SANITIZE_NUMBER_INT);
+                $fMin = filter_var($data->focus_mining, FILTER_SANITIZE_NUMBER_INT);
+
+                // enforce 1 and 0
+                $focus = [
+                    'f' => ($fFaucet == 1) ? 1 : 0,
+                    'sl' => ($fSH == 1) ? 1 : 0,
+                    'of' => ($fOF == 1) ? 1 : 0,
+                    'lt' => ($fLot == 1) ? 1 : 0,
+                    'm' => ($fMin == 1) ? 1 : 0,
+                ];
+
                 $guildData = [
                     'label' => $guildName,
+                    'description' => $guildDescription,
+                    'welcome_message' => $guildMessage,
+                    'focus' => json_encode($focus),
                     'owner_idfs' => $me->User_ID,
                     'created_date' => date('Y-m-d H:i:s', time()),
                     'xp_level' => 1,
                     'xp_current' => 0,
                     'xp_total' => 0,
                     'members' => 1,
-                    'icon' => $guildIcon,
+                    'icon' => '',
+                    'emblem_shield' => $guildShield,
+                    'emblem_icon' => $guildIcon,
                     'is_vip' => 0,
                     'token_balance' => 0,
+                    'main_language' => $guildLanguage,
+                    'sort_id' => 99
                 ];
                 if($this->mGuildTbl->insert($guildData)) {
                     # get id of new guild
@@ -389,9 +413,16 @@ class GuildResource extends AbstractResourceListener
                 if($userGuildInfo->rank == 0) {
                     $gmCount = $this->mGuildUserTbl->select(['guild_idfs' => $userGuildInfo->guild_idfs,'rank' => 0])->count();
                     if($gmCount == 1) {
+                        $guildInfo = $this->mGuildTbl->select(['Guild_ID' => $userGuildInfo->guild_idfs]);
+                        if($guildInfo->count() > 0) {
+                            $guildInfo = $guildInfo->current();
+                        }
                         $memberCount = $this->mGuildUserTbl->select(['guild_idfs' => $userGuildInfo->guild_idfs])->count();
                         if($memberCount > 1) {
                             return new ApiProblem(403, 'You cannot leave the guild as guildmaster. Please promote a new guildmaster first or remove all members so the guild is empty.');
+                        }
+                        if($guildInfo->token_balance > 0) {
+                            return new ApiProblem(403, 'You still have Coins in your Guild Bank. Please withraw them all before deleting the guild');
                         }
                     }
                 }
@@ -530,6 +561,16 @@ class GuildResource extends AbstractResourceListener
             }
         }
 
+        // user-xp-m-
+        $xpStatSel = new Select($this->mGuildUserTbl->getTable());
+        $xpStatSel->join(['ufc' => 'user_faucet_stat'], 'ufc.user_idfs = faucet_guild_user.user_idfs', ['stat_data']);
+        $xpStatSel->where(['guild_idfs' => $guildId, 'ufc.stat_key' => 'user-xp-m-'.date('n-Y', time())]);
+        $guildUserXp = $this->mGuildUserTbl->selectWith($xpStatSel);
+        $gUserXpCache = [];
+        foreach($guildUserXp as $gXp) {
+            $gUserXpCache['user-'.$gXp->user_idfs] = $gXp->stat_data;
+        }
+
         /**
          * Load Guild Members List (paginated)
          */
@@ -554,11 +595,17 @@ class GuildResource extends AbstractResourceListener
         $membersPaginated->setCurrentPageNumber($page);
         $membersPaginated->setItemCountPerPage(25);
         foreach($membersPaginated as $guildMember) {
+            $xpGained = 0;
+            if(array_key_exists('user-'.$guildMember->User_ID, $gUserXpCache)) {
+                $xpGained = $gUserXpCache['user-'.$guildMember->User_ID];
+            }
             $guildMembers[] = (object)[
                 'id' => $guildMember->User_ID,
                 'name' => $guildMember->username,
                 'avatar' => ($guildMember->avatar != '') ? $guildMember->avatar : $guildMember->username,
                 'xp_level' => $guildMember->xp_level,
+                'join_level' => $guildMember->join_level,
+                'xp_gained' => $xpGained,
                 'last_action' => $guildMember->last_action,
                 'rank' => (object)[
                     'id' => $guildMember->rank,
@@ -746,8 +793,8 @@ class GuildResource extends AbstractResourceListener
         return (object)[
             'guild' => (object)[
                 'id' => $guild->Guild_ID,
-                'name'=> utf8_decode($guild->label),
-                'description'=> utf8_decode($guild->description),
+                'name'=> $guild->label,
+                'description'=> $guild->description,
                 'icon' => $guild->icon,
                 'language' => $guild->main_language,
                 'emblem_shield' => $guild->emblem_shield,
@@ -920,7 +967,7 @@ class GuildResource extends AbstractResourceListener
                 'name' => $guild->label,
                 'focus' => json_decode($guild->focus),
                 'guild_focus' => $gFocus,
-                'description' => utf8_decode($guild->description),
+                'description' => $guild->description,
                 'members' => $guild->members,
                 'xp_level' => $guild->xp_level,
                 'xp_current' => $guild->xp_current,
@@ -969,9 +1016,9 @@ class GuildResource extends AbstractResourceListener
                 }
                 $guildsNew[] = (object)[
                     'id' => $ng->Guild_ID,
-                    'name' => utf8_encode($ng->label),
+                    'name' => $ng->label,
                     'focus' => json_decode(filter_var($ng->focus, FILTER_SANITIZE_STRING)),
-                    'description' => utf8_encode(filter_var($ng->description, FILTER_SANITIZE_STRING)),
+                    'description' => filter_var($ng->description, FILTER_SANITIZE_STRING),
                     'members' => $ng->members,
                     'xp_level' => $ng->xp_level,
                     'xp_current' => $ng->xp_current,
@@ -1370,7 +1417,7 @@ class GuildResource extends AbstractResourceListener
                     }
                     $newDescription = filter_var($data->description, FILTER_SANITIZE_STRING);
                     $this->mGuildTbl->update([
-                        'description' => utf8_encode($newDescription),
+                        'description' => $newDescription,
                     ],[
                         'Guild_ID' => $userGuildRole->guild_idfs,
                     ]);
@@ -1418,7 +1465,7 @@ class GuildResource extends AbstractResourceListener
                     }
                     $newDescription = filter_var($data->welcome_message, FILTER_SANITIZE_STRING);
                     $this->mGuildTbl->update([
-                        'welcome_message' => utf8_encode($newDescription),
+                        'welcome_message' => $newDescription,
                     ],[
                         'Guild_ID' => $userGuildRole->guild_idfs,
                     ]);

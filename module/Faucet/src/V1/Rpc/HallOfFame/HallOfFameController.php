@@ -124,6 +124,11 @@ class HallOfFameController extends AbstractActionController
     private $mGuildStatsTbl;
 
     /**
+     * @var TableGateway
+     */
+    private $mTokenTbl;
+
+    /**
      * Constructor
      *
      * UserResource constructor.
@@ -144,6 +149,7 @@ class HallOfFameController extends AbstractActionController
         $this->mContestWinners = new TableGateway('faucet_contest_winner', $mapper);
         $this->mContest = new TableGateway('faucet_contest', $mapper);
         $this->mContestRewards = new TableGateway('faucet_contest_reward', $mapper);
+        $this->mTokenTbl = new TableGateway('faucet_tokenbuy', $mapper);
 
         $this->mSecTools = new SecurityTools($mapper);
     }
@@ -254,6 +260,7 @@ class HallOfFameController extends AbstractActionController
                 case 'loyalty':
                 case 'lottery':
                 case 'faucet':
+                case 'token':
                     $detail = $detailSet;
                     break;
                 default:
@@ -1196,6 +1203,65 @@ class HallOfFameController extends AbstractActionController
                     ],
                     'me_month' => ['links' => $myShortsM,'rank' => $myRankM],
                     'me_all' => ['links' => (int)$myShorts,'rank' => $myRank]
+                ]);
+            }
+
+            if($detail == 'token') {
+
+                $tkSel = new Select($this->mTokenTbl->getTable());
+                $tkSel->join(['u' => 'user'],'u.User_ID = faucet_tokenbuy.user_idfs', ['username', 'avatar']);
+                $tkSel->where(['sent' => 1]);
+                $tokenHolders = $this->mTokenTbl->selectWith($tkSel);
+                $tokensByUserId = [];
+                $tokenUserInfoByUserId = [];
+                foreach($tokenHolders as $tk) {
+                    $tkKey = 'user-'.$tk->user_idfs;
+                    if(!array_key_exists($tkKey, $tokensByUserId)) {
+                        $tokensByUserId[$tkKey] = 0;
+                    }
+                    $tokensByUserId[$tkKey]+=$tk->amount;
+                    if(!array_key_exists($tkKey,$tokenUserInfoByUserId)) {
+                        $tokenUserInfoByUserId[$tkKey] = (object)[
+                            'id' => $tk->user_idfs,
+                            'name' => $tk->username,
+                            'avatar' => ($tk->avatar != '') ? $tk->avatar : $tk->username,
+                            'tokens' => 0,
+                        ];
+                    }
+                }
+
+                arsort($tokensByUserId);
+                $rank = 1;
+                $topShorters = [];
+                $topShortersM = [];
+
+                $myRank = 0;
+                $myRankM = 0;
+                $myShorts = 0;
+                $myShortsM = 0;
+                foreach($tokensByUserId as $tkKey => $tkUser) {
+                    if($rank <= 50) {
+                        $top = $tokenUserInfoByUserId[$tkKey];
+                        $top->rank = $rank;
+                        $top->tokens = $tkUser;
+                        $topShorters[] = $top;
+                    }
+                    if($tkKey == 'user-'.$me->User_ID) {
+                        $myRank = $rank;
+                        $myShorts = $tkUser;
+                    }
+                    $rank++;
+                }
+
+                # Show Stats
+                return new ViewModel([
+                    'date' => date('Y-m-d H:i:s'),
+                    'player_list' => [
+                        'month' => $topShortersM,
+                        'all' => $topShorters,
+                    ],
+                    'me_month' => ['coins' => $myShortsM,'rank' => $myRankM],
+                    'me_all' => ['coins' => (int)$myShorts,'rank' => $myRank]
                 ]);
             }
 

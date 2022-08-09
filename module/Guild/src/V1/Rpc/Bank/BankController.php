@@ -294,6 +294,9 @@ class BankController extends AbstractActionController
                             # move coins from guild to user
                             $newBalance = $this->mTransaction->executeTransaction($amount, false, $me->User_ID, $guild->Guild_ID, 'guild-withdraw', '');
                             if($newBalance !== false) {
+                                $totalItems = $this->mTransaction->getGuildTransactionCount($guild->Guild_ID);
+                                $pages = (round($totalItems/10) > 0) ? round($totalItems/10) : 1;
+
                                 return [
                                     'state' => 'success',
                                     'message' => $amount.' successfully withdrawn from Guildbank',
@@ -307,6 +310,14 @@ class BankController extends AbstractActionController
                                         'xp_percent' => $guildXPPercent,
                                         'rank' => (object)['id' => $userHasGuild->rank, 'name' => $rank],
                                         'token_balance' => $newGuildBalance,
+                                    ],
+                                    'withdraw_timer' => (3600*24),
+                                    'transactions' => [
+                                        'page_size' => 10,
+                                        'page' => 1,
+                                        'page_count' => $pages,
+                                        'total_items' => $totalItems,
+                                        'transactions' => $this->mTransaction->getGuildTransactions($guild->Guild_ID, 1, 10),
                                     ],
                                     'token_balance' => $newBalance,
                                 ];
@@ -336,6 +347,9 @@ class BankController extends AbstractActionController
                         # move coins from user to guild
                         $newGuildBalance = $this->mTransaction->executeGuildTransaction($amount, false, $guild->Guild_ID, 0, '', 'Deposit from User ' . $me->username, $me->User_ID);
                         if ($newGuildBalance !== false) {
+                            $totalItems = $this->mTransaction->getGuildTransactionCount($guild->Guild_ID);
+                            $pages = (round($totalItems/10) > 0) ? round($totalItems/10) : 1;
+
                             return [
                                 'state' => 'success',
                                 'message' => $amount . ' successfully deposited to Guildbank',
@@ -349,6 +363,13 @@ class BankController extends AbstractActionController
                                     'xp_percent' => $guildXPPercent,
                                     'rank' => (object)['id' => $userHasGuild->rank, 'name' => $rank],
                                     'token_balance' => $newGuildBalance,
+                                ],
+                                'transactions' => [
+                                    'page_size' => 10,
+                                    'page' => 1,
+                                    'page_count' => $pages,
+                                    'total_items' => $totalItems,
+                                    'transactions' => $this->mTransaction->getGuildTransactions($guild->Guild_ID, 1, 10),
                                 ],
                                 'token_balance' => $newBalance,
                             ];

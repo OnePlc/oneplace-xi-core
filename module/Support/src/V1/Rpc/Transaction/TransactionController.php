@@ -16,6 +16,7 @@
 namespace Support\V1\Rpc\Transaction;
 
 use Application\Controller\IndexController;
+use Faucet\Tools\ApiTools;
 use Faucet\Tools\SecurityTools;
 use Faucet\Tools\UserTools;
 use Faucet\Transaction\TransactionHelper;
@@ -110,6 +111,11 @@ class TransactionController extends AbstractActionController
     protected $mGuildActivityTbl;
 
     /**
+     * @var ApiTools
+     */
+    private $mApiTools;
+
+    /**
      * ConstructormGuildActivityTbl
      *
      * TransactionController constructor.
@@ -122,6 +128,7 @@ class TransactionController extends AbstractActionController
         $this->mSecTools = new SecurityTools($mapper);
         $this->mUserTbl = new TableGateway('user', $mapper);
         $this->mUserTools = new UserTools($mapper);
+        $this->mApiTools = new ApiTools($mapper);
         $this->mTransaction = new TransactionHelper($mapper);
         $this->mUserSetTbl = new TableGateway('user_setting', $mapper);
         $this->mTransTbl = new TableGateway('faucet_transaction', $mapper);
@@ -208,6 +215,7 @@ class TransactionController extends AbstractActionController
                                 'amount' => $gt->reward,
                                 'is_output' => 0,
                                 'date' => $gt->date,
+                                'time_ago' => $this->mApiTools->timeElapsedString($gt->date),
                                 'ref_idfs' => $gt->ref_idfs,
                                 'ref_type' => $gt->ref_type,
                                 'comment' => '',
@@ -272,6 +280,7 @@ class TransactionController extends AbstractActionController
                         'amount' => $trans->amount,
                         'is_output' => (boolean)$trans->is_output,
                         'date' => $trans->date,
+                        'time_ago' => $this->mApiTools->timeElapsedString($trans->date),
                         'ref_idfs' => $trans->ref_idfs,
                         'ref_type' => $trans->ref_type,
                         'comment' => $trans->comment
