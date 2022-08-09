@@ -399,7 +399,6 @@ class DailytaskResource extends AbstractResourceListener
                 }
 
                 # Transaction
-                //$this->mUserTools->getItemDropChance('dailytask', $me->User_ID);
                 $newBalance = $this->mTransaction->executeTransaction($dailyTask->reward, false, $me->User_ID, $iTaskID, 'dailytask-claim', 'Daily Task '.$dailyTask->label.' completed');
                 if($newBalance !== false) {
                     # Add Done

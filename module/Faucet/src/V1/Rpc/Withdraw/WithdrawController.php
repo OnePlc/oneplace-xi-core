@@ -207,16 +207,6 @@ class WithdrawController extends AbstractActionController
             }
 
             $withdrawBonus = 0;
-            /**
-            $myBuffs = [];
-            # check for active withdrawal buffs
-            $activeBuffs = $this->mUserTools->getUserActiveBuffs('daily-withdraw-buff', date('Y-m-d', time()), $me->User_ID);
-            if(count($activeBuffs) > 0) {
-                foreach($activeBuffs as $buff) {
-                    $withdrawBonus+=$buff->buff;
-                    $myBuffs[] = $buff;
-                }
-            } **/
 
             $gachaLink = false;
             $links = $this->mLinkAccTbl->select(['user_idfs' => $me->User_ID]);
@@ -716,20 +706,6 @@ class WithdrawController extends AbstractActionController
                 if($me->xp_level >= 20) {
                     $withdrawLimit = $withdrawLimit*2;
                 }
-
-                /**
-                 * Add Buffs to Limit
-                 */
-                /**
-                $withdrawBonus = 0;
-                # check for active withdrawal buffs
-                $activeBuffs = $this->mUserTools->getUserActiveBuffs('daily-withdraw-buff', date('Y-m-d', time()), $me->User_ID);
-                if(count($activeBuffs) > 0) {
-                    foreach($activeBuffs as $buff) {
-                        $withdrawBonus+=$buff->buff;
-                    }
-                }
-                **/
 
                 /**
                  * Buffs V2

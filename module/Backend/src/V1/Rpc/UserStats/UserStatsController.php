@@ -166,7 +166,24 @@ class UserStatsController extends AbstractActionController
             ];
             $countryLabelsTmp = [];
             $countryDataTmp = [];
+
+            $clientDayStats = [
+                'labels' => [],
+                'data' => []
+            ];
+            $clientDayLabelsTmp = [];
+            $clientDayDataTmp = [];
+
             foreach($mauClients as $cl) {
+                if(date('Y-m-d', strtotime($cl->last_action)) == date('Y-m-d', time())) {
+                    if(!array_key_exists('v-'.$cl->client_version,$clientDayLabelsTmp)) {
+                        $clientDayLabelsTmp['v-'.$cl->client_version] = $cl->client_version;
+                    }
+                    if(!array_key_exists('v-'.$cl->client_version,$clientDayDataTmp)) {
+                        $clientDayDataTmp['v-'.$cl->client_version] = 0;
+                    }
+                    $clientDayDataTmp['v-'.$cl->client_version]++;
+                }
                 if(!array_key_exists('v-'.$cl->client_version,$labelsTmp)) {
                     $labelsTmp['v-'.$cl->client_version] = $cl->client_version;
                 }
@@ -189,9 +206,14 @@ class UserStatsController extends AbstractActionController
                 $clientStats['data'][] = $dataTmp[$vKey];
             }
 
-            foreach($countryLabelsTmp as $cKey => $cName) {
-                $countryStats['labels'][] = $cName;
-                $countryStats['data'][] = $countryDataTmp[$cKey];
+            foreach($countryLabelsTmp as $vKey => $vName) {
+                $countryStats['labels'][] = $vName;
+                $countryStats['data'][] = $countryDataTmp[$vKey];
+            }
+
+            foreach($clientDayLabelsTmp as $cKey => $cName) {
+                $clientDayStats['labels'][] = $cName;
+                $clientDayStats['data'][] = $clientDayDataTmp[$cKey];
             }
 
             /**
@@ -224,6 +246,7 @@ class UserStatsController extends AbstractActionController
                 'mau' => $mauStats,
                 'muu' => $muuStats,
                 'clv' => $clientStats,
+                'cld' => $clientDayStats,
                 'dcu' => $dcuStats,
                 'mcd' => $countryStats
             ];

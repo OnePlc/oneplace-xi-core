@@ -96,14 +96,6 @@ class UserTools extends AbstractResourceListener {
     protected $mTransaction;
 
     /**
-     * User Buff Table
-     *
-     * @var TableGateway $mUserBuffTbl
-     * @since 1.0.0
-     */
-    protected $mUserBuffTbl;
-
-    /**
      * Inventory Helper
      *
      * @var InventoryHelper $mInventory
@@ -129,7 +121,6 @@ class UserTools extends AbstractResourceListener {
         $this->mAchievTbl = new TableGateway('faucet_achievement', $mapper);
         $this->mAchievUserTbl = new TableGateway('faucet_achievement_user', $mapper);
         $this->mUserTbl = new TableGateway('user', $mapper);
-        $this->mUserBuffTbl = new TableGateway('user_buff', $mapper);
 
         $this->mTransaction = new TransactionHelper($mapper);
         $this->mInventory = new InventoryHelper($mapper);
@@ -247,25 +238,6 @@ class UserTools extends AbstractResourceListener {
         }
     }
 
-    public function getUserActiveBuffs($buffType, $date, $userId) {
-        $buffWh = new Where();
-        $buffWh->like('buff_type', $buffType);
-        $buffWh->equalTo('user_idfs', $userId);
-        //$buffWh->like('date', $date.'%');
-        //$buffWh->greaterThanOrEqualTo('date', $date.'%');
-        $buffWh->greaterThanOrEqualTo('expires', $date.'%');
-        $buffsActive = $this->mUserBuffTbl->select($buffWh);
-        $buffs = [];
-
-        if(count($buffsActive) > 0) {
-            foreach($buffsActive as $buff) {
-                $buffs[] = $buff;
-            }
-        }
-
-        return $buffs;
-    }
-
     public function getSetting($userId, $key)
     {
         $settingFound = $this->mUserSettingsTbl->select(['user_idfs' => $userId, 'setting_name' => $key]);
@@ -293,53 +265,5 @@ class UserTools extends AbstractResourceListener {
             ]);
         }
         return true;
-    }
-
-    public function getItemDropChance($action, $userId) {
-        $lootId = rand(1, 100);
-        $lootTable = [
-            1 => ['id' => 31, 'amount' => 5],
-            2 => ['id' => 31, 'amount' => 3],
-            3 => ['id' => 31, 'amount' => 5],
-            4 => ['id' => 31, 'amount' => 3],
-            5 => ['id' => 31, 'amount' => 5],
-            6 => ['id' => 31, 'amount' => 3],
-            7 => ['id' => 31, 'amount' => 5],
-            8 => ['id' => 31, 'amount' => 3],
-            9 => ['id' => 31, 'amount' => 5],
-            10 => ['id' => 31, 'amount' => 3],
-            11 => ['id' => 38, 'amount' => 3],
-            12 => ['id' => 38, 'amount' => 2],
-            13 => ['id' => 38, 'amount' => 3],
-            14 => ['id' => 38, 'amount' => 2],
-            15 => ['id' => 38, 'amount' => 2],
-            16 => ['id' => 38, 'amount' => 3],
-            17 => ['id' => 38, 'amount' => 2],
-            18 => ['id' => 39, 'amount' => 1],
-            19 => ['id' => 39, 'amount' => 1],
-            20 => ['id' => 39, 'amount' => 2],
-            21 => ['id' => 39, 'amount' => 1],
-            22 => ['id' => 39, 'amount' => 1],
-        ];
-
-        switch($action) {
-            case 'faucet-claim':
-                if(array_key_exists($lootId, $lootTable)) {
-                    $this->mInventory->addItemToUserInventory($lootTable[$lootId]['id'], $lootTable[$lootId]['amount'], $userId, 'Random drop from Faucet', 1);
-                }
-                break;
-            case 'dailytask':
-                if(array_key_exists($lootId, $lootTable)) {
-                    $this->mInventory->addItemToUserInventory($lootTable[$lootId]['id'], $lootTable[$lootId]['amount'], $userId, 'Random drop from Daily Task', 1);
-                }
-                break;
-            case 'shortlink-claim':
-                if(array_key_exists($lootId, $lootTable)) {
-                    $this->mInventory->addItemToUserInventory($lootTable[$lootId]['id'], $lootTable[$lootId]['amount'], $userId, 'Random drop from Shortlink', 1);
-                }
-                break;
-            default:
-                break;
-        }
     }
 }

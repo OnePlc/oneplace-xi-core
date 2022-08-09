@@ -201,8 +201,6 @@ class CompleteController extends AbstractActionController
                         if($newBalance !== false) {
                             $xpInfo = $this->mUserTools->addXP('shortlink-claim', $shFound->user_idfs);
 
-                            //$itemDrop = $this->mUserTools->getItemDropChance('shortlink-claim', $shFound->user_idfs);
-
                             # check for achievement completetion
                             $currentLinksDone = $this->mShortDoneTbl->select(['user_idfs' => $shFound->user_idfs])->count();
 
