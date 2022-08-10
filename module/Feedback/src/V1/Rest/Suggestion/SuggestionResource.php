@@ -201,7 +201,7 @@ class SuggestionResource extends AbstractResourceListener
         $checkWh->equalTo('user_idfs', $me->User_ID);
         $lastPost = $this->mFeedbackTbl->select($checkWh);
 
-        if($lastPost->count() == 0) {
+        if($lastPost->count() <= 20) {
             # save feedback
             $this->mFeedbackTbl->insert([
                 'title' => $title,
@@ -213,7 +213,7 @@ class SuggestionResource extends AbstractResourceListener
 
             return true;
         } else {
-            return new ApiProblemResponse(new ApiProblem(400, 'You can only post 1 suggestion per day'));
+            return new ApiProblemResponse(new ApiProblem(400, 'You can only post 5 suggestions per day'));
         }
     }
 
@@ -278,11 +278,19 @@ class SuggestionResource extends AbstractResourceListener
 
         $verifiedComments = $this->mFeedbackCommentTbl->selectWith($comSel);
 
+        $adminUserIds = $this->mSecTools->getCoreSetting('admin-user-idfs');
+        $adminUserIds = json_decode($adminUserIds);
+
         $totalComments = 0;
         foreach($verifiedComments as $comment) {
+            $isAdmin = 0;
+            if(in_array($comment->user_idfs, $adminUserIds)) {
+                $isAdmin = 1;
+            }
             $comments[] = [
                 'id' => $comment->Comment_ID,
                 'author' => $comment->username,
+                'is_admin' => $isAdmin,
                 'comment' => utf8_decode($comment->comment),
                 'date' => $comment->date
             ];
@@ -311,7 +319,7 @@ class SuggestionResource extends AbstractResourceListener
             'feedback' => [
                 'id' => $feed->Feedback_ID,
                 'title' => $feed->title,
-                'description' => nl2br($feed->description),
+                'description' => $feed->description,
                 'date' => $feed->date,
                 'votes' => $feed->votes,
                 'author' => $feed->username,
@@ -348,7 +356,7 @@ class SuggestionResource extends AbstractResourceListener
 
         # prepare sql query
         $feedbackSel = new Select($this->mFeedbackTbl->getTable());
-        $feedbackSel->order('date DESC');
+        $feedbackSel->order(['complete ASC','date DESC']);
         $feedbackSel->where(['verified' => 1]);
         $feedbackSel->join(['u' => 'user'],'u.User_ID = feedback.user_idfs', ['username']);
 

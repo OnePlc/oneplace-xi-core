@@ -791,6 +791,12 @@ class UserResource extends AbstractResourceListener
             $claimSound = $claimSoundSet;
         }
 
+        $rpsGameLimit = 1;
+        $rpsGameLimitBuy = $this->mUserTools->getSetting($user->User_ID, 'game-rps-unlock-multi');
+        if($rpsGameLimitBuy) {
+            $rpsGameLimit = $rpsGameLimitBuy;
+        }
+
         $returnData = [
             'id' => (int)$user->User_ID,
             'name' => $user->username,
@@ -799,6 +805,7 @@ class UserResource extends AbstractResourceListener
             'servertime' => date('Y-m-d H:i:s', time()),
             'claim_timer' => $sTime,
             'claim_sound' => $claimSound,
+            'rps_game_limit' => $rpsGameLimit,
             'daily_claim_count' => $this->getDailyTasksReadyToClaim($user),
             'emp_mode' => ($user->is_employee == 1) ? 'mod' : '',
             'verified' => (int)$user->email_verified,
@@ -824,7 +831,7 @@ class UserResource extends AbstractResourceListener
             'inbox_count' => $inboxMessages
         ];
 
-        $forceUpdateTo = '2.0.10';
+        $forceUpdateTo = '2.0.11';
         if(isset($_REQUEST['v'])) {
             $clientVersion = substr(filter_var($_REQUEST['v'], FILTER_SANITIZE_STRING),0, 6);
 
@@ -1172,6 +1179,9 @@ class UserResource extends AbstractResourceListener
         if(isset($data->claim_sound)) {
             $checkFields[] = $data->claim_sound;
         }
+        if(isset($data->rps_unlock)) {
+            $checkFields[] = $data->rps_unlock;
+        }
         if(isset($data->passwordCheck)) {
             $checkFields[] = $data->passwordCheck;
             $checkFields[] = $data->passwordNew;
@@ -1201,8 +1211,11 @@ class UserResource extends AbstractResourceListener
         $avatar = filter_var($data->avatar, FILTER_SANITIZE_STRING);
         $gachaAcc = filter_var($data->account_gacha, FILTER_SANITIZE_STRING);
         $claimSound = filter_var($data->claim_sound, FILTER_SANITIZE_STRING);
+        $rpsUnlock = filter_var($data->rps_unlock, FILTER_SANITIZE_NUMBER_INT);
 
         $favCoin = filter_var($data->favCoin, FILTER_SANITIZE_STRING);
+
+        $tokenBalance = $user->token_balance;
 
         $update = [];
         # check if name has changed
@@ -1245,6 +1258,33 @@ class UserResource extends AbstractResourceListener
                 $avatar = $user->username;
             } else {
                 $avatar = $user->avatar;
+            }
+        }
+
+        $rpsGameLimit = 1;
+        $checkSetting = $this->mUserTools->getSetting($user->User_ID, 'game-rps-unlock-multi');
+        if($checkSetting) {
+            $rpsGameLimit = $checkSetting;
+        }
+
+        if($rpsUnlock != '' && $rpsUnlock != 0) {
+            if($rpsUnlock != 3 && $rpsUnlock != 10) {
+                return new ApiProblem(409, 'Invalid Upgrade');
+            }
+            $price = 750;
+            if($rpsUnlock == 10) {
+                $price = 5000;
+            }
+            if($rpsGameLimit == 10) {
+                return new ApiProblem(409, 'You already have the biggest upgrade');
+            }
+            if($this->mTransaction->checkUserBalance($price, $user->User_ID)) {
+                $newBalance = $this->mTransaction->executeTransaction($price, true, $user->User_ID, $rpsUnlock, 'rps-unlock', 'Upgrade to '.$rpsUnlock.' concurrent Games in RPS');
+                if($newBalance) {
+                    $tokenBalance = $newBalance;
+                    $this->mUserTools->setSetting($user->User_ID, 'game-rps-unlock-multi', $rpsUnlock);
+                    $rpsGameLimit = $rpsUnlock;
+                }
             }
         }
 
@@ -1409,7 +1449,7 @@ class UserResource extends AbstractResourceListener
             $coinInfo = $coinInfo->current();
             $prefColor = $coinInfo->bgcolor;
             $prefText = $coinInfo->textcolor;
-            $cryptoBalance = $user->token_balance*$tokenValue;
+            $cryptoBalance = $tokenBalance*$tokenValue;
             if($coinInfo->dollar_val > 0) {
                 $cryptoBalance = $cryptoBalance/$coinInfo->dollar_val;
             } else {
@@ -1425,8 +1465,9 @@ class UserResource extends AbstractResourceListener
                 'name' => $user->username,
                 'email' => $user->email,
                 'avatar' => $avatar,
-                'token_balance' => $user->token_balance,
+                'token_balance' => $tokenBalance,
                 'crypto_balance' => $cryptoBalance,
+                'rps_game_limit' => $rpsGameLimit,
                 'xp_level' => $user->xp_level,
                 'xp_percent' => $dPercent,
                 'prefered_coin' => $favCoin,
