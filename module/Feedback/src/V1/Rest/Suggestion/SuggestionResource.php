@@ -356,7 +356,7 @@ class SuggestionResource extends AbstractResourceListener
 
         # prepare sql query
         $feedbackSel = new Select($this->mFeedbackTbl->getTable());
-        $feedbackSel->order(['complete ASC','date DESC']);
+        $feedbackSel->order(['complete ASC','votes DESC']);
         $feedbackSel->where(['verified' => 1]);
         $feedbackSel->join(['u' => 'user'],'u.User_ID = feedback.user_idfs', ['username']);
 

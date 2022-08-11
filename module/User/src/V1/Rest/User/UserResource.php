@@ -831,7 +831,7 @@ class UserResource extends AbstractResourceListener
             'inbox_count' => $inboxMessages
         ];
 
-        $forceUpdateTo = '2.0.11';
+        $forceUpdateTo = '2.0.12';
         if(isset($_REQUEST['v'])) {
             $clientVersion = substr(filter_var($_REQUEST['v'], FILTER_SANITIZE_STRING),0, 6);
 
@@ -1124,6 +1124,8 @@ class UserResource extends AbstractResourceListener
             'avatar' => $avatar,
             'token_balance' => $user->token_balance,
             'crypto_balance' => $cryptoBalance,
+            'verified' => (int)$user->email_verified,
+            'show_verify_mail' => ($user->send_verify == null) ? ($user->email_verified == 1) ? false : true : false,
             'xp_level' => $user->xp_level,
             'xp_percent' => $dPercent,
             'prefered_coin' => $favCoin,
@@ -1467,6 +1469,8 @@ class UserResource extends AbstractResourceListener
                 'avatar' => $avatar,
                 'token_balance' => $tokenBalance,
                 'crypto_balance' => $cryptoBalance,
+                'verified' => (int)$user->email_verified,
+                'show_verify_mail' => ($user->send_verify == null) ? ($user->email_verified == 1) ? false : true : false,
                 'rps_game_limit' => $rpsGameLimit,
                 'xp_level' => $user->xp_level,
                 'xp_percent' => $dPercent,
