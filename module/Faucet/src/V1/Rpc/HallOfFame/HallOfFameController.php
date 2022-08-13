@@ -261,6 +261,7 @@ class HallOfFameController extends AbstractActionController
                 case 'lottery':
                 case 'faucet':
                 case 'token':
+                case 'rpsgame':
                     $detail = $detailSet;
                     break;
                 default:
@@ -579,7 +580,11 @@ class HallOfFameController extends AbstractActionController
                 $infoByUserId = [];
                 if(count($totalUserShorts) > 0) {
                     foreach($totalUserShorts as $shd) {
-                        $shortsByUser['user-'.$shd->user_idfs] = (int)$shd->stat_data.$shd->xp_level;
+                        $cLevel = $shd->xp_level;
+                        if($cLevel < 10) {
+                            $cLevel.= '0';
+                        }
+                        $shortsByUser['user-'.$shd->user_idfs] = (int)$shd->stat_data.$cLevel;
                         $infoByUserId['user-'.$shd->user_idfs] = (object)[
                             'name' => $shd->username,
                             'xp_level' => $shd->xp_level,
@@ -607,8 +612,8 @@ class HallOfFameController extends AbstractActionController
                     $rank++;
                 }
 
-                $myContestStats[10] = $myShortsM;
-                $myContestRanks[10] = $myRankM;
+                $myContestStats['contest-10'] = $myShortsM;
+                $myContestRanks['contest-10'] = $myRankM;
 
                 /**
                  * Daily Tasks
@@ -622,7 +627,11 @@ class HallOfFameController extends AbstractActionController
                 $infoByUserId = [];
                 if(count($totalUserShorts) > 0) {
                     foreach($totalUserShorts as $shd) {
-                        $shortsByUser['user-'.$shd->user_idfs] = (int)$shd->stat_data.$shd->xp_level;
+                        $cLevel = $shd->xp_level;
+                        if($cLevel < 10) {
+                            $cLevel.= '0';
+                        }
+                        $shortsByUser['user-'.$shd->user_idfs] = (int)$shd->stat_data.$cLevel;
                         $infoByUserId['user-'.$shd->user_idfs] = (object)[
                             'name' => $shd->username,
                             'xp_level' => $shd->xp_level,
@@ -650,8 +659,8 @@ class HallOfFameController extends AbstractActionController
                     $rank++;
                 }
 
-                $myContestStats[13] = $myShortsM;
-                $myContestRanks[13] = $myRankM;
+                $myContestStats['contest-13'] = $myShortsM;
+                $myContestRanks['contest-13'] = $myRankM;
 
                 /**
                  * Offerwalls BIG
@@ -665,7 +674,11 @@ class HallOfFameController extends AbstractActionController
                 $infoByUserId = [];
                 if(count($totalUserShorts) > 0) {
                     foreach($totalUserShorts as $shd) {
-                        $shortsByUser['user-'.$shd->user_idfs] = (int)$shd->stat_data.$shd->xp_level;
+                        $cLevel = $shd->xp_level;
+                        if($cLevel < 10) {
+                            $cLevel.= '0';
+                        }
+                        $shortsByUser['user-'.$shd->user_idfs] = (int)$shd->stat_data.$cLevel;
                         $infoByUserId['user-'.$shd->user_idfs] = (object)[
                             'name' => $shd->username,
                             'xp_level' => $shd->xp_level,
@@ -677,12 +690,12 @@ class HallOfFameController extends AbstractActionController
                 }
                 arsort($shortsByUser);
                 $rank = 1;
-                $myRankM = "-";
-                $myShortsM = 0;
+                $myRankBM = "-";
+                $myShortsBM = 0;
                 foreach(array_keys($shortsByUser) as $claimUser) {
                     if($claimUser == 'user-'.$me->User_ID) {
-                        $myRankM = $rank;
-                        $myShortsM = $infoByUserId[$claimUser]->count;
+                        $myRankBM = $rank;
+                        $myShortsBM = $infoByUserId[$claimUser]->count;
                     }
                     if($rank <= 10) {
                         if(array_key_exists($claimUser,$infoByUserId)) {
@@ -693,8 +706,8 @@ class HallOfFameController extends AbstractActionController
                     $rank++;
                 }
 
-                $myContestStats[11] = $myShortsM;
-                $myContestRanks[11] = $myRankM;
+                $myContestStats['contest-11'] = $myShortsBM;
+                $myContestRanks['contest-11'] = $myRankBM;
 
                 /**
                  * Offerwalls Small
@@ -708,7 +721,11 @@ class HallOfFameController extends AbstractActionController
                 $infoByUserId = [];
                 if(count($totalUserShorts) > 0) {
                     foreach($totalUserShorts as $shd) {
-                        $shortsByUser['user-'.$shd->user_idfs] = (int)$shd->stat_data.$shd->xp_level;
+                        $cLevel = $shd->xp_level;
+                        if($cLevel < 10) {
+                            $cLevel.= '0';
+                        }
+                        $shortsByUser['user-'.$shd->user_idfs] = (int)$shd->stat_data.$cLevel;
                         $infoByUserId['user-'.$shd->user_idfs] = (object)[
                             'name' => $shd->username,
                             'xp_level' => $shd->xp_level,
@@ -736,8 +753,8 @@ class HallOfFameController extends AbstractActionController
                     $rank++;
                 }
 
-                $myContestStats[12] = $myShortsM;
-                $myContestRanks[12] = $myRankM;
+                $myContestStats['contest-12'] = $myShortsM;
+                $myContestRanks['contest-12'] = $myRankM;
 
                 /**
                  * Offerwalls Tiny
@@ -751,7 +768,11 @@ class HallOfFameController extends AbstractActionController
                 $infoByUserId = [];
                 if(count($totalUserShorts) > 0) {
                     foreach($totalUserShorts as $shd) {
-                        $shortsByUser['user-'.$shd->user_idfs] = (int)$shd->stat_data.$shd->xp_level;
+                        $cLevel = $shd->xp_level;
+                        if($cLevel < 10) {
+                            $cLevel.= '0';
+                        }
+                        $shortsByUser['user-'.$shd->user_idfs] = (int)$shd->stat_data.$cLevel;
                         $infoByUserId['user-'.$shd->user_idfs] = (object)[
                             'name' => $shd->username,
                             'xp_level' => $shd->xp_level,
@@ -779,8 +800,8 @@ class HallOfFameController extends AbstractActionController
                     $rank++;
                 }
 
-                $myContestStats[14] = $myShortsM;
-                $myContestRanks[14] = $myRankM;
+                $myContestStats['contest-14'] = $myShortsM;
+                $myContestRanks['contest-14'] = $myRankM;
 
                 /**
                  * Offerwalls Medium
@@ -794,7 +815,11 @@ class HallOfFameController extends AbstractActionController
                 $infoByUserId = [];
                 if(count($totalUserShorts) > 0) {
                     foreach($totalUserShorts as $shd) {
-                        $shortsByUser['user-'.$shd->user_idfs] = (int)$shd->stat_data.$shd->xp_level;
+                        $cLevel = $shd->xp_level;
+                        if($cLevel < 10) {
+                            $cLevel.= '0';
+                        }
+                        $shortsByUser['user-'.$shd->user_idfs] = (int)$shd->stat_data.$cLevel;
                         $infoByUserId['user-'.$shd->user_idfs] = (object)[
                             'name' => $shd->username,
                             'xp_level' => $shd->xp_level,
@@ -822,8 +847,8 @@ class HallOfFameController extends AbstractActionController
                     $rank++;
                 }
 
-                $myContestStats[15] = $myShortsM;
-                $myContestRanks[15] = $myRankM;
+                $myContestStats['contest-15'] = $myShortsM;
+                $myContestRanks['contest-15'] = $myRankM;
 
                 // nano-coin-m-rvn-5-2022
                 /**
@@ -844,8 +869,12 @@ class HallOfFameController extends AbstractActionController
                 $infoByUserId = [];
                 if(count($totalUserShorts) > 0) {
                     foreach($totalUserShorts as $shd) {
+                        $cLevel = $shd->xp_level;
+                        if($cLevel < 10) {
+                            $cLevel.= '0';
+                        }
                         if(!array_key_exists('user-'.$shd->user_idfs, $shortsByUser)) {
-                            $shortsByUser['user-'.$shd->user_idfs] = (int)$shd->stat_data.$shd->xp_level;
+                            $shortsByUser['user-'.$shd->user_idfs] = (int)$shd->stat_data.$cLevel;
                             $infoByUserId['user-'.$shd->user_idfs] = (object)[
                                 'name' => $shd->username,
                                 'xp_level' => $shd->xp_level,
@@ -854,7 +883,7 @@ class HallOfFameController extends AbstractActionController
                                 'count' => (int)$shd->stat_data,
                             ];
                         } else {
-                            $shortsByUser['user-'.$shd->user_idfs]+= (int)$shd->stat_data.$shd->xp_level;
+                            $shortsByUser['user-'.$shd->user_idfs]+= (int)$shd->stat_data.$cLevel;
                             $infoByUserId['user-'.$shd->user_idfs]->count += (int)$shd->stat_data;
                         }
 
@@ -878,8 +907,8 @@ class HallOfFameController extends AbstractActionController
                     $rank++;
                 }
 
-                $myContestStats[5] = $myShortsM;
-                $myContestRanks[5] = $myRankM;
+                $myContestStats['contest-5'] = $myShortsM;
+                $myContestRanks['contest-5'] = $myRankM;
 
                 /**
                  * CPU Miners
@@ -893,7 +922,11 @@ class HallOfFameController extends AbstractActionController
                 $infoByUserId = [];
                 if(count($totalUserShorts) > 0) {
                     foreach($totalUserShorts as $shd) {
-                        $shortsByUser['user-'.$shd->user_idfs] = (int)$shd->stat_data.$shd->xp_level;
+                        $cLevel = $shd->xp_level;
+                        if($cLevel < 10) {
+                            $cLevel.= '0';
+                        }
+                        $shortsByUser['user-'.$shd->user_idfs] = (int)$shd->stat_data.$cLevel;
                         $infoByUserId['user-'.$shd->user_idfs] = (object)[
                             'name' => $shd->username,
                             'xp_level' => $shd->xp_level,
@@ -921,8 +954,8 @@ class HallOfFameController extends AbstractActionController
                     $rank++;
                 }
 
-                $myContestStats[6] = $myShortsM;
-                $myContestRanks[6] = $myRankM;
+                $myContestStats['contest-6'] = $myShortsM;
+                $myContestRanks['contest-6'] = $myRankM;
 
                 /**
                  * Top Guilds
@@ -1010,12 +1043,12 @@ class HallOfFameController extends AbstractActionController
                         $winners = $top10Contest['contest-'.$con->Contest_ID];
                     }
                     $me = 0;
-                    if(array_key_exists($con->Contest_ID,$myContestStats)) {
-                        $me = $myContestStats[$con->Contest_ID];
+                    if(array_key_exists('contest-'.$con->Contest_ID,$myContestStats)) {
+                        $me = $myContestStats['contest-'.$con->Contest_ID];
                     }
                     $meRank = '-';
-                    if(array_key_exists($con->Contest_ID,$myContestRanks)) {
-                        $meRank = $myContestRanks[$con->Contest_ID];
+                    if(array_key_exists('contest-'.$con->Contest_ID,$myContestRanks)) {
+                        $meRank = $myContestRanks['contest-'.$con->Contest_ID];
                     }
                     $contestsData[] = [
                         'id' => $con->Contest_ID,
@@ -1118,6 +1151,91 @@ class HallOfFameController extends AbstractActionController
                     ],
                     'me_month' => ['points' => $myAchievs,'rank' => $myRank],
                     'me_all' => ['points' => $myAchievs,'rank' => $myRank]
+                ]);
+            }
+
+            if($detail == 'rpsgame') {
+                $totalSel = new Select($this->mUsrStatsTbl->getTable());
+                $totalSel->join(['u' => 'user'],'u.User_ID = user_faucet_stat.user_idfs', ['username','avatar']);
+                $totalSel->where(['stat_key' => 'user-rps-game-total']);
+                $totalUserShorts = $this->mUsrStatsTbl->selectWith($totalSel);
+                $shortsByUser = [];
+                $infoByUserId = [];
+                if(count($totalUserShorts) > 0) {
+                    foreach($totalUserShorts as $shd) {
+                        $shortsByUser['user-'.$shd->user_idfs] = (int)$shd->stat_data;
+                        $infoByUserId['user-'.$shd->user_idfs] = (object)[
+                            'name' => $shd->username,
+                            'avatar' => ($shd->avatar != '') ? $shd->avatar : $shd->username,
+                            'id' => $shd->user_idfs,
+                            'games' => (int)$shd->stat_data
+                        ];
+                    }
+                }
+                arsort($shortsByUser);
+                $topShorters = [];
+                $rank = 1;
+                $myRank = "-";
+                $myShorts = 0;
+                foreach(array_keys($shortsByUser) as $claimUser) {
+                    if($claimUser == 'user-'.$me->User_ID) {
+                        $myRank = $rank;
+                        $myShorts = $shortsByUser[$claimUser];
+                    }
+                    if($rank <= 50) {
+                        if(array_key_exists($claimUser,$infoByUserId)) {
+                            $infoByUserId[$claimUser]->rank = $rank;
+                            $topShorters[] = $infoByUserId[$claimUser];
+                        }
+                    }
+                    $rank++;
+                }
+
+                $totalSel = new Select($this->mUsrStatsTbl->getTable());
+                $totalSel->join(['u' => 'user'],'u.User_ID = user_faucet_stat.user_idfs', ['username','avatar']);
+                $totalSel->where(['stat_key' => 'user-rps-game-m-'.date('n-Y', time())]);
+                $totalUserShorts = $this->mUsrStatsTbl->selectWith($totalSel);
+                $shortsByUser = [];
+                $infoByUserId = [];
+                if(count($totalUserShorts) > 0) {
+                    foreach($totalUserShorts as $shd) {
+                        $shortsByUser['user-'.$shd->user_idfs] = (int)$shd->stat_data;
+                        $infoByUserId['user-'.$shd->user_idfs] = (object)[
+                            'name' => $shd->username,
+                            'avatar' => ($shd->avatar != '') ? $shd->avatar : $shd->username,
+                            'id' => $shd->user_idfs,
+                            'games' => (int)$shd->stat_data
+                        ];
+                    }
+                }
+                arsort($shortsByUser);
+                $topShortersM = [];
+                $rank = 1;
+                $myRankM = "-";
+                $myShortsM = 0;
+                foreach(array_keys($shortsByUser) as $claimUser) {
+                    if($claimUser == 'user-'.$me->User_ID) {
+                        $myRankM = $rank;
+                        $myShortsM = $shortsByUser[$claimUser];
+                    }
+                    if($rank <= 50) {
+                        if(array_key_exists($claimUser,$infoByUserId)) {
+                            $infoByUserId[$claimUser]->rank = $rank;
+                            $topShortersM[] = $infoByUserId[$claimUser];
+                        }
+                    }
+                    $rank++;
+                }
+
+                # Show Stats
+                return new ViewModel([
+                    'date' => date('Y-m-d H:i:s'),
+                    'player_list' => [
+                        'month' => $topShortersM,
+                        'all' => $topShorters,
+                    ],
+                    'me_month' => ['games' => $myShortsM,'rank' => $myRankM],
+                    'me_all' => ['games' => (int)$myShorts,'rank' => $myRank]
                 ]);
             }
 
@@ -1458,11 +1576,21 @@ class HallOfFameController extends AbstractActionController
             }
 
             if($detail == 'offerwalls') {
-                $totalUserShorts = $this->mUsrStatsTbl->select(['stat_key' => 'ofdone-total']);
+                $totalSel = new Select($this->mUsrStatsTbl->getTable());
+                $totalSel->join(['u' => 'user'],'u.User_ID = user_faucet_stat.user_idfs', ['username','avatar']);
+                $totalSel->where(['stat_key' => 'user-offerearned-total']);
+                $totalUserShorts = $this->mUsrStatsTbl->selectWith($totalSel);
                 $shortsByUser = [];
+                $infoByUserId = [];
                 if(count($totalUserShorts) > 0) {
                     foreach($totalUserShorts as $shd) {
-                        $shortsByUser[$shd->user_idfs] = (int)$shd->stat_data;
+                        $shortsByUser['user-'.$shd->user_idfs] = (int)$shd->stat_data;
+                        $infoByUserId['user-'.$shd->user_idfs] = (object)[
+                            'name' => $shd->username,
+                            'avatar' => ($shd->avatar != '') ? $shd->avatar : $shd->username,
+                            'id' => $shd->user_idfs,
+                            'coins' => (int)$shd->stat_data
+                        ];
                     }
                 }
                 arsort($shortsByUser);
@@ -1471,57 +1599,51 @@ class HallOfFameController extends AbstractActionController
                 $myRank = "-";
                 $myShorts = 0;
                 foreach(array_keys($shortsByUser) as $claimUser) {
-                    if($claimUser == $me->User_ID) {
+                    if($claimUser == 'user-'.$me->User_ID) {
                         $myRank = $rank;
                         $myShorts = $shortsByUser[$claimUser];
                     }
                     if($rank <= 50) {
-                        $userInfo = $this->mUserTbl->select(['User_ID' => $claimUser]);
-                        if(count($userInfo) > 0) {
-                            $userInfo = $userInfo->current();
-                            $topShorters[] = (object)[
-                                'name' => $userInfo->username,
-                                'avatar' => ($userInfo->avatar != '') ? $userInfo->avatar : $userInfo->username,
-                                'id' => $userInfo->User_ID,
-                                'rank' => $rank,
-                                'offers' => (int)$shortsByUser[$claimUser],
-                            ];
+                        if(array_key_exists($claimUser,$infoByUserId)) {
+                            $infoByUserId[$claimUser]->rank = $rank;
+                            $topShorters[] = $infoByUserId[$claimUser];
                         }
-
                     }
                     $rank++;
                 }
 
-                $totalUserShorts = $this->mUsrStatsTbl->select(['stat_key' => 'ofdone-m-'.date('n-Y',time())]);
+                $totalSel = new Select($this->mUsrStatsTbl->getTable());
+                $totalSel->join(['u' => 'user'],'u.User_ID = user_faucet_stat.user_idfs', ['username','avatar']);
+                $totalSel->where(['stat_key' => 'user-offerearned-m-'.date('n-Y', time())]);
+                $totalUserShorts = $this->mUsrStatsTbl->selectWith($totalSel);
                 $shortsByUser = [];
+                $infoByUserId = [];
                 if(count($totalUserShorts) > 0) {
                     foreach($totalUserShorts as $shd) {
-                        $shortsByUser[$shd->user_idfs] = (int)$shd->stat_data;
+                        $shortsByUser['user-'.$shd->user_idfs] = (int)$shd->stat_data;
+                        $infoByUserId['user-'.$shd->user_idfs] = (object)[
+                            'name' => $shd->username,
+                            'avatar' => ($shd->avatar != '') ? $shd->avatar : $shd->username,
+                            'id' => $shd->user_idfs,
+                            'coins' => (int)$shd->stat_data
+                        ];
                     }
                 }
                 arsort($shortsByUser);
-                $topShortersMonth = [];
+                $topShortersM = [];
                 $rank = 1;
                 $myRankM = "-";
                 $myShortsM = 0;
                 foreach(array_keys($shortsByUser) as $claimUser) {
-                    if($claimUser == $me->User_ID) {
+                    if($claimUser == 'user-'.$me->User_ID) {
                         $myRankM = $rank;
                         $myShortsM = $shortsByUser[$claimUser];
                     }
                     if($rank <= 50) {
-                        $userInfo = $this->mUserTbl->select(['User_ID' => $claimUser]);
-                        if(count($userInfo) > 0) {
-                            $userInfo = $userInfo->current();
-                            $topShortersMonth[] = (object)[
-                                'name' => $userInfo->username,
-                                'avatar' => ($userInfo->avatar != '') ? $userInfo->avatar : $userInfo->username,
-                                'id' => $userInfo->User_ID,
-                                'rank' => $rank,
-                                'offers' => (int)$shortsByUser[$claimUser],
-                            ];
+                        if(array_key_exists($claimUser,$infoByUserId)) {
+                            $infoByUserId[$claimUser]->rank = $rank;
+                            $topShortersM[] = $infoByUserId[$claimUser];
                         }
-
                     }
                     $rank++;
                 }
@@ -1530,11 +1652,11 @@ class HallOfFameController extends AbstractActionController
                 return new ViewModel([
                     'date' => date('Y-m-d H:i:s'),
                     'player_list' => [
-                        'month' => $topShortersMonth,
+                        'month' => $topShortersM,
                         'all' => $topShorters,
                     ],
-                    'me_month' => ['offers' => $myShortsM,'rank' => $myRankM],
-                    'me_all' => ['offers' => (int)$myShorts,'rank' => $myRank]
+                    'me_month' => ['coins' => $myShortsM,'rank' => $myRankM],
+                    'me_all' => ['coins' => (int)$myShorts,'rank' => $myRank]
                 ]);
             }
 

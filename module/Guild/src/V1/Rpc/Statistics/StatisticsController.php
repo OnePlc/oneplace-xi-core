@@ -235,6 +235,59 @@ class StatisticsController extends AbstractActionController
             }
 
             /**
+             * Get Top 10 Offerwalls Medium
+             */
+            $gWh = new Where();
+            $gWh->notLike('date_joined', '0000-00-00 00:00:00');
+            $gWh->equalTo('guild_idfs', $guildId);
+            if($mode == 'month') {
+                $gWh->like('ufs.stat_key', 'user-offermed-m-'.date('n-Y', time()));
+            }
+            if($mode == 'week') {
+                $week = $this->getCurrentWeekNumber();
+                $gWh->like('ufs.stat_key', 'user-offermed-w-'.$week);
+            }
+            if($mode == 'total') {
+                $gWh->like('ufs.stat_key', 'user-offermed-total');
+            }
+
+            $gSel = new Select($this->mGuildUserTbl->getTable());
+            $gSel->join(['u' => 'user'],'faucet_guild_user.user_idfs = u.User_ID',['username','avatar','last_action']);
+            $gSel->join(['ufs' => 'user_faucet_stat'],'ufs.user_idfs = faucet_guild_user.user_idfs',['stat_data']);
+            $gSel->where($gWh);
+            $shortStats = $this->mGuildUserTbl->selectWith($gSel);
+
+            $offersByUserId = [];
+            foreach($shortStats as $sh) {
+                $uInfo = [
+                    'amount' => $sh->stat_data,
+                    'id' => $sh->user_idfs,
+                    'name' => $sh->username,
+                    'avatar' => $sh->avatar
+                ];
+                if($isGuildMaster) {
+                    $uInfo['joined'] = date('Y-m-d', strtotime($sh->date_joined));
+                    $uInfo['active'] = date('Y-m-d', strtotime($sh->last_action));
+                    if(array_key_exists('rank-'.$sh->rank, $ranks)) {
+                        $uInfo['rank'] = $ranks['rank-'.$sh->rank];
+                    }
+                }
+
+                $offersByUserId[$sh->user_idfs] = $uInfo;
+            }
+            arsort($offersByUserId);
+
+            $top10OFM = [];
+            $count = 1;
+            foreach($offersByUserId as $topOf) {
+                $top10OFM[] = $topOf;
+                if($count == 10) {
+                    break;
+                }
+                $count++;
+            }
+
+            /**
              * Get Top 10 Offerwalls Small
              */
             $gWh = new Where();
@@ -281,6 +334,59 @@ class StatisticsController extends AbstractActionController
             $count = 1;
             foreach($offersByUserId as $topOf) {
                 $top10OFS[] = $topOf;
+                if($count == 10) {
+                    break;
+                }
+                $count++;
+            }
+
+            /**
+             * Get Top 10 Offerwalls Tiny
+             */
+            $gWh = new Where();
+            $gWh->notLike('date_joined', '0000-00-00 00:00:00');
+            $gWh->equalTo('guild_idfs', $guildId);
+            if($mode == 'month') {
+                $gWh->like('ufs.stat_key', 'user-offertiny-m-'.date('n-Y', time()));
+            }
+            if($mode == 'week') {
+                $week = $this->getCurrentWeekNumber();
+                $gWh->like('ufs.stat_key', 'user-offertiny-w-'.$week);
+            }
+            if($mode == 'total') {
+                $gWh->like('ufs.stat_key', 'user-offertiny-total');
+            }
+
+            $gSel = new Select($this->mGuildUserTbl->getTable());
+            $gSel->join(['u' => 'user'],'faucet_guild_user.user_idfs = u.User_ID',['username','avatar','last_action']);
+            $gSel->join(['ufs' => 'user_faucet_stat'],'ufs.user_idfs = faucet_guild_user.user_idfs',['stat_data']);
+            $gSel->where($gWh);
+            $shortStats = $this->mGuildUserTbl->selectWith($gSel);
+
+            $offersByUserId = [];
+            foreach($shortStats as $sh) {
+                $uInfo = [
+                    'amount' => $sh->stat_data,
+                    'id' => $sh->user_idfs,
+                    'name' => $sh->username,
+                    'avatar' => $sh->avatar
+                ];
+                if($isGuildMaster) {
+                    $uInfo['joined'] = date('Y-m-d', strtotime($sh->date_joined));
+                    $uInfo['active'] = date('Y-m-d', strtotime($sh->last_action));
+                    if(array_key_exists('rank-'.$sh->rank, $ranks)) {
+                        $uInfo['rank'] = $ranks['rank-'.$sh->rank];
+                    }
+                }
+
+                $offersByUserId[$sh->user_idfs] = $uInfo;
+            }
+            arsort($offersByUserId);
+
+            $top10OFT = [];
+            $count = 1;
+            foreach($offersByUserId as $topOf) {
+                $top10OFT[] = $topOf;
                 if($count == 10) {
                     break;
                 }
@@ -519,7 +625,9 @@ class StatisticsController extends AbstractActionController
             return [
                 'shortlink' => $top10SH,
                 'offerwall' => $top10OF,
+                'offermed' => $top10OFM,
                 'offersmall' => $top10OFS,
+                'offertiny' => $top10OFT,
                 'faucet' => $top10Cl,
                 'dailys' => $top10OD,
                 'miner_cpu' => $top10OCPU,
