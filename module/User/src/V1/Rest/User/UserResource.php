@@ -797,6 +797,12 @@ class UserResource extends AbstractResourceListener
             $rpsGameLimit = $rpsGameLimitBuy;
         }
 
+        $shipsGameLimit = 1;
+        $shipsGameLimitBuy = $this->mUserTools->getSetting($user->User_ID, 'game-ships-unlock-multi');
+        if($shipsGameLimitBuy) {
+            $shipsGameLimit = $shipsGameLimitBuy;
+        }
+
         $returnData = [
             'id' => (int)$user->User_ID,
             'name' => $user->username,
@@ -806,6 +812,7 @@ class UserResource extends AbstractResourceListener
             'claim_timer' => $sTime,
             'claim_sound' => $claimSound,
             'rps_game_limit' => $rpsGameLimit,
+            'ships_game_limit' => $shipsGameLimit,
             'daily_claim_count' => $this->getDailyTasksReadyToClaim($user),
             'emp_mode' => ($user->is_employee == 1) ? 'mod' : '',
             'verified' => (int)$user->email_verified,
@@ -1184,6 +1191,9 @@ class UserResource extends AbstractResourceListener
         if(isset($data->rps_unlock)) {
             $checkFields[] = $data->rps_unlock;
         }
+        if(isset($data->ships_unlock)) {
+            $checkFields[] = $data->ships_unlock;
+        }
         if(isset($data->passwordCheck)) {
             $checkFields[] = $data->passwordCheck;
             $checkFields[] = $data->passwordNew;
@@ -1214,7 +1224,7 @@ class UserResource extends AbstractResourceListener
         $gachaAcc = filter_var($data->account_gacha, FILTER_SANITIZE_STRING);
         $claimSound = filter_var($data->claim_sound, FILTER_SANITIZE_STRING);
         $rpsUnlock = filter_var($data->rps_unlock, FILTER_SANITIZE_NUMBER_INT);
-
+        $shipsUnlock = filter_var($data->ships_unlock, FILTER_SANITIZE_NUMBER_INT);
         $favCoin = filter_var($data->favCoin, FILTER_SANITIZE_STRING);
 
         $tokenBalance = $user->token_balance;
@@ -1286,6 +1296,30 @@ class UserResource extends AbstractResourceListener
                     $tokenBalance = $newBalance;
                     $this->mUserTools->setSetting($user->User_ID, 'game-rps-unlock-multi', $rpsUnlock);
                     $rpsGameLimit = $rpsUnlock;
+                }
+            }
+        }
+
+        $shipsGameLimit = 1;
+        $checkSetting = $this->mUserTools->getSetting($user->User_ID, 'game-ships-unlock-multi');
+        if($checkSetting) {
+            $shipsGameLimit = $checkSetting;
+        }
+
+        if($shipsUnlock != '' && $shipsUnlock != 0) {
+            if($shipsUnlock != 3) {
+                return new ApiProblem(409, 'Invalid Upgrade');
+            }
+            $price = 1500;
+            if($shipsGameLimit == 10) {
+                return new ApiProblem(409, 'You already have the biggest upgrade');
+            }
+            if($this->mTransaction->checkUserBalance($price, $user->User_ID)) {
+                $newBalance = $this->mTransaction->executeTransaction($price, true, $user->User_ID, $shipsUnlock, 'ships-unlock', 'Upgrade to '.$shipsUnlock.' concurrent Games in Battleships');
+                if($newBalance) {
+                    $tokenBalance = $newBalance;
+                    $this->mUserTools->setSetting($user->User_ID, 'game-ships-unlock-multi', $shipsUnlock);
+                    $shipsGameLimit = $shipsUnlock;
                 }
             }
         }
@@ -1472,6 +1506,7 @@ class UserResource extends AbstractResourceListener
                 'verified' => (int)$user->email_verified,
                 'show_verify_mail' => ($user->send_verify == null) ? ($user->email_verified == 1) ? false : true : false,
                 'rps_game_limit' => $rpsGameLimit,
+                'ships_game_limit' => $shipsGameLimit,
                 'xp_level' => $user->xp_level,
                 'xp_percent' => $dPercent,
                 'prefered_coin' => $favCoin,
