@@ -803,6 +803,19 @@ class UserResource extends AbstractResourceListener
             $shipsGameLimit = $shipsGameLimitBuy;
         }
 
+        // try to update country for old users
+        if($user->country == 'GGG') {
+            try {
+                $country = $this->ip_info(NULL, 'countrycode');
+
+                $this->mapper->update([
+                    'country' => $country
+                ],['User_ID' => $user->User_ID]);
+            } catch (\RuntimeException $e) {
+                # country get error
+            }
+        }
+
         $returnData = [
             'id' => (int)$user->User_ID,
             'name' => $user->username,
@@ -838,7 +851,7 @@ class UserResource extends AbstractResourceListener
             'inbox_count' => $inboxMessages
         ];
 
-        $forceUpdateTo = '2.0.13';
+        $forceUpdateTo = '2.0.14';
         if(isset($_REQUEST['v'])) {
             $clientVersion = substr(filter_var($_REQUEST['v'], FILTER_SANITIZE_STRING),0, 6);
 

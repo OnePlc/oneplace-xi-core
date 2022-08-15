@@ -183,25 +183,37 @@ class AyetPBController extends AbstractActionController
                                 ]);
                             }
 
-                            $scamWh = new Where();
-                            $scamWh->equalTo('offer_id', $offerId);
-                            $scamWh->equalTo('offerwall_idfs', $offerWallId);
-                            $scamWh->greaterThanOrEqualTo('date_completed', date('Y-m-d H:i:s', strtotime('-7 days')));
-
-                            $oScamCheck = $this->mOfferDoneTbl->select($scamWh)->count();
-                            if($oScamCheck >= 5) {
-                                // log same offer done again over and over
-                                $this->mLogTbl->insert([
-                                    'log_type' => 'offer-repeat',
-                                    'log_level' => 'error',
-                                    'log_message' => 'Offer done more than 5 times a week',
-                                    'log_info' => '{"userId":'.$iUserID.',"offerId":'.$offerId.',"offerWall":'.$offerWallId.'}',
-                                    'log_date' => $now
-                                ]);
-
-                                // dont give withdrawal bonus yet
-                                //$addBonus = false;
+                            $checkRepeat = true;
+                            $ayetWhiteList = $this->mSecTools->getCoreSetting('ayet-whitelist-offers');
+                            if($ayetWhiteList) {
+                                $ayetWhiteList = json_decode($ayetWhiteList);
+                                if (in_array($offerId, $ayetWhiteList)) {
+                                    $checkRepeat = false;
+                                }
                             }
+
+                            if($checkRepeat) {
+                                $scamWh = new Where();
+                                $scamWh->equalTo('offer_id', $offerId);
+                                $scamWh->equalTo('offerwall_idfs', $offerWallId);
+                                $scamWh->greaterThanOrEqualTo('date_completed', date('Y-m-d H:i:s', strtotime('-7 days')));
+
+                                $oScamCheck = $this->mOfferDoneTbl->select($scamWh)->count();
+                                if($oScamCheck >= 5) {
+                                    // log same offer done again over and over
+                                    $this->mLogTbl->insert([
+                                        'log_type' => 'offer-repeat',
+                                        'log_level' => 'error',
+                                        'log_message' => 'Offer done more than 5 times a week',
+                                        'log_info' => '{"userId":'.$iUserID.',"offerId":'.$offerId.',"offerWall":'.$offerWallId.'}',
+                                        'log_date' => $now
+                                    ]);
+
+                                    // dont give withdrawal bonus yet
+                                    //$addBonus = false;
+                                }
+                            }
+
 
                             $this->mOfferDoneTbl->insert([
                                 'user_idfs' => $iUserID,

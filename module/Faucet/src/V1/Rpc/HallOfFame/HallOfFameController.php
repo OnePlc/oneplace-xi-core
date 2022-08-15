@@ -561,6 +561,14 @@ class HallOfFameController extends AbstractActionController
             }
 
             if($detail == 'contest') {
+                $bannedUsersById = [];
+                $bannedUsers = $this->mUserSetTbl->select(['setting_name' => 'user-tempban']);
+                foreach($bannedUsers as $bannedUser) {
+                    if(!in_array($bannedUser->user_idfs,$bannedUsersById)) {
+                        $bannedUsersById[] = $bannedUser->user_idfs;
+                    }
+                }
+
                 $conMonth = date('n', time());
                 $conYear = date('Y', time());
 
@@ -580,9 +588,13 @@ class HallOfFameController extends AbstractActionController
                 $infoByUserId = [];
                 if(count($totalUserShorts) > 0) {
                     foreach($totalUserShorts as $shd) {
+                        // skip banned users
+                        if(in_array($shd->user_idfs, $bannedUsersById)) {
+                            continue;
+                        }
                         $cLevel = $shd->xp_level;
                         if($cLevel < 10) {
-                            $cLevel.= '0';
+                            $cLevel = '0'.$cLevel;
                         }
                         $shortsByUser['user-'.$shd->user_idfs] = (int)$shd->stat_data.$cLevel;
                         $infoByUserId['user-'.$shd->user_idfs] = (object)[
@@ -627,9 +639,13 @@ class HallOfFameController extends AbstractActionController
                 $infoByUserId = [];
                 if(count($totalUserShorts) > 0) {
                     foreach($totalUserShorts as $shd) {
+                        // skip banned users
+                        if(in_array($shd->user_idfs, $bannedUsersById)) {
+                            continue;
+                        }
                         $cLevel = $shd->xp_level;
                         if($cLevel < 10) {
-                            $cLevel.= '0';
+                            $cLevel = '0'.$cLevel;
                         }
                         $shortsByUser['user-'.$shd->user_idfs] = (int)$shd->stat_data.$cLevel;
                         $infoByUserId['user-'.$shd->user_idfs] = (object)[
@@ -674,9 +690,13 @@ class HallOfFameController extends AbstractActionController
                 $infoByUserId = [];
                 if(count($totalUserShorts) > 0) {
                     foreach($totalUserShorts as $shd) {
+                        // skip banned users
+                        if(in_array($shd->user_idfs, $bannedUsersById)) {
+                            continue;
+                        }
                         $cLevel = $shd->xp_level;
                         if($cLevel < 10) {
-                            $cLevel.= '0';
+                            $cLevel = '0'.$cLevel;
                         }
                         $shortsByUser['user-'.$shd->user_idfs] = (int)$shd->stat_data.$cLevel;
                         $infoByUserId['user-'.$shd->user_idfs] = (object)[
@@ -721,9 +741,13 @@ class HallOfFameController extends AbstractActionController
                 $infoByUserId = [];
                 if(count($totalUserShorts) > 0) {
                     foreach($totalUserShorts as $shd) {
+                        // skip banned users
+                        if(in_array($shd->user_idfs, $bannedUsersById)) {
+                            continue;
+                        }
                         $cLevel = $shd->xp_level;
                         if($cLevel < 10) {
-                            $cLevel.= '0';
+                            $cLevel = '0'.$cLevel;
                         }
                         $shortsByUser['user-'.$shd->user_idfs] = (int)$shd->stat_data.$cLevel;
                         $infoByUserId['user-'.$shd->user_idfs] = (object)[
@@ -768,9 +792,13 @@ class HallOfFameController extends AbstractActionController
                 $infoByUserId = [];
                 if(count($totalUserShorts) > 0) {
                     foreach($totalUserShorts as $shd) {
+                        // skip banned users
+                        if(in_array($shd->user_idfs, $bannedUsersById)) {
+                            continue;
+                        }
                         $cLevel = $shd->xp_level;
                         if($cLevel < 10) {
-                            $cLevel.= '0';
+                            $cLevel = '0'.$cLevel;
                         }
                         $shortsByUser['user-'.$shd->user_idfs] = (int)$shd->stat_data.$cLevel;
                         $infoByUserId['user-'.$shd->user_idfs] = (object)[
@@ -815,9 +843,13 @@ class HallOfFameController extends AbstractActionController
                 $infoByUserId = [];
                 if(count($totalUserShorts) > 0) {
                     foreach($totalUserShorts as $shd) {
+                        // skip banned users
+                        if(in_array($shd->user_idfs, $bannedUsersById)) {
+                            continue;
+                        }
                         $cLevel = $shd->xp_level;
                         if($cLevel < 10) {
-                            $cLevel.= '0';
+                            $cLevel = '0'.$cLevel;
                         }
                         $shortsByUser['user-'.$shd->user_idfs] = (int)$shd->stat_data.$cLevel;
                         $infoByUserId['user-'.$shd->user_idfs] = (object)[
@@ -869,9 +901,13 @@ class HallOfFameController extends AbstractActionController
                 $infoByUserId = [];
                 if(count($totalUserShorts) > 0) {
                     foreach($totalUserShorts as $shd) {
+                        // skip banned users
+                        if(in_array($shd->user_idfs, $bannedUsersById)) {
+                            continue;
+                        }
                         $cLevel = $shd->xp_level;
                         if($cLevel < 10) {
-                            $cLevel.= '0';
+                            $cLevel = '0'.$cLevel;
                         }
                         if(!array_key_exists('user-'.$shd->user_idfs, $shortsByUser)) {
                             $shortsByUser['user-'.$shd->user_idfs] = (int)$shd->stat_data.$cLevel;
@@ -922,9 +958,13 @@ class HallOfFameController extends AbstractActionController
                 $infoByUserId = [];
                 if(count($totalUserShorts) > 0) {
                     foreach($totalUserShorts as $shd) {
+                        // skip banned users
+                        if(in_array($shd->user_idfs, $bannedUsersById)) {
+                            continue;
+                        }
                         $cLevel = $shd->xp_level;
                         if($cLevel < 10) {
-                            $cLevel.= '0';
+                            $cLevel = '0'.$cLevel;
                         }
                         $shortsByUser['user-'.$shd->user_idfs] = (int)$shd->stat_data.$cLevel;
                         $infoByUserId['user-'.$shd->user_idfs] = (object)[
