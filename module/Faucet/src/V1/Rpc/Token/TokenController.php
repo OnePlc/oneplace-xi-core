@@ -164,34 +164,6 @@ class TokenController extends AbstractActionController
 
             # get price per token in crypto
             $tokenValue = $this->mTransaction->getTokenValue();
-            $coinInfoBCH = $this->mWalletTbl->select(['coin_sign' => 'BCH'])->current();
-            $amountCrypto = 2500*$tokenValue;
-            if($coinInfoBCH->dollar_val > 0) {
-                $amountCryptoBCH = number_format($amountCrypto/$coinInfoBCH->dollar_val,8,'.','');
-            } else {
-                $amountCryptoBCH = number_format($amountCrypto*$coinInfoBCH->dollar_val,8,'.','');
-            }
-
-            $coinInfoLTC = $this->mWalletTbl->select(['coin_sign' => 'LTC'])->current();
-            if($coinInfoLTC->dollar_val > 0) {
-                $amountCryptoLTC = number_format($amountCrypto/$coinInfoLTC->dollar_val,8,'.','');
-            } else {
-                $amountCryptoLTC = number_format($amountCrypto*$coinInfoLTC->dollar_val,8,'.','');
-            }
-
-            $coinInfoZEN = $this->mWalletTbl->select(['coin_sign' => 'ZEN'])->current();
-            if($coinInfoZEN->dollar_val > 0) {
-                $amountCryptoZEN = number_format($amountCrypto/$coinInfoZEN->dollar_val,8,'.','');
-            } else {
-                $amountCryptoZEN = number_format($amountCrypto*$coinInfoZEN->dollar_val,8,'.','');
-            }
-
-            $coinInfoDOGE = $this->mWalletTbl->select(['coin_sign' => 'DOGE'])->current();
-            if($coinInfoDOGE->dollar_val > 0) {
-                $amountCryptoDOGE = number_format($amountCrypto/$coinInfoDOGE->dollar_val,8,'.','');
-            } else {
-                $amountCryptoDOGE = number_format($amountCrypto*$coinInfoDOGE->dollar_val,8,'.','');
-            }
 
             # get wallets for crypto payments
             $walletBCH = $this->mSecTools->getCoreSetting('tokenbuy-BCH');
@@ -235,6 +207,12 @@ class TokenController extends AbstractActionController
                     'cancelled' => ($tk->cancelled == 1) ? true : false,
                     'received' => ($tk->received == 1) ? true : false,
                 ];
+            }
+
+            $userHasInternalTokens = 0;
+            $myInternalTokens = $this->mTokenBuyTbl->select(['sent' => 1, 'user_idfs' => $me->User_ID, 'wallet' => 'rvninternalstorage'])->count();
+            if($myInternalTokens > 0) {
+                $userHasInternalTokens = $myInternalTokens;
             }
 
             /**
@@ -419,16 +397,11 @@ class TokenController extends AbstractActionController
                           'page_size' => $pageSize,
                           'page_count' => (round($totalStakingHistory/$pageSize) > 0) ? round($totalStakingHistory/$pageSize) : 1,
                         ],
+                        'internal_tokens' => $userHasInternalTokens,
                         'active_bonus' => 5,
                         'next_bonus' => 10,
                         'next_bonus_percent' => round(($soldToken / 100000) * 100 ,2),
                         'price' => 2500,
-                        'wallet_bch' => $walletBCH,
-                        'wallet_ltc' => $walletLTC,
-                        'bch_price' => number_format($amountCryptoBCH, 8),
-                        'ltc_price' => number_format($amountCryptoLTC,8),
-                        'zen_price' => number_format($amountCryptoZEN,8),
-                        'doge_price' => number_format($amountCryptoDOGE,8),
                         'total' => 21000000,
                         'sold' => (int)$soldToken,
                         'linked' => $linkedTokens,
@@ -674,13 +647,13 @@ class TokenController extends AbstractActionController
 
         if($request->isPut()) {
             # Get Data from Request Body
-            $json = IndexController::loadJSONFromRequestBody(['amount','coin','wallet'],$this->getRequest()->getContent());
+            $json = IndexController::loadJSONFromRequestBody(['wallet'],$this->getRequest()->getContent());
             if(!$json) {
                 return new ApiProblemResponse(new ApiProblem(400, 'Invalid Response Body (missing required fields)'));
             }
 
             # check for attack vendors
-            $secResult = $this->mSecTools->basicInputCheck([$json->amount,$json->coin,$json->wallet]);
+            $secResult = $this->mSecTools->basicInputCheck([$json->wallet]);
             if($secResult !== 'ok') {
                 # ban user and force logout on client
                 $this->mUserSetTbl->insert([
@@ -700,123 +673,23 @@ class TokenController extends AbstractActionController
             if(strtolower(substr($wallet,0,1)) != 'r') {
                 return new ApiProblemResponse(new ApiProblem(400, 'Invalid Ravencoin address'));
             }
-
-            $amount = filter_var($json->amount, FILTER_SANITIZE_NUMBER_INT);
-            if($amount <= 0) {
-                return new ApiProblemResponse(new ApiProblem(400, 'Invalid Amount'));
+            $addrCheck = str_replace(['ravencoin:'],[''],$wallet);
+            if(strlen($addrCheck) < 34) {
+                return new ApiProblemResponse(new ApiProblem(400, 'Invalid Ravencoin Address. Make sure you have no typing errors and choose the correct currency'));
+            }
+            $firstLetter = strtolower(substr($addrCheck,0,1));
+            if($firstLetter != 'r') {
+                return new ApiProblemResponse(new ApiProblem(400, 'Invalid Ravencoin Address. Make sure you have no typing errors and choose the correct currency'));
             }
 
-            $coin = filter_var($json->coin, FILTER_SANITIZE_STRING);
-            if($coin != 'COINS' && $coin != 'BCH' && $coin != 'LTC') {
-                return new ApiProblemResponse(new ApiProblem(400, 'Invalid Coin'));
-            }
+            $this->mTokenBuyTbl->update([
+                'wallet' => $wallet,
+                'sent' => 0,
+                'date_sent' => null,
+                'transaction_id' => null
+            ],['user_idfs' => $me->User_ID, 'wallet' => 'rvninternalstorage', 'sent' => 1]);
 
-            $todayWh = new Where();
-            $todayWh->like('date', date('Y-m-d', time()).'%');
-            $todayWh->equalTo('user_idfs', $me->User_ID);
-            $tokenBuyToday = $this->mTokenBuyTbl->select($todayWh);
-            $tokenBuyedToday = 0;
-            if(count($tokenBuyToday) > 0) {
-                foreach($tokenBuyToday as $tkbuy) {
-                    $tokenBuyedToday+=$tkbuy->amount;
-                }
-            }
-            $tokenLeft = 1000-$tokenBuyedToday;
-            if($tokenLeft-$amount < 0) {
-                return new ApiProblemResponse(new ApiProblem(400, 'You have already reached the daily limit of 100 token. You can buy more tomorrow.'));
-            }
-
-            $newBalance = false;
-            $tokenPrice = 2500;
-            if($coin == 'COINS') {
-                if (!$this->mTransaction->checkUserBalance(($amount * $tokenPrice), $me->User_ID)) {
-                    return new ApiProblemResponse(new ApiProblem(400, 'Your balance is too low to buy ' . $amount . ' tokens'));
-                }
-                $newBalance = $this->mTransaction->executeTransaction(($amount * $tokenPrice), true, $me->User_ID, $amount, 'token-buy', 'Bought '.$amount.' Tokens with COINS');
-                /**
-                 * Send Coins to Admins - do not Burn
-                 */
-                if($newBalance !== false) {
-                    $adminUserIds = explode(',',$this->mSecTools->getCoreSetting('admin-user-ids'));
-                    foreach($adminUserIds as $adminid) {
-                        $newBalanceAdmin = $this->mTransaction->executeTransaction((($amount * $tokenPrice)/count($adminUserIds)), false, $adminid, $amount, 'token-buy', 'User Bought '.$amount.' Tokens with COINS');
-                    }
-                }
-            } else {
-                $newBalance = $me->token_balance;
-            }
-
-            $totalTokenDB = $this->mTokenBuyTbl->select(['user_idfs' => $me->User_ID, 'sent' => 1]);
-            $totalToken = 0;
-            if(count($totalTokenDB) > 0) {
-                foreach($totalTokenDB as $tok) {
-                    $totalToken+=$tok->amount;
-                }
-            }
-
-            $pendingTokenDB = $this->mTokenBuyTbl->select(['user_idfs' => $me->User_ID, 'sent' => 0]);
-            $pendingToken = 0;
-            if(count($pendingTokenDB) > 0) {
-                foreach($pendingTokenDB as $tok) {
-                    $pendingToken+=$tok->amount;
-                }
-            }
-
-            $tokenValue = $this->mTransaction->getTokenValue();
-            $pricePaid = 0;
-
-            switch($coin) {
-                case 'COINS':
-                    $pricePaid = $amount*$tokenPrice;
-                    break;
-                case 'BCH':
-                    $coinInfoBCH = $this->mWalletTbl->select(['coin_sign' => 'BCH'])->current();
-                    $amountCrypto = ($amount*$tokenPrice)*$tokenValue;
-                    if($coinInfoBCH->dollar_val > 0) {
-                        $pricePaid = number_format($amountCrypto/$coinInfoBCH->dollar_val,8,'.','');
-                    } else {
-                        $pricePaid = number_format($amountCrypto*$coinInfoBCH->dollar_val,8,'.','');
-                    }
-                    break;
-                case 'LTC':
-                    $coinInfoLTC = $this->mWalletTbl->select(['coin_sign' => 'LTC'])->current();
-                    $amountCrypto = ($amount*$tokenPrice)*$tokenValue;
-                    if($coinInfoLTC->dollar_val > 0) {
-                        $pricePaid = number_format($amountCrypto/$coinInfoLTC->dollar_val,8,'.','');
-                    } else {
-                        $pricePaid = number_format($amountCrypto*$coinInfoLTC->dollar_val,8,'.','');
-                    }
-                    break;
-                default:
-                    break;
-            }
-
-            if($newBalance !== false) {
-                $this->mTokenBuyTbl->insert([
-                    'user_idfs' => $me->User_ID,
-                    'date' => date('Y-m-d H:i:s', time()),
-                    'coin' => $coin,
-                    'wallet' => $wallet,
-                    'amount' => $amount,
-                    'price' => $pricePaid,
-                    'received' => ($coin == 'COINS') ? 1 : 0,
-                    'sent' => 0,
-                ]);
-                return [
-                    '_links' => [],
-                    '_embedded' => [
-                        'user' => [
-                            'token_balance' => $newBalance,
-                        ],
-                        'token' => [
-                            'total' => (int)$totalToken,
-                            'pending' => (int)$pendingToken
-                        ]
-                    ]
-                ];
-            } else {
-                return new ApiProblemResponse(new ApiProblem(500, 'Transaction Error. Please contact support'));
-            }
+            return true;
         }
 
         return new ApiProblemResponse(new ApiProblem(405, 'Method not allowed'));

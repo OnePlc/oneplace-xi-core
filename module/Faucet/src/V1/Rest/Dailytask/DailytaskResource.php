@@ -223,6 +223,8 @@ class DailytaskResource extends AbstractResourceListener
         }
         $dailysDone = $dailysToday->count();
 
+        $totalRewards = 0;
+
         # Load Dailytasks
         $oWh = new Where();
         $oWh->NEST
@@ -236,6 +238,8 @@ class DailytaskResource extends AbstractResourceListener
         $achievementsDB = $this->mTaskTbl->selectWith($dailySel);
         $achievements = [];
         foreach($achievementsDB as $achiev) {
+            $totalRewards+=$achiev->reward;
+
             switch($achiev->type) {
                 case 'shortlink':
                     $progress = $shortlinksDone;
@@ -267,6 +271,7 @@ class DailytaskResource extends AbstractResourceListener
             '_links' => [],
             'total_items' => count($achievements),
             'user_task' => [],
+            'total_reward' => $totalRewards,
             'task' => $achievements,
             'server_time' => date('H:i', time()),
         ]);

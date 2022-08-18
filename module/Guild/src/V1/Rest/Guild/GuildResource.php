@@ -165,6 +165,15 @@ class GuildResource extends AbstractResourceListener
     protected $mRankPermTbl;
 
     /**
+     * @var TableGateway
+     */
+    private $mWeeklyDoneTbl;
+    /**
+     * @var TableGateway
+     */
+    private $mContestWinnerTbl;
+
+    /**
      * Constructor
      *
      * AchievementResource constructor.
@@ -187,6 +196,8 @@ class GuildResource extends AbstractResourceListener
         $this->mXPLvlTbl = new TableGateway('user_xp_level', $mapper);
         $this->mUserSetTbl = new TableGateway('user_setting', $mapper);
         $this->mRankPermTbl = new TableGateway('faucet_guild_rank_permission', $mapper);
+        $this->mWeeklyDoneTbl = new TableGateway('faucet_guild_weekly_claim', $mapper);
+        $this->mContestWinnerTbl = new TableGateway('faucet_contest_winner', $mapper);
 
         $this->mSession = new Container('webauth');
         $this->mTransaction = new TransactionHelper($mapper);
@@ -544,6 +555,111 @@ class GuildResource extends AbstractResourceListener
             $guild = $guild->current();
         }
 
+        if(isset($_REQUEST['weekly'])) {
+            $gTaskWeek = $this->mSecTools->getWeek(time());
+            $weekInfo = explode('-', $gTaskWeek);
+            $weekNo = $weekInfo[0];
+            $yearNo = $weekInfo[1];
+
+            /**
+             * Get Weekly Tasks Progress
+             */
+            $weeklyStatus = [];
+            $statCheckWh = new Where();
+            $statCheckWh->equalTo('guild_idfs', $guild->Guild_ID);
+            $statCheckWh->equalTo('week', $weekNo);
+            $statCheckWh->equalTo('year', $yearNo);
+            $statCheck = $this->mGuildWeeklyStatusTbl->select($statCheckWh);
+            foreach($statCheck as $stat) {
+                $weeklyStatus[$stat->weekly_key] = $stat->progress;
+            }
+
+            /**
+             * Load Guild Tasks List (Weeklys)
+             */
+            $weeklyTasks = [];
+            $weeklysDB = $this->mGuildTaskTbl->select(['series' => 0, 'active' => 1]);
+            $tasksDone = 0;
+            $taskEarnings = 0;
+            foreach($weeklysDB as $weekly) {
+                $progress = 0;
+                if(array_key_exists($weekly->target_mode, $weeklyStatus)) {
+                    $progress = $weeklyStatus[$weekly->target_mode];
+                }
+                if($progress >= $weekly->target) {
+                    $tasksDone++;
+                    $taskEarnings+=$weekly->reward;
+                    $nextLvl = $this->mGuildTaskTbl->select(['series' => $weekly->Weekly_ID, 'active' => 1]);
+                    if($nextLvl->count() == 0) {
+                        $weeklyTasks[] = (object)[
+                            'id' => $weekly->Weekly_ID,
+                            'name' => $weekly->label,
+                            'description' => $weekly->description,
+                            'target' => $weekly->target,
+                            'target_mode' => $weekly->target_mode,
+                            'reward' => $weekly->reward,
+                            'current' => $progress,
+                        ];
+                    } else {
+                        $nextLvl = $nextLvl->current();
+                        if($progress >= $nextLvl->target) {
+                            $tasksDone++;
+                            $taskEarnings+=$weekly->reward;
+                            $nextLvl2 = $this->mGuildTaskTbl->select(['series' => $nextLvl->Weekly_ID, 'active' => 1]);
+                            if($nextLvl2->count() == 0) {
+                                $weeklyTasks[] = (object)[
+                                    'id' => $nextLvl->Weekly_ID,
+                                    'name' => $nextLvl->label,
+                                    'description' => $nextLvl->description,
+                                    'target' => $nextLvl->target,
+                                    'target_mode' => $nextLvl->target_mode,
+                                    'reward' => $nextLvl->reward,
+                                    'current' => $progress,
+                                ];
+                            } else {
+                                $nextLvl2 = $nextLvl2->current();
+                                $weeklyTasks[] = (object)[
+                                    'id' => $nextLvl2->Weekly_ID,
+                                    'name' => $nextLvl2->label,
+                                    'description' => $nextLvl2->description,
+                                    'target' => $nextLvl2->target,
+                                    'target_mode' => $nextLvl2->target_mode,
+                                    'reward' => $nextLvl2->reward,
+                                    'current' => $progress,
+                                ];
+                            }
+                        } else {
+                            $weeklyTasks[] = (object)[
+                                'id' => $nextLvl->Weekly_ID,
+                                'name' => $nextLvl->label,
+                                'description' => $nextLvl->description,
+                                'target' => $nextLvl->target,
+                                'target_mode' => $nextLvl->target_mode,
+                                'reward' => $nextLvl->reward,
+                                'current' => $progress,
+                            ];
+                        }
+                    }
+                } else {
+                    $weeklyTasks[] = (object)[
+                        'id' => $weekly->Weekly_ID,
+                        'name' => $weekly->label,
+                        'description' => $weekly->description,
+                        'target' => $weekly->target,
+                        'target_mode' => $weekly->target_mode,
+                        'reward' => $weekly->reward,
+                        'current' => $progress,
+                    ];
+                }
+            }
+
+            return [
+                'tasks' => $weeklyTasks,
+                'done' => $tasksDone,
+                'earned' => $taskEarnings
+            ];
+        }
+
         /**
          * Get Guild Ranks
          */
@@ -789,6 +905,19 @@ class GuildResource extends AbstractResourceListener
         }
 
 
+        $weeklyTotal = 0;
+        $weeklyEarnings = 0;
+        $weeklysDone = $this->mWeeklyDoneTbl->select(['guild_idfs' => $guild->Guild_ID]);
+        foreach($weeklysDone as $weekly) {
+            $weeklyTotal++;
+            $weeklyEarnings+=$weekly->reward;
+        }
+
+        $contestEarnings = 0;
+        $wonContests = $this->mContestWinnerTbl->select(['contest_idfs' => 1, 'user_idfs'  => $guild->Guild_ID]);
+        foreach($wonContests as $win) {
+            $contestEarnings+=$win->reward;
+        }
 
         return (object)[
             'guild' => (object)[
@@ -801,6 +930,9 @@ class GuildResource extends AbstractResourceListener
                 'emblem_icon' => $guild->emblem_icon,
                 'link' => $guild->page_url,
                 'week_no' => $weekNo,
+                'weeklys_total' => $weeklyTotal,
+                'weeklys_earnings' => $weeklyEarnings,
+                'contest_earnings' => $contestEarnings,
                 'is_vip' => ($guild->is_vip == 1) ? true : false,
                 'token_balance' => $guild->token_balance,
                 'xp_level' => $guild->xp_level,
