@@ -350,6 +350,46 @@ class SuggestionResource extends AbstractResourceListener
             return new ApiProblemResponse($me);
         }
 
+        if(isset($_REQUEST['comments'])) {
+            if($me->is_employee != 1) {
+                return new ApiProblemResponse(new ApiProblem(400, 'You are not allowed this access this api'));
+            }
+
+            $ipWhiteList = $this->mSecTools->getCoreSetting('backend-ip-whitelist');
+            $ipWhiteList = json_decode($ipWhiteList);
+            if(!in_array($_SERVER['REMOTE_ADDR'], $ipWhiteList)) {
+                return new ApiProblemResponse(new ApiProblem(400, 'You are not allowed this access this api'));
+            }
+
+            $feedbacks = $this->mFeedbackTbl->select(['verified' => 1]);
+            $feedbacksById = [];
+            foreach($feedbacks as $feedback) {
+                $feedbacksById['fb-'.$feedback->Feedback_ID] = [
+                    'id' => $feedback->Feedback_ID,
+                    'title' => $feedback->title
+                ];
+            }
+
+            $comSel = new Select($this->mFeedbackCommentTbl->getTable());
+            $comSel->join(['u' => 'user'],'u.User_ID = feedback_comment.user_idfs', ['username']);
+            $comSel->where(['verified' => 0]);
+
+            $unverifiedComments = $this->mFeedbackCommentTbl->selectWith($comSel);
+            $list = [];
+            foreach($unverifiedComments as $comment) {
+                $list[] = [
+                    'id' => $comment->Comment_ID,
+                    'comment' => $comment->comment,
+                    'user' => $comment->username,
+                    'feedback' => $feedbacksById['fb-'.$comment->feedback_idfs]
+                ];
+            }
+
+            return (object)[
+                'list' => $list
+            ];
+        }
+
         # Get page
         $page = (isset($_REQUEST['page'])) ? filter_var($_REQUEST['page'], FILTER_SANITIZE_NUMBER_INT) : 1;
         $pageSize = 50;
@@ -404,6 +444,7 @@ class SuggestionResource extends AbstractResourceListener
                     'description' => $feed->description,
                     'date' => $feed->date,
                     'votes' => $feed->votes,
+                    'comments' => $feed->comments,
                     'author' => $feed->username,
                     'tags' => $tags
                 ];
@@ -479,16 +520,18 @@ class SuggestionResource extends AbstractResourceListener
             return new ApiProblemResponse(new ApiProblem(400, 'Account is not verified. Please verify E-Mail before voting up or commenting a suggestion.'));
         }
 
-        $tokensBuys = $this->mTokenTbl->select(['sent' => 1, 'user_idfs' => $me->User_ID]);
-        if($tokensBuys->count() == 0) {
-            return new ApiProblemResponse(new ApiProblem(409, 'You need to own at least '.$this->mTokenVoteComment.' Token to comment or upvote a suggestion'));
-        }
-        $tokens = 0;
-        foreach($tokensBuys as $tb) {
-            $tokens += $tb->amount;
-        }
-        if($tokens < $this->mTokenVoteComment) {
-            return new ApiProblemResponse(new ApiProblem(409, 'You need to own at least '.$this->mTokenVoteComment.' Token to comment or upvote a suggestion'));
+        if($me->is_employee != 1) {
+            $tokensBuys = $this->mTokenTbl->select(['sent' => 1, 'user_idfs' => $me->User_ID]);
+            if($tokensBuys->count() == 0) {
+                return new ApiProblemResponse(new ApiProblem(409, 'You need to own at least '.$this->mTokenVoteComment.' Token to comment or upvote a suggestion'));
+            }
+            $tokens = 0;
+            foreach($tokensBuys as $tb) {
+                $tokens += $tb->amount;
+            }
+            if($tokens < $this->mTokenVoteComment) {
+                return new ApiProblemResponse(new ApiProblem(409, 'You need to own at least '.$this->mTokenVoteComment.' Token to comment or upvote a suggestion'));
+            }
         }
 
         /**
@@ -560,17 +603,85 @@ class SuggestionResource extends AbstractResourceListener
                 if(strlen($comment) < 30) {
                     return new ApiProblem(400, 'Please post a real comment not just a word or two');
                 }
+
+                $verified = 0;
+                if($me->is_employee == 1) {
+                    $verified = 1;
+                }
                 $this->mFeedbackCommentTbl->insert([
                     'user_idfs' => $me->User_ID,
                     'feedback_idfs' => $feedbackId,
                     'comment' => utf8_encode($comment),
-                    'date' => date('Y-m-d H:i:s', time())
+                    'date' => date('Y-m-d H:i:s', time()),
+                    'verified' => $verified
                 ]);
 
                 return true;
             } else {
                 return new ApiProblem(400, 'You can only post 1 comment every 24 hours');
             }
+        }
+
+        /**
+         * Verify Comment
+         */
+        if($data->cmd == 'verify') {
+            if($me->is_employee != 1) {
+                return new ApiProblemResponse(new ApiProblem(400, 'You are not allowed this access this api'));
+            }
+
+            $ipWhiteList = $this->mSecTools->getCoreSetting('backend-ip-whitelist');
+            $ipWhiteList = json_decode($ipWhiteList);
+            if(!in_array($_SERVER['REMOTE_ADDR'], $ipWhiteList)) {
+                return new ApiProblemResponse(new ApiProblem(400, 'You are not allowed this access this api'));
+            }
+
+            /**
+            $comments = $this->mFeedbackCommentTbl->select(['verified' => 1]);
+            $commentsByFeedbackId = [];
+            foreach($comments as $com) {
+                if(!array_key_exists('com-'.$com->feedback_idfs,$commentsByFeedbackId)) {
+                    $commentsByFeedbackId['com-'.$com->feedback_idfs] = 0;
+                }
+                $commentsByFeedbackId['com-'.$com->feedback_idfs]++;
+            }
+
+            foreach($commentsByFeedbackId as $fKey => $fVal) {
+                $fId = substr($fKey, strlen('com-'));
+                $this->mFeedbackTbl->update(['comments' => $fVal],['Feedback_ID' => $fId]);
+            }
+
+            return new ApiProblemResponse(new ApiProblem(400, 'Update done'));
+             * **/
+
+            $feedbackId = filter_var($id, FILTER_SANITIZE_NUMBER_INT);
+            if($feedbackId <= 0 || empty($feedbackId)) {
+                return new ApiProblemResponse(new ApiProblem(400, 'Invalid feedback id'));
+            }
+            $feedback = $this->mFeedbackTbl->select(['Feedback_ID' => $feedbackId, 'verified' => 1]);
+            if($feedback->count() == 0) {
+                return new ApiProblemResponse(new ApiProblem(404, 'feedback not found'));
+            }
+            $feedback = $feedback->current();
+
+            $commentId = filter_var($data->comment_id, FILTER_SANITIZE_NUMBER_INT);
+            if($commentId <= 0 || empty($commentId)) {
+                return new ApiProblemResponse(new ApiProblem(400, 'Invalid feedback id'));
+            }
+            $comment = $this->mFeedbackCommentTbl->select(['Comment_ID' => $commentId]);
+            if($comment->count() == 0) {
+                return new ApiProblemResponse(new ApiProblem(404, 'comment not found'));
+            }
+
+            $this->mFeedbackCommentTbl->update([
+                'verified' => 1
+            ],['Comment_ID' => $commentId]);
+
+            $this->mFeedbackTbl->update([
+                'comments' => $feedback->comments+1
+            ],['Feedback_ID' => $feedbackId]);
+
+            return true;
         }
 
         return new ApiProblem(405, 'Invalid Action');

@@ -199,7 +199,7 @@ class AyetPBController extends AbstractActionController
                                 $scamWh->greaterThanOrEqualTo('date_completed', date('Y-m-d H:i:s', strtotime('-7 days')));
 
                                 $oScamCheck = $this->mOfferDoneTbl->select($scamWh)->count();
-                                if($oScamCheck >= 5) {
+                                if($oScamCheck >= 2) {
                                     // log same offer done again over and over
                                     $this->mLogTbl->insert([
                                         'log_type' => 'offer-repeat',

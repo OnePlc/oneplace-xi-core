@@ -1021,12 +1021,12 @@ class HallOfFameController extends AbstractActionController
 
                 arsort($tasksByGuild);
 
-                $rank = 1;
+                $rank = 0;
                 foreach($tasksByGuild as $gKey => $gCount) {
-                    if($rank == 5) {
+                    if($rank == 10) {
                         break;
                     }
-                    $guildInfoByGuildId[$gKey]->rank = $rank;
+                    $guildInfoByGuildId[$gKey]->rank = ($rank+1);
                     $top10Contest['contest-1'][] = $guildInfoByGuildId[$gKey];
                     $rank++;
                 }

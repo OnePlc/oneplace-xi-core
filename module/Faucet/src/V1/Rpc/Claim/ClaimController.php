@@ -85,6 +85,10 @@ class ClaimController extends AbstractActionController
      * @var TableGateway
      */
     private $mTaskTbl;
+    /**
+     * @var TableGateway
+     */
+    private $mTokenTbl;
 
     /**
      * Constructor
@@ -102,6 +106,7 @@ class ClaimController extends AbstractActionController
         $this->mMapper = $mapper;
         $this->mTaskDoneTbl = new TableGateway('faucet_dailytask_user', $mapper);
         $this->mTaskTbl = new TableGateway('faucet_dailytask', $mapper);
+        $this->mTokenTbl = new TableGateway('faucet_tokenbuy', $mapper);
 
         /**
          * Load Achievements to Cache
@@ -147,9 +152,6 @@ class ClaimController extends AbstractActionController
         # Set Timer for next claim
         $sTime = 0;
         $timeCheck = '-1 hour';
-        if($platform == 'android' && $me->User_ID == 335874988) {
-            $timeCheck = '-60 seconds';
-        }
         # Lets check if there was a claim less than 60 minutes ago
         $oWh = new Where();
         $oWh->equalTo('user_idfs', $me->User_ID);
@@ -163,6 +165,20 @@ class ClaimController extends AbstractActionController
 
         # Only show timer if GET
         $oRequest = $this->getRequest();
+
+        /**
+         * No captcha for token holders
+         */
+        $tokensBuys = $this->mTokenTbl->select(['sent' => 1, 'user_idfs' => $me->User_ID]);
+        $tokens = 0;
+        $disableCatpcha = 0;
+        foreach($tokensBuys as $tb) {
+            $tokens += $tb->amount;
+        }
+        if($tokens >= 50) {
+            $disableCatpcha = 1;
+        }
+
         if(!$oRequest->isPost()) {
             $oWhT = new Where();
             $oWhT->equalTo('user_idfs', $me->User_ID);
@@ -183,13 +199,8 @@ class ClaimController extends AbstractActionController
                 'next_claim' => $sTime,
                 'amount' => $claimAmount,
                 'quote' => $quote,
+                'captcha' => $disableCatpcha,
             ];
-
-            $showGoogle = true;
-            if($todayClaims >= 3) {
-                $showGoogle = false;
-            }
-            $viewData['show_main_ad'] = $showGoogle;
 
             $hasMessage = $this->mSecTools->getCoreSetting('faucet-claim-msg-content');
             if($hasMessage) {
@@ -228,32 +239,41 @@ class ClaimController extends AbstractActionController
         if($sTime > 0) {
             return new ApiProblemResponse(new ApiProblem(409, 'Already claimed - wait '.$sTime.' more seconds before claiming again'));
         } else {
-            if(isset($_REQUEST['v2'])) {
-                # Get Data from Request Body
-                $json = IndexController::loadJSONFromRequestBody(['device','ad_id','advertiser', 'captcha'],$this->getRequest()->getContent());
-                if(!$json) {
-                    return new ApiProblemResponse(new ApiProblem(400, 'Invalid Response Body (missing required fields)'));
+            if(isset($_REQUEST['v2']) || isset($_REQUEST['v3'])) {
+                if(isset($_REQUEST['v3'])) {
+                    $json = IndexController::loadJSONFromRequestBody(['device','ad_id','advertiser', 'captcha', 'bonus'],$this->getRequest()->getContent());
+                    if(!$json) {
+                        return new ApiProblemResponse(new ApiProblem(400, 'Invalid Response Body (missing required fields)'));
+                    }
+                } else {
+                    $json = IndexController::loadJSONFromRequestBody(['device','ad_id','advertiser', 'captcha'],$this->getRequest()->getContent());
+                    if(!$json) {
+                        return new ApiProblemResponse(new ApiProblem(400, 'Invalid Response Body (missing required fields)'));
+                    }
                 }
 
-                $captchaToken = $json->captcha;
-                if(strlen($captchaToken) < 10) {
-                    return new ApiProblemResponse(new ApiProblem(400, 'Please use the captcha'));
-                }
-                $captchaSecret = $this->mSecTools->getCoreSetting('hcaptcha-secret');
-                if($captchaSecret) {
-                    $response = ClientStatic::post(
-                        'https://hcaptcha.com/siteverify', [
-                        'secret' => $captchaSecret,
-                        'response' => $captchaToken
-                    ]);
+                if($disableCatpcha == 0) {
+                    # Get Data from Request Body
+                    $captchaToken = $json->captcha;
+                    if(strlen($captchaToken) < 10) {
+                        return new ApiProblemResponse(new ApiProblem(400, 'Please use the captcha'));
+                    }
+                    $captchaSecret = $this->mSecTools->getCoreSetting('hcaptcha-secret');
+                    if($captchaSecret) {
+                        $response = ClientStatic::post(
+                            'https://hcaptcha.com/siteverify', [
+                            'secret' => $captchaSecret,
+                            'response' => $captchaToken
+                        ]);
 
-                    $status = $response->getStatusCode();
-                    $googleResponse = $response->getBody();
+                        $status = $response->getStatusCode();
+                        $googleResponse = $response->getBody();
 
-                    $googleJson = json_decode($googleResponse);
+                        $googleJson = json_decode($googleResponse);
 
-                    if(!$googleJson->success) {
-                        return new ApiProblemResponse(new ApiProblem(400, 'Captcha not valid. Please try again or contact support.'));
+                        if(!$googleJson->success) {
+                            return new ApiProblemResponse(new ApiProblem(400, 'Captcha not valid. Please try again or contact support.'));
+                        }
                     }
                 }
             } else {
@@ -263,22 +283,27 @@ class ClaimController extends AbstractActionController
             # check for attack vendors
             $secResult = $this->mSecTools->basicInputCheck([$json->device,$json->ad_id,$json->advertiser]);
             if($secResult !== 'ok') {
+                /**
                 # ban user and force logout on client
                 $this->mUserSetTbl->insert([
                     'user_idfs' => $me->User_ID,
                     'setting_name' => 'user-tempban',
                     'setting_value' => 'Potential '.$secResult.' Attack @ '.date('Y-m-d H:i:s').' Faucet Claim',
-                ]);
+                ]); **/
                 return new ApiProblem(418, 'Potential '.$secResult.' Attack - Goodbye');
             }
 
             $device = filter_var($json->device, FILTER_SANITIZE_STRING);
             $ad_id = filter_var($json->ad_id, FILTER_SANITIZE_STRING);
             $advertiser = filter_var($json->advertiser, FILTER_SANITIZE_STRING);
+            $bonus = filter_var($json->bonus, FILTER_SANITIZE_NUMBER_INT);
 
             $nextTimer = 3600;
             if($platform == 'android' && $me->User_ID == 335874988) {
                 $nextTimer = 60;
+            }
+            if($bonus == 1) {
+                $claimAmount = $claimAmount * 3;
             }
 
             # Set next claim date

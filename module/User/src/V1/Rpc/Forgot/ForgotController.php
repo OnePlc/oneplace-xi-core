@@ -188,7 +188,7 @@ class ForgotController extends AbstractActionController
                 $user = $user->current();
                 if($user->password_reset_date == null || strtotime($user->password_reset_date) <= time()-(3600*24)) {
                     $secToken = $this->mMailTools->generateSecurityToken($user);
-                    $confirmLink = $this->mMailTools->getSystemURL().'/#/reset-pw/'.$secToken;
+                    $confirmLink = $this->mMailTools->getSystemURL().'/reset-pw/'.$secToken;
                     $this->mUserTbl->update([
                         'password_reset_token' => $secToken,
                         'password_reset_date' => date('Y-m-d H:i:s', time()),
