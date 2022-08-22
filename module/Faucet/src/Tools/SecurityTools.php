@@ -142,7 +142,7 @@ class SecurityTools extends AbstractResourceListener {
      */
     private function sqlinjectCheck(array $aValsToCheck = [])
     {
-        $aBlacklist = ['dblink_connect','user=','(SELECT','SELECT (','select *','union all','and 1','1=1','2=2'];
+        $aBlacklist = ['dblink_connect','user=','(SELECT','SELECT (','select *','union all','and 1','1=1','2=2','1 = 1', '2 = 2'];
         foreach($aValsToCheck as $sVal) {
             foreach($aBlacklist as $sBlack) {
                 $bHasBlack = stripos(strtolower($sVal),strtolower($sBlack));

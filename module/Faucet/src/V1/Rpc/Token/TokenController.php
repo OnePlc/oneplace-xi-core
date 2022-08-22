@@ -210,9 +210,11 @@ class TokenController extends AbstractActionController
             }
 
             $userHasInternalTokens = 0;
-            $myInternalTokens = $this->mTokenBuyTbl->select(['sent' => 1, 'user_idfs' => $me->User_ID, 'wallet' => 'rvninternalstorage'])->count();
+            $myInternalTokens = $this->mTokenBuyTbl->select(['sent' => 1, 'user_idfs' => $me->User_ID, 'wallet' => 'rvninternalstorage']);
             if($myInternalTokens > 0) {
-                $userHasInternalTokens = $myInternalTokens;
+                foreach($myInternalTokens as $tkn) {
+                    $userHasInternalTokens += $tkn->amount;
+                }
             }
 
             /**

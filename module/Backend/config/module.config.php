@@ -6,6 +6,7 @@ return [
             \Backend\V1\Rest\Withdraw\WithdrawResource::class => \Backend\V1\Rest\Withdraw\WithdrawResourceFactory::class,
             \Backend\V1\Rest\TokenBuy\TokenBuyResource::class => \Backend\V1\Rest\TokenBuy\TokenBuyResourceFactory::class,
             \Backend\V1\Rest\TokenStaking\TokenStakingResource::class => \Backend\V1\Rest\TokenStaking\TokenStakingResourceFactory::class,
+            \Backend\V1\Rest\Banhammer\BanhammerResource::class => \Backend\V1\Rest\Banhammer\BanhammerResourceFactory::class,
         ],
     ],
     'router' => [
@@ -76,6 +77,15 @@ return [
                     ],
                 ],
             ],
+            'backend.rest.banhammer' => [
+                'type' => 'Segment',
+                'options' => [
+                    'route' => '/backend/banhammer[/:banhammer_id]',
+                    'defaults' => [
+                        'controller' => 'Backend\\V1\\Rest\\Banhammer\\Controller',
+                    ],
+                ],
+            ],
         ],
     ],
     'api-tools-versioning' => [
@@ -87,6 +97,7 @@ return [
             4 => 'backend.rpc.user-info',
             5 => 'backend.rest.token-buy',
             6 => 'backend.rest.token-staking',
+            7 => 'backend.rest.banhammer',
         ],
     ],
     'api-tools-rest' => [
@@ -181,6 +192,28 @@ return [
             'collection_class' => \Backend\V1\Rest\TokenStaking\TokenStakingCollection::class,
             'service_name' => 'TokenStaking',
         ],
+        'Backend\\V1\\Rest\\Banhammer\\Controller' => [
+            'listener' => \Backend\V1\Rest\Banhammer\BanhammerResource::class,
+            'route_name' => 'backend.rest.banhammer',
+            'route_identifier_name' => 'banhammer_id',
+            'collection_name' => 'banhammer',
+            'entity_http_methods' => [
+                0 => 'GET',
+                1 => 'PATCH',
+                2 => 'PUT',
+                3 => 'DELETE',
+            ],
+            'collection_http_methods' => [
+                0 => 'GET',
+                1 => 'POST',
+            ],
+            'collection_query_whitelist' => [],
+            'page_size' => 25,
+            'page_size_param' => null,
+            'entity_class' => \Backend\V1\Rest\Banhammer\BanhammerEntity::class,
+            'collection_class' => \Backend\V1\Rest\Banhammer\BanhammerCollection::class,
+            'service_name' => 'Banhammer',
+        ],
     ],
     'api-tools-content-negotiation' => [
         'controllers' => [
@@ -191,6 +224,7 @@ return [
             'Backend\\V1\\Rpc\\UserInfo\\Controller' => 'Json',
             'Backend\\V1\\Rest\\TokenBuy\\Controller' => 'HalJson',
             'Backend\\V1\\Rest\\TokenStaking\\Controller' => 'HalJson',
+            'Backend\\V1\\Rest\\Banhammer\\Controller' => 'HalJson',
         ],
         'accept_whitelist' => [
             'Backend\\V1\\Rest\\Contest\\Controller' => [
@@ -228,6 +262,11 @@ return [
                 1 => 'application/hal+json',
                 2 => 'application/json',
             ],
+            'Backend\\V1\\Rest\\Banhammer\\Controller' => [
+                0 => 'application/vnd.backend.v1+json',
+                1 => 'application/hal+json',
+                2 => 'application/json',
+            ],
         ],
         'content_type_whitelist' => [
             'Backend\\V1\\Rest\\Contest\\Controller' => [
@@ -255,6 +294,10 @@ return [
                 1 => 'application/json',
             ],
             'Backend\\V1\\Rest\\TokenStaking\\Controller' => [
+                0 => 'application/vnd.backend.v1+json',
+                1 => 'application/json',
+            ],
+            'Backend\\V1\\Rest\\Banhammer\\Controller' => [
                 0 => 'application/vnd.backend.v1+json',
                 1 => 'application/json',
             ],
@@ -308,6 +351,18 @@ return [
                 'entity_identifier_name' => 'id',
                 'route_name' => 'backend.rest.token-staking',
                 'route_identifier_name' => 'token_staking_id',
+                'is_collection' => true,
+            ],
+            \Backend\V1\Rest\Banhammer\BanhammerEntity::class => [
+                'entity_identifier_name' => 'id',
+                'route_name' => 'backend.rest.banhammer',
+                'route_identifier_name' => 'banhammer_id',
+                'hydrator' => \Laminas\Hydrator\ObjectPropertyHydrator::class,
+            ],
+            \Backend\V1\Rest\Banhammer\BanhammerCollection::class => [
+                'entity_identifier_name' => 'id',
+                'route_name' => 'backend.rest.banhammer',
+                'route_identifier_name' => 'banhammer_id',
                 'is_collection' => true,
             ],
         ],
@@ -396,6 +451,22 @@ return [
                 ],
             ],
             'Backend\\V1\\Rest\\TokenStaking\\Controller' => [
+                'collection' => [
+                    'GET' => true,
+                    'POST' => true,
+                    'PUT' => false,
+                    'PATCH' => false,
+                    'DELETE' => false,
+                ],
+                'entity' => [
+                    'GET' => true,
+                    'POST' => false,
+                    'PUT' => true,
+                    'PATCH' => true,
+                    'DELETE' => true,
+                ],
+            ],
+            'Backend\\V1\\Rest\\Banhammer\\Controller' => [
                 'collection' => [
                     'GET' => true,
                     'POST' => true,

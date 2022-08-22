@@ -616,6 +616,12 @@ class SuggestionResource extends AbstractResourceListener
                     'verified' => $verified
                 ]);
 
+                if($verified == 1) {
+                    $this->mFeedbackTbl->update([
+                        'comments' => $feedback->comments+1
+                    ],['Feedback_ID' => $feedbackId]);
+                }
+
                 return true;
             } else {
                 return new ApiProblem(400, 'You can only post 1 comment every 24 hours');
