@@ -128,37 +128,6 @@ class HistoryController extends AbstractActionController
 
             $totalHistory = $this->mMinerBatchTbl->select($checkWh)->count();
 
-            # get current hashrate for gpu miner
-            $gpuCurrentHash = 0;
-            $bHashFound = $this->mUserTools->getSetting($me->User_ID, 'gpu-nano-currenthashrate');
-            if($bHashFound) {
-                $gpuCurrentHash = number_format($bHashFound, 2);
-            }
-
-            $bPoolFound = $this->mUserTools->getSetting($me->User_ID, 'gpu-nano-currentpool');
-            $poolUrl = "#";
-            if($bPoolFound) {
-                $poolUrlDB = $this->mSecTools->getCoreSetting('nanopool-'.$bPoolFound);
-                if($poolUrlDB) {
-                    $poolUrl = $poolUrlDB;
-                }
-            }
-
-            # get current hashrate for cpu miner
-            $cpuCurrentHash = 0;
-            $bcpuHashFound = $this->mUserTools->getSetting($me->User_ID, 'cpu-nano-currenthashrate');
-            if($bcpuHashFound) {
-                $cpuCurrentHash = number_format($bcpuHashFound, 2);
-            }
-            $bcpuPoolFound = $this->mUserTools->getSetting($me->User_ID, 'cpu-nano-currentpool');
-            $cpuPoolUrl = "#";
-            if($bcpuPoolFound) {
-                $poolUrlDB = $this->mSecTools->getCoreSetting('nanopool-'.$bcpuPoolFound);
-                if($poolUrlDB) {
-                    $cpuPoolUrl = $poolUrlDB;
-                }
-            }
-
             $quote = "";
             if($page == 1) {
                 # get some random satoshi quote
@@ -211,11 +180,11 @@ class HistoryController extends AbstractActionController
 
             $viewData = [
                 'workers' => $myWorkers,
-                'gpu_current_hash' => $gpuCurrentHash,
-                'cpu_current_hash' => $cpuCurrentHash,
+                'gpu_current_hash' => 0,
+                'cpu_current_hash' => 0,
                 'total_items' => $totalHistory,
-                'pool_url' => $poolUrl.'/swissfaucetio'.$me->User_ID,
-                'cpu_pool_url' => $cpuPoolUrl.'/swissfaucetio'.$me->User_ID,
+                'pool_url' => '',
+                'cpu_pool_url' => '',
                 'page' => $page,
                 'page_size' => $pageSize,
                 'page_count' => (round($totalHistory / $pageSize) > 0) ? round($totalHistory / $pageSize) : 1,
@@ -224,6 +193,10 @@ class HistoryController extends AbstractActionController
                 'quote' => $quote,
                 'show_info_msg' => ''
             ];
+
+            if($page == 1) {
+                $viewData['token_balance'] = $me->token_balance;
+            }
 
             $hasMessage = $this->mSecTools->getCoreSetting('faucet-mining-msg-content');
             if($hasMessage) {

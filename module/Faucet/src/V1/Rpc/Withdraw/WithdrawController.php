@@ -202,8 +202,12 @@ class WithdrawController extends AbstractActionController
 
             $withdrawLimit = 1000 + (200 * ($me->xp_level - 1));
             // double base limit for users lvl 20+
-            if($me->xp_level >= 20) {
+            if($me->xp_level >= 5) {
                 $withdrawLimit = $withdrawLimit*2;
+            }
+            // double base limit for users lvl 20+
+            if($me->xp_level >= 20) {
+                $withdrawLimit = $withdrawLimit*4;
             }
 
             $withdrawBonus = 0;
@@ -702,9 +706,12 @@ class WithdrawController extends AbstractActionController
                  */
                 $amount = filter_var($json->amount, FILTER_SANITIZE_NUMBER_INT);
                 $withdrawLimit = 1000 + (200 * ($me->xp_level - 1));
+                if($me->xp_level >= 5) {
+                    $withdrawLimit = $withdrawLimit*2;
+                }
                 // double base limit for users lvl 20+
                 if($me->xp_level >= 20) {
-                    $withdrawLimit = $withdrawLimit*2;
+                    $withdrawLimit = $withdrawLimit*4;
                 }
 
                 /**

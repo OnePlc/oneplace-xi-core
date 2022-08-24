@@ -16,17 +16,33 @@ echo $this->headScript()
     ->prependFile($this->basePath('/api-tools/js/bootstrap.min.js'))
     ->prependFile($this->basePath('/api-tools/js/jquery.min.js'));
 ?>
+    <style>
+        html, body {
+            background: #1d1e31;,
+            color: #fff;
+        }
+
+        span, div, p {
+            color: #fff;
+        }
+    </style>
 </head>
 <body>
+    <header>
+        <div class="container">
+            <img src="https://swissfaucet.io/img/logo.4afd33a7.png" style="max-width: 72px; position: absolute; top:8px;" />
+            <h3 style="max-width: 72px; position: absolute; top:0; margin-left: 80px;">Swissfaucet.io</h3>
+        </div>
+    </header>
     <div class="container">
         <?= $this->content ?>
     </div>
     <footer>
-        <hr>
+        <hr/>
         <div class="container center-block"><div class="row">
             <div class="col-sm-4">
                 &copy; <?= date('Y') ?> <a href="https://swissfaucet.io">
-                    <?=$this->appTitle?>
+                    Swissfaucet.io
                 </a>
             </div>
         </div></div>

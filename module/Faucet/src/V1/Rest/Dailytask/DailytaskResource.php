@@ -486,6 +486,9 @@ class DailytaskResource extends AbstractResourceListener
                 }
             }
 
+            $xpInfo = $this->mUserTools->addXP('daily-task', $me->User_ID);
+
+
             # Return referall info
             return (object)([
                 '_links' => [],
@@ -494,7 +497,8 @@ class DailytaskResource extends AbstractResourceListener
                 'daily_claim_count' => $readyToClaim,
                 'reward' => $dailyTask->reward,
                 'token_balance' => $newBalance,
-                'task' => $achievements
+                'task' => $achievements,
+                'xp_info' => $xpInfo
             ]);
         } else {
             return new ApiProblem(404, 'Daily task not found');

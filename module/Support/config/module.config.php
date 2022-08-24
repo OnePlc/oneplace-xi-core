@@ -8,6 +8,8 @@ return [
             'Support\\V1\\Rpc\\Transaction\\Controller' => \Support\V1\Rpc\Transaction\TransactionControllerFactory::class,
             'Support\\V1\\Rpc\\FAQ\\Controller' => \Support\V1\Rpc\FAQ\FAQControllerFactory::class,
             'Support\\V1\\Rpc\\Browser\\Controller' => \Support\V1\Rpc\Browser\BrowserControllerFactory::class,
+            'Support\\V1\\Rpc\\MailClaim\\Controller' => \Support\V1\Rpc\MailClaim\MailClaimControllerFactory::class,
+            'Support\\V1\\Rpc\\MailUnsub\\Controller' => \Support\V1\Rpc\MailUnsub\MailUnsubControllerFactory::class,
         ],
     ],
     'view_manager' => [
@@ -77,6 +79,26 @@ return [
                     ],
                 ],
             ],
+            'support.rpc.mail-claim' => [
+                'type' => 'Segment',
+                'options' => [
+                    'route' => '/mailclaim',
+                    'defaults' => [
+                        'controller' => 'Support\\V1\\Rpc\\MailClaim\\Controller',
+                        'action' => 'mailClaim',
+                    ],
+                ],
+            ],
+            'support.rpc.mail-unsub' => [
+                'type' => 'Segment',
+                'options' => [
+                    'route' => '/unsub-email',
+                    'defaults' => [
+                        'controller' => 'Support\\V1\\Rpc\\MailUnsub\\Controller',
+                        'action' => 'mailUnsub',
+                    ],
+                ],
+            ],
         ],
     ],
     'api-tools-versioning' => [
@@ -87,6 +109,8 @@ return [
             3 => 'support.rpc.transaction',
             4 => 'support.rpc.faq',
             5 => 'support.rpc.browser',
+            6 => 'support.rpc.mail-claim',
+            7 => 'support.rpc.mail-unsub',
         ],
         'default_version' => 1,
     ],
@@ -135,6 +159,20 @@ return [
             ],
             'route_name' => 'support.rpc.browser',
         ],
+        'Support\\V1\\Rpc\\MailClaim\\Controller' => [
+            'service_name' => 'MailClaim',
+            'http_methods' => [
+                0 => 'GET',
+            ],
+            'route_name' => 'support.rpc.mail-claim',
+        ],
+        'Support\\V1\\Rpc\\MailUnsub\\Controller' => [
+            'service_name' => 'MailUnsub',
+            'http_methods' => [
+                0 => 'GET',
+            ],
+            'route_name' => 'support.rpc.mail-unsub',
+        ],
     ],
     'api-tools-content-negotiation' => [
         'controllers' => [
@@ -144,6 +182,8 @@ return [
             'Support\\V1\\Rpc\\Transaction\\Controller' => 'Json',
             'Support\\V1\\Rpc\\FAQ\\Controller' => 'Json',
             'Support\\V1\\Rpc\\Browser\\Controller' => 'Json',
+            'Support\\V1\\Rpc\\MailClaim\\Controller' => 'Json',
+            'Support\\V1\\Rpc\\MailUnsub\\Controller' => 'Json',
         ],
         'accept_whitelist' => [
             'Support\\V1\\Rpc\\Support\\Controller' => [
@@ -176,6 +216,16 @@ return [
                 1 => 'application/json',
                 2 => 'application/*+json',
             ],
+            'Support\\V1\\Rpc\\MailClaim\\Controller' => [
+                0 => 'application/vnd.support.v1+json',
+                1 => 'application/json',
+                2 => 'application/*+json',
+            ],
+            'Support\\V1\\Rpc\\MailUnsub\\Controller' => [
+                0 => 'application/vnd.support.v1+json',
+                1 => 'application/json',
+                2 => 'application/*+json',
+            ],
         ],
         'content_type_whitelist' => [
             'Support\\V1\\Rpc\\Support\\Controller' => [
@@ -199,6 +249,14 @@ return [
                 1 => 'application/json',
             ],
             'Support\\V1\\Rpc\\Browser\\Controller' => [
+                0 => 'application/vnd.support.v1+json',
+                1 => 'application/json',
+            ],
+            'Support\\V1\\Rpc\\MailClaim\\Controller' => [
+                0 => 'application/vnd.support.v1+json',
+                1 => 'application/json',
+            ],
+            'Support\\V1\\Rpc\\MailUnsub\\Controller' => [
                 0 => 'application/vnd.support.v1+json',
                 1 => 'application/json',
             ],

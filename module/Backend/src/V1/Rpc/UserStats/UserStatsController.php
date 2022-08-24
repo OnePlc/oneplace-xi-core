@@ -33,6 +33,16 @@ class UserStatsController extends AbstractActionController
     private $mUserTbl;
 
     /**
+     * @var TableGateway
+     */
+    private $mWthBuffTbl;
+
+    /**
+     * @var TableGateway
+     */
+    private $mUserSetTbl;
+
+    /**
      * Constructor
      *
      * UserResource constructor.
@@ -43,6 +53,8 @@ class UserStatsController extends AbstractActionController
     {
         $this->mCoreStatsTbl = new TableGateway('core_statistic', $mapper);
         $this->mUserTbl = new TableGateway('user', $mapper);
+        $this->mWthBuffTbl = new TableGateway('faucet_withdraw_buff', $mapper);
+        $this->mUserSetTbl = new TableGateway('user_setting', $mapper);
 
         $this->mSecTools = new SecurityTools($mapper);
     }
@@ -73,6 +85,10 @@ class UserStatsController extends AbstractActionController
             $ipWhiteList = json_decode($ipWhiteList);
             if(!in_array($_SERVER['REMOTE_ADDR'], $ipWhiteList)) {
                 return new ApiProblemResponse(new ApiProblem(400, 'You are not allowed this access this api'));
+            }
+
+            if(isset($_REQUEST['richlist'])) {
+                return $this->getUserRichList();
             }
 
             /**
@@ -253,5 +269,52 @@ class UserStatsController extends AbstractActionController
         }
 
         return new ApiProblemResponse(new ApiProblem(403, 'Not alloawed'));
+    }
+
+    private function getUserRichList(): array
+    {
+        $rlSel = new Select($this->mUserTbl->getTable());
+        $rlSel->order('token_balance DESC');
+        $rlSel->limit(51);
+
+        $richList = $this->mUserTbl->selectWith($rlSel);
+        $users = [];
+
+        $bannedUsersById = [];
+        $bannedUsers = $this->mUserSetTbl->select(['setting_name' => 'user-tempban']);
+        foreach($bannedUsers as $bannedUser) {
+            if(!in_array($bannedUser->user_idfs,$bannedUsersById)) {
+                $bannedUsersById[] = $bannedUser->user_idfs;
+            }
+        }
+
+        foreach($richList as $user) {
+            if($user->User_ID == 335874987) {
+                continue;
+            }
+            if(in_array($user->User_ID, $bannedUsersById)) {
+                continue;
+            }
+            $bfWth = new Where();
+            $bfWth->equalTo('user_idfs', $user->User_ID);
+            $bfWth->greaterThanOrEqualTo('days_left', 1);
+            $buffs = $this->mWthBuffTbl->select($bfWth);
+            $buffCoin = 0;
+            if($buffs->count() > 0) {
+                foreach($buffs as $bf) {
+                    $buffCoin+=$bf->amount;
+                }
+            }
+            $users[] = [
+                'id' => $user->User_ID,
+                'name' => $user->username,
+                'token_balance' => $user->token_balance,
+                'wth_buff' => $buffCoin
+            ];
+        }
+
+        return [
+            'richlist' => $users
+        ];
     }
 }

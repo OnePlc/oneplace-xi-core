@@ -229,7 +229,11 @@ class TimewallPBController extends AbstractActionController
                                     'user_idfs' => $iUserID
                                     ]); **/
                                 } else {
-                                    $this->mUserTools->addXP('cpx-claim-small', $iUserID);
+                                    if($amount >= 1000) {
+                                        $this->mUserTools->addXP('cpx-claim-small', $iUserID);
+                                    } else {
+                                        $this->mUserTools->addXP('shortlink-claim', $iUserID);
+                                    }
                                 }
                                 return [
                                     'state' => 'success'

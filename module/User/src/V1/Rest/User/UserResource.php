@@ -751,11 +751,13 @@ class UserResource extends AbstractResourceListener
         $prefColor = "#1bc5bd";
         $prefText = '#fff';
         $cryptoBalance = 0;
+        $cryptoDollarVal = 0;
         if(count($coinInfo) > 0) {
             $coinInfo = $coinInfo->current();
             $prefColor = $coinInfo->bgcolor;
             $prefText = $coinInfo->textcolor;
             $cryptoBalance = $user->token_balance*$tokenValue;
+            $cryptoDollarVal = $coinInfo->dollar_val;
             if($coinInfo->dollar_val > 0) {
                 $cryptoBalance = $cryptoBalance/$coinInfo->dollar_val;
             } else {
@@ -833,6 +835,7 @@ class UserResource extends AbstractResourceListener
             'token_balance' => (float)$user->token_balance,
             'credit_balance' => (float)$user->credit_balance,
             'crypto_balance' => (float)$cryptoBalance,
+            'crypto_dollarval' => $cryptoDollarVal,
             'xp_level' => (int)$user->xp_level,
             'xp_percent' => (float)$dPercent,
             'time_zone' => $user->timezone,
@@ -851,7 +854,7 @@ class UserResource extends AbstractResourceListener
             'inbox_count' => $inboxMessages
         ];
 
-        $forceUpdateTo = '2.0.15';
+        $forceUpdateTo = '2.0.16';
         if(isset($_REQUEST['v'])) {
             $clientVersion = substr(filter_var($_REQUEST['v'], FILTER_SANITIZE_STRING),0, 6);
 
@@ -1494,11 +1497,13 @@ class UserResource extends AbstractResourceListener
         $cryptoBalance = 0;
         $prefColor = "#1bc5bd";
         $prefText = '#fff';
+        $cryptoDollarVal = 0;
         if(count($coinInfo) > 0) {
             $coinInfo = $coinInfo->current();
             $prefColor = $coinInfo->bgcolor;
             $prefText = $coinInfo->textcolor;
             $cryptoBalance = $tokenBalance*$tokenValue;
+            $cryptoDollarVal = $coinInfo->dollar_val;
             if($coinInfo->dollar_val > 0) {
                 $cryptoBalance = $cryptoBalance/$coinInfo->dollar_val;
             } else {
@@ -1515,6 +1520,7 @@ class UserResource extends AbstractResourceListener
                 'email' => $user->email,
                 'avatar' => $avatar,
                 'token_balance' => $tokenBalance,
+                'crypto_dollarval' => $cryptoDollarVal,
                 'crypto_balance' => $cryptoBalance,
                 'verified' => (int)$user->email_verified,
                 'show_verify_mail' => ($user->send_verify == null) ? ($user->email_verified == 1) ? false : true : false,

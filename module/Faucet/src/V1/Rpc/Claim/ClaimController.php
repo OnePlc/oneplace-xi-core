@@ -373,9 +373,11 @@ class ClaimController extends AbstractActionController
                     'next' => strtotime($nextDate)-time(),
                     'balance' => $newBalance,
                     'balance_crypto' => $oTransHelper->getCryptoBalance($newBalance, $me),
-                    'xp_level' => $me->xp_level,
-                    'xp_current' => $me->xp_current,
-                    'xp_percent' => $me->xp_percent,
+                    'xp_info' => [
+                        'xp_level' => $me->xp_level,
+                        'xp_current' => $me->xp_current,
+                        'xp_percent' => $me->xp_percent,
+                    ],
                     'achievement' => $achievDone,
                     'daily_claim_count' => $this->getDailyTasksReadyToClaim($me),
                 ]);
