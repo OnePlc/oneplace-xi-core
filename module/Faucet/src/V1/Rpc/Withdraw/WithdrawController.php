@@ -657,6 +657,16 @@ class WithdrawController extends AbstractActionController
                             return new ApiProblemResponse(new ApiProblem(400, 'Invalid Ravencoin Address. Make sure you have no typing errors and choose the correct currency'));
                         }
                         break;
+                    case 'XMR':
+                        $addrCheck = str_replace(['monero:'],[''],$wallet);
+                        if(strlen($addrCheck) < 34) {
+                            return new ApiProblemResponse(new ApiProblem(400, 'Invalid Monero Address. Make sure you have no typing errors and choose the correct currency'));
+                        }
+                        $firstLetter = strtolower(substr($addrCheck,0,1));
+                        if($firstLetter != '4') {
+                            return new ApiProblemResponse(new ApiProblem(400, 'Invalid Monero Address. Make sure you have no typing errors and choose the correct currency'));
+                        }
+                        break;
                     case 'LTC':
                         $addrCheck = str_replace(['litecoin:'],[''],$wallet);
                         if(strlen($addrCheck) < 34) {

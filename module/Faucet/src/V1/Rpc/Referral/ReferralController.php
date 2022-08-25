@@ -120,7 +120,7 @@ class ReferralController extends AbstractActionController
             $refStat = $this->mUserStatsTbl->select(['stat_key' => 'user-wth-coins-total','user_idfs' => $ref->User_ID]);
             if($refStat->count() > 0) {
                 $withdrawn = $refStat->current()->stat_data;
-                $bonus = $withdrawn*0.1;
+                $bonus = round($withdrawn*0.1, 0);
             }
             $lastAction = '-';
             if($ref->last_action != '0000-00-00 00:00:00') {
