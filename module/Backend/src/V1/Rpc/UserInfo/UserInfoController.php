@@ -4,6 +4,8 @@ namespace Backend\V1\Rpc\UserInfo;
 use Faucet\Tools\SecurityTools;
 use Laminas\ApiTools\ApiProblem\ApiProblem;
 use Laminas\ApiTools\ApiProblem\ApiProblemResponse;
+use Laminas\Db\Sql\Select;
+use Laminas\Db\Sql\Where;
 use Laminas\Db\TableGateway\TableGateway;
 use Laminas\Mvc\Controller\AbstractActionController;
 
@@ -28,6 +30,11 @@ class UserInfoController extends AbstractActionController
     private $mTxTbl;
 
     /**
+     * @var TableGateway
+     */
+    private $mOfTbl;
+
+    /**
      * Constructor
      *
      * UserResource constructor.
@@ -38,6 +45,7 @@ class UserInfoController extends AbstractActionController
     {
         $this->mUserTbl = new TableGateway('user', $mapper);
         $this->mTxTbl = new TableGateway('faucet_transaction', $mapper);
+        $this->mOfTbl = new TableGateway('offerwall_user', $mapper);
 
         $this->mSecTools = new SecurityTools($mapper);
     }
@@ -119,6 +127,52 @@ class UserInfoController extends AbstractActionController
                 $earningChart['data'][] = round($eVal);
             }
 
+            $userOffers = ['small' => [],'big' => []];
+
+            $ofSmallWh = new Where();
+            $ofSmallWh->lessThanOrEqualTo('amount', 500);
+            $ofSmallWh->equalTo('user_idfs', $userId);
+            $ofSel = new Select($this->mOfTbl->getTable());
+            $ofSel->join(['o' => 'offerwall'],'o.Offerwall_ID = offerwall_user.offerwall_idfs', ['wall_name']);
+            $ofSel->where($ofSmallWh);
+            $ofSel->order('date_completed DESC');
+            $ofSel->limit(50);
+
+            $smallOffers = $this->mOfTbl->selectWith($ofSel);
+            foreach($smallOffers as $smallOffer) {
+                $userOffers['small'][] = [
+                    'id' => $smallOffer->id,
+                    'amount' => $smallOffer->amount,
+                    'usd' => $smallOffer->amount_usd,
+                    'date' => date('Y-m-d H:i', strtotime($smallOffer->date_completed)),
+                    'name' => $smallOffer->label,
+                    'wall' => $smallOffer->wall_name,
+                    'tx_id' => $smallOffer->transaction_id
+                ];
+            }
+
+            $ofBigWh = new Where();
+            $ofBigWh->greaterThanOrEqualTo('amount', 500);
+            $ofBigWh->equalTo('user_idfs', $userId);
+            $ofSel = new Select($this->mOfTbl->getTable());
+            $ofSel->join(['o' => 'offerwall'],'o.Offerwall_ID = offerwall_user.offerwall_idfs', ['wall_name']);
+            $ofSel->where($ofBigWh);
+            $ofSel->order('date_completed DESC');
+            $ofSel->limit(50);
+
+            $bigOffers = $this->mOfTbl->selectWith($ofSel);
+            foreach($bigOffers as $bigOffer) {
+                $userOffers['big'][] = [
+                    'id' => $bigOffer->id,
+                    'amount' => $bigOffer->amount,
+                    'usd' => $bigOffer->amount_usd,
+                    'date' => date('Y-m-d H:i', strtotime($bigOffer->date_completed)),
+                    'name' => $bigOffer->label,
+                    'wall' => $bigOffer->wall_name,
+                    'tx_id' => $bigOffer->transaction_id
+                ];
+            }
+
             return [
                 'user' => [
                     'id' => $userInfo->User_ID,
@@ -127,6 +181,7 @@ class UserInfoController extends AbstractActionController
                     'signup' => $userInfo->created_date,
                     'xp_level' => $userInfo->xp_level
                 ],
+                'offers' => $userOffers,
                 'earning_chart' => $earningChart,
                 'spending_chart' => $spendingChart
             ];

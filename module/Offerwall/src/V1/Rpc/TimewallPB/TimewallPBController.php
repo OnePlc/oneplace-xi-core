@@ -142,7 +142,7 @@ class TimewallPBController extends AbstractActionController
                             $offerId = filter_var($_REQUEST['tx'], FILTER_SANITIZE_STRING);
                             $hash = filter_var($_REQUEST['hash'], FILTER_SANITIZE_STRING);
                             //$offerName = filter_var($_REQUEST['offer_name'], FILTER_SANITIZE_STRING);
-                            $offerName = 'Timewall Offer';
+                            $offerName = 'Timewall Withdraw';
 
                             if($amount <= 0 || empty($amount) || $amountUsd <= 0 || empty($amountUsd)) {
                                 return [

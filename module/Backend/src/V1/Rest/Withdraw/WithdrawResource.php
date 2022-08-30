@@ -278,10 +278,11 @@ class WithdrawResource extends AbstractResourceListener
         }
 
         $wthSel = new Select($this->mWithdrawTbl->getTable());
-        $wthSel->join(['u' => 'user'],'u.User_ID = faucet_withdraw.user_idfs', ['username']);
+        $wthSel->join(['u' => 'user'],'u.User_ID = faucet_withdraw.user_idfs', ['username','xp_level']);
         $wthSel->where(['state' => 'new']);
         $openWithdraws = $this->mWithdrawTbl->selectWith($wthSel);
         $withdrawals = [];
+        $riskyWithdrawals = [];
         $totalOpenByCrypto = [];
         $totalOpenCoinsByCrypto = [];
         $totalOpenDollars = 0;
@@ -297,16 +298,32 @@ class WithdrawResource extends AbstractResourceListener
                     $totalOpenCoinsByCrypto[$cryptoKey] = 0;
                 }
                 $totalOpenCoinsByCrypto[$cryptoKey]+=$wth->amount;
-                $withdrawals[] = [
-                    'id' => $wth->Withdraw_ID,
-                    'amount_coins' => $wth->amount,
-                    'amount_crypto' => $wth->amount_paid,
-                    'currency' => strtolower($wth->currency),
-                    'wallet' => $wth->wallet,
-                    'user' => $wth->username,
-                    'lnk' => $wth->user_idfs,
-                    'date' => date('Y-m-d H:i', strtotime($wth->date_requested))
-                ];
+
+                if($wth->xp_level >= 10) {
+                    $withdrawals[] = [
+                        'id' => $wth->Withdraw_ID,
+                        'amount_coins' => $wth->amount,
+                        'amount_crypto' => $wth->amount_paid,
+                        'currency' => strtolower($wth->currency),
+                        'wallet' => $wth->wallet,
+                        'user' => $wth->username,
+                        'xp_level' => $wth->xp_level,
+                        'lnk' => $wth->user_idfs,
+                        'date' => date('Y-m-d H:i', strtotime($wth->date_requested))
+                    ];
+                } else {
+                    $riskyWithdrawals[] = [
+                        'id' => $wth->Withdraw_ID,
+                        'amount_coins' => $wth->amount,
+                        'amount_crypto' => $wth->amount_paid,
+                        'currency' => strtolower($wth->currency),
+                        'wallet' => $wth->wallet,
+                        'user' => $wth->username,
+                        'xp_level' => $wth->xp_level,
+                        'lnk' => $wth->user_idfs,
+                        'date' => date('Y-m-d H:i', strtotime($wth->date_requested))
+                    ];
+                }
             }
         }
 
@@ -328,7 +345,8 @@ class WithdrawResource extends AbstractResourceListener
         return (object)[
             'total_usd' => round($totalOpenDollars*0.00004, 0),
             'total_crypto' => $openCryptos,
-            'withdrawals' => $withdrawals
+            'withdrawals' => $withdrawals,
+            'risky_withdrawals' => $riskyWithdrawals
         ];
     }
 
