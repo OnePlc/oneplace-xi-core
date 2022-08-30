@@ -125,6 +125,9 @@ class DepositController extends AbstractActionController
 
         if($request->isGet()) {
             $page = (isset($_REQUEST['page'])) ? filter_var($_REQUEST['page'], FILTER_SANITIZE_NUMBER_INT) : 1;
+            if($page <= 0) {
+                return new ApiProblemResponse(new ApiProblem(400, 'Invalid Page'));
+            }
             $pageSize = 25;
 
             $myDeposits = [];
@@ -221,6 +224,10 @@ class DepositController extends AbstractActionController
                     }
                     $merchKey = $this->mSecTools->getCoreSetting('cu-merchant-key');
                     $secKey = $this->mSecTools->getCoreSetting('cu-secret-key');
+
+                    if($amount < 2500) {
+                        return new ApiProblemResponse(new ApiProblem(400, 'You can buy at least 2500 PTC Credits with crypto'));
+                    }
 
                     // Make sure amount is a multiple of 500
                     $fixedAmount = round($amount / 500) * 500;

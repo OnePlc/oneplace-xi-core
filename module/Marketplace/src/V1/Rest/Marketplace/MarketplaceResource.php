@@ -113,7 +113,7 @@ class MarketplaceResource extends AbstractResourceListener
         if(get_class($user) == 'Laminas\\ApiTools\\ApiProblem\\ApiProblem') {
             return $user;
         }
-        return new ApiProblem(400, 'Marketplace is removed in the next update.');
+        return new ApiProblem(403, 'marketplace is disabled');
 
         if($user->email_verified == 0) {
             return new ApiProblem(404, 'You cannot use marketplace with unverified account.');
@@ -261,6 +261,8 @@ class MarketplaceResource extends AbstractResourceListener
             return $user;
         }
 
+        return new ApiProblem(403, 'marketplace is disabled');
+
         $auctionId = filter_var($id, FILTER_SANITIZE_NUMBER_INT);
 
         $auction = $this->mAuctionTbl->select(['Auction_ID' => $auctionId]);
@@ -392,6 +394,7 @@ class MarketplaceResource extends AbstractResourceListener
         if(get_class($user) == 'Laminas\\ApiTools\\ApiProblem\\ApiProblem') {
             return $user;
         }
+        return new ApiProblem(403, 'marketplace is disabled');
 
         $categoryId = filter_var($id, FILTER_SANITIZE_NUMBER_INT);
 
@@ -494,6 +497,7 @@ class MarketplaceResource extends AbstractResourceListener
         if(get_class($user) == 'Laminas\\ApiTools\\ApiProblem\\ApiProblem') {
             return $user;
         }
+        return new ApiProblem(403, 'marketplace is disabled');
 
         $categories = [];
         $categoriesById = [];
@@ -573,6 +577,8 @@ class MarketplaceResource extends AbstractResourceListener
         if(get_class($user) == 'Laminas\\ApiTools\\ApiProblem\\ApiProblem') {
             return $user;
         }
+
+        return new ApiProblem(403, 'marketplace is disabled');
 
         $itemId = filter_var($id, FILTER_SANITIZE_NUMBER_INT);
         $amount = filter_var($data->amount, FILTER_SANITIZE_NUMBER_INT);

@@ -134,6 +134,8 @@ class SupportController extends AbstractActionController
             return new ApiProblemResponse($me);
         }
 
+        return new ApiProblemResponse(new ApiProblem(403, 'page support is disabled'));
+
         $request = $this->getRequest();
 
         /**

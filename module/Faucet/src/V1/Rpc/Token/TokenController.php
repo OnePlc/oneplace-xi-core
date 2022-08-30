@@ -175,6 +175,9 @@ class TokenController extends AbstractActionController
             ];
 
             $page = (isset($_REQUEST['page'])) ? filter_var($_REQUEST['page'], FILTER_SANITIZE_NUMBER_INT) : 1;
+            if($page <= 0) {
+                return new ApiProblemResponse(new ApiProblem(400, 'Invalid Page'));
+            }
             $pageSize = 10;
 
             # user token history
@@ -490,80 +493,6 @@ class TokenController extends AbstractActionController
             $price = 0;
 
             switch(strtolower($coin)) {
-                /**
-                case 'doge':
-                    $sBCHNodeUrl = $this->mSecTools->getCoreSetting('dogenode-rpcurl');
-                    if($sBCHNodeUrl) {
-                        $client = new Client();
-                        $client->setUri($sBCHNodeUrl);
-                        $client->setMethod('POST');
-                        $client->setRawBody('{"jsonrpc":"2.0","id":"curltext","method":"getnewaddress","params":[]}');
-                        $response = $client->send();
-                        $googleResponse = json_decode($response->getBody());
-                        $walletReceive = $googleResponse->result;
-                    }
-                    $coinInfoBCH = $this->mWalletTbl->select(['coin_sign' => 'DOGE'])->current();
-                    if($coinInfoBCH->dollar_val > 0) {
-                        $price = number_format($amountCrypto/$coinInfoBCH->dollar_val,8,'.','');
-                    } else {
-                        $price = number_format($amountCrypto*$coinInfoBCH->dollar_val,8,'.','');
-                    }
-                    break;
-                case 'bch':
-                    $sBCHNodeUrl = $this->mSecTools->getCoreSetting('bchnode-rpcurl');
-                    if($sBCHNodeUrl) {
-                        $client = new Client();
-                        $client->setUri($sBCHNodeUrl);
-                        $client->setMethod('POST');
-                        $client->setRawBody('{"jsonrpc":"2.0","id":"curltext","method":"getnewaddress","params":[]}');
-                        $response = $client->send();
-                        $googleResponse = json_decode($response->getBody());
-                        $walletReceive = $googleResponse->result;
-                    }
-                    $coinInfoBCH = $this->mWalletTbl->select(['coin_sign' => 'BCH'])->current();
-                    if($coinInfoBCH->dollar_val > 0) {
-                        $price = number_format($amountCrypto/$coinInfoBCH->dollar_val,8,'.','');
-                    } else {
-                        $price = number_format($amountCrypto*$coinInfoBCH->dollar_val,8,'.','');
-                    }
-                    break;
-                case 'ltc':
-                    $sLTCNodeUrl = $this->mSecTools->getCoreSetting('ltcnode-rpcurl');
-                    if($sLTCNodeUrl) {
-                        $client = new Client();
-                        $client->setUri($sLTCNodeUrl);
-                        $client->setMethod('POST');
-                        $client->setRawBody('{"jsonrpc":"2.0","id":"curltext","method":"getnewaddress","params":[]}');
-                        $response = $client->send();
-                        $googleResponse = json_decode($response->getBody());
-                        $walletReceive = $googleResponse->result;
-                    }
-                    $coinInfoLTC = $this->mWalletTbl->select(['coin_sign' => 'LTC'])->current();
-                    if($coinInfoLTC->dollar_val > 0) {
-                        $price = number_format($amountCrypto/$coinInfoLTC->dollar_val,8,'.','');
-                    } else {
-                        $price = number_format($amountCrypto*$coinInfoLTC->dollar_val,8,'.','');
-                    }
-                    break;
-                case 'zen':
-                    $sZENNodeUrl = $this->mSecTools->getCoreSetting('zennode-rpcurl');
-                    if($sZENNodeUrl) {
-                        $client = new Client();
-                        $client->setUri($sZENNodeUrl);
-                        $client->setMethod('POST');
-                        $client->setRawBody('{"jsonrpc":"2.0","id":"curltext","method":"getnewaddress","params":[]}');
-                        $response = $client->send();
-                        $googleResponse = json_decode($response->getBody());
-                        $walletReceive = $googleResponse->result;
-                    }
-                    $coinInfoZEN = $this->mWalletTbl->select(['coin_sign' => 'ZEN'])->current();
-                    if($coinInfoZEN->dollar_val > 0) {
-                        $price = number_format($amountCrypto/$coinInfoZEN->dollar_val,8,'.','');
-                    } else {
-                        $price = number_format($amountCrypto*$coinInfoZEN->dollar_val,8,'.','');
-                    }
-                    break;
-                 **/
                 case 'usd':
                     $cWh = new Where();
                     $cWh->equalTo('user_idfs', $me->User_ID);
@@ -575,6 +504,10 @@ class TokenController extends AbstractActionController
                     }
                     $merchKey = $this->mSecTools->getCoreSetting('cu-merchant-key');
                     $secKey = $this->mSecTools->getCoreSetting('cu-secret-key');
+
+                    if($amount < 50) {
+                        return new ApiProblemResponse(new ApiProblem(400, 'You need to buy at least 50 Tokens with Crypto'));
+                    }
 
                     $response = ClientStatic::post(
                         'https://cryptounifier.io/api/v1/merchant/create-invoice', [

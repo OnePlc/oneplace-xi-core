@@ -84,6 +84,9 @@ class HistoryController extends AbstractActionController
 
         if($request->isGet()) {
             $page = (isset($_REQUEST['page'])) ? filter_var($_REQUEST['page'], FILTER_SANITIZE_NUMBER_INT) : 1;
+            if($page <= 0) {
+                return new ApiProblemResponse(new ApiProblem(400, 'Invalid Page'));
+            }
             $pageSize = 10;
 
             $provSel = new Select($this->mShortProviderTbl->getTable());

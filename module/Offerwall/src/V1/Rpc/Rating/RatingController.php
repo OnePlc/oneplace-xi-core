@@ -135,8 +135,11 @@ class RatingController extends AbstractActionController
                     }
                 }
             } else {
-                if($me->is_employee != 1) {
+                if((int)$me->is_employee !== 1) {
                     return new ApiProblemResponse(new ApiProblem(400, 'Invalid Response Body (missing required fields no emp)'));
+                }
+                if($this->mSecTools->checkIpRestrictedAccess() !== true) {
+                    return new ApiProblem(400, 'You are not allowed this access this api');
                 }
 
                 $openRatings = [];
@@ -231,8 +234,11 @@ class RatingController extends AbstractActionController
          */
         if($request->isPut()) {
             # only for admins
-            if($me->is_employee != 1) {
+            if((int)$me->is_employee !== 1) {
                 return new ApiProblemResponse(new ApiProblem(400, 'Invalid Response Body (missing required fields no emp)'));
+            }
+            if($this->mSecTools->checkIpRestrictedAccess() !== true) {
+                return new ApiProblem(400, 'You are not allowed this access this api');
             }
 
             # Get Data from Request Body

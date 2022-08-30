@@ -84,6 +84,7 @@ class DashboardController extends AbstractActionController
         if(get_class($me) == 'Laminas\\ApiTools\\ApiProblem\\ApiProblem') {
             return new ApiProblemResponse($me);
         }
+        return new ApiProblemResponse(new ApiProblem(418, 'Nice try - but no coffee for you.'));
 
         # this is only for emplyoees ...
         if((int)$me->is_employee !== 1) {
@@ -94,6 +95,9 @@ class DashboardController extends AbstractActionController
          * Get open Support Tickets
          */
         $page = (isset($_REQUEST['page'])) ? filter_var($_REQUEST['page'], FILTER_SANITIZE_NUMBER_INT) : 1;
+        if($page <= 0) {
+            return new ApiProblemResponse(new ApiProblem(400, 'Invalid Page'));
+        }
         $pageSize = 25;
         $openTickets = [];
         $ticketSel = new Select($this->mSupTicketTbl->getTable());

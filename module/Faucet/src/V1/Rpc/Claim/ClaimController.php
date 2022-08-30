@@ -302,9 +302,11 @@ class ClaimController extends AbstractActionController
             if($platform == 'android' && $me->User_ID == 335874988) {
                 $nextTimer = 60;
             }
+            /**
             if($bonus == 1) {
                 $claimAmount = $claimAmount * 3;
             }
+             * **/
 
             # Set next claim date
             $nextDate = date('Y-m-d H:i:s', time()+$nextTimer);

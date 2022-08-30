@@ -75,9 +75,7 @@ class TokenBuyResource extends AbstractResourceListener
             return new ApiProblem(403, 'You have no permission to do that ('.$me->is_employee.')');
         }
 
-        $ipWhiteList = $this->mSecTools->getCoreSetting('backend-ip-whitelist');
-        $ipWhiteList = json_decode($ipWhiteList);
-        if(!in_array($_SERVER['REMOTE_ADDR'], $ipWhiteList)) {
+        if($this->mSecTools->checkIpRestrictedAccess() !== true) {
             return new ApiProblem(400, 'You are not allowed this access this api');
         }
 
@@ -184,9 +182,7 @@ class TokenBuyResource extends AbstractResourceListener
             return new ApiProblem(403, 'You have no permission to do that ('.$me->is_employee.')');
         }
 
-        $ipWhiteList = $this->mSecTools->getCoreSetting('backend-ip-whitelist');
-        $ipWhiteList = json_decode($ipWhiteList);
-        if(!in_array($_SERVER['REMOTE_ADDR'], $ipWhiteList)) {
+        if($this->mSecTools->checkIpRestrictedAccess() !== true) {
             return new ApiProblem(400, 'You are not allowed this access this api');
         }
 
@@ -245,9 +241,7 @@ class TokenBuyResource extends AbstractResourceListener
             return new ApiProblem(403, 'You have no permission to do that ('.$me->is_employee.')');
         }
 
-        $ipWhiteList = $this->mSecTools->getCoreSetting('backend-ip-whitelist');
-        $ipWhiteList = json_decode($ipWhiteList);
-        if(!in_array($_SERVER['REMOTE_ADDR'], $ipWhiteList)) {
+        if($this->mSecTools->checkIpRestrictedAccess() !== true) {
             return new ApiProblem(400, 'You are not allowed this access this api');
         }
 
@@ -349,9 +343,7 @@ class TokenBuyResource extends AbstractResourceListener
             return new ApiProblem(403, 'You have no permission to do that ('.$me->is_employee.')');
         }
 
-        $ipWhiteList = $this->mSecTools->getCoreSetting('backend-ip-whitelist');
-        $ipWhiteList = json_decode($ipWhiteList);
-        if(!in_array($_SERVER['REMOTE_ADDR'], $ipWhiteList)) {
+        if($this->mSecTools->checkIpRestrictedAccess() !== true) {
             return new ApiProblem(400, 'You are not allowed this access this api');
         }
 
@@ -422,9 +414,7 @@ class TokenBuyResource extends AbstractResourceListener
             return new ApiProblem(403, 'You have no permission to do that ('.$me->is_employee.')');
         }
 
-        $ipWhiteList = $this->mSecTools->getCoreSetting('backend-ip-whitelist');
-        $ipWhiteList = json_decode($ipWhiteList);
-        if(!in_array($_SERVER['REMOTE_ADDR'], $ipWhiteList)) {
+        if($this->mSecTools->checkIpRestrictedAccess() !== true) {
             return new ApiProblem(400, 'You are not allowed this access this api');
         }
 

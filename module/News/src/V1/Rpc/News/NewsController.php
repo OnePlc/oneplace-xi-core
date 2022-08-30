@@ -14,6 +14,8 @@
  */
 namespace News\V1\Rpc\News;
 
+use Laminas\ApiTools\ApiProblem\ApiProblem;
+use Laminas\ApiTools\ApiProblem\ApiProblemResponse;
 use Laminas\Db\Sql\Select;
 use Laminas\Db\TableGateway\TableGateway;
 use Laminas\Mvc\Controller\AbstractActionController;
@@ -51,6 +53,9 @@ class NewsController extends AbstractActionController
     public function newsAction()
     {
         $page = (isset($_REQUEST['page'])) ? filter_var($_REQUEST['page'], FILTER_SANITIZE_NUMBER_INT) : 1;
+        if($page <= 0) {
+            return new ApiProblemResponse(new ApiProblem(400, 'Invalid Page'));
+        }
         $website = (isset($_REQUEST['website'])) ? filter_var($_REQUEST['website'], FILTER_SANITIZE_STRING) : 'sf';
         if($website != 'sf' && $website != 'ca') {
             $website = 'sf';

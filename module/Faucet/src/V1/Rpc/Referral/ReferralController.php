@@ -80,7 +80,7 @@ class ReferralController extends AbstractActionController
     /**
      * User Referral Statistics
      *
-     * @return ApiProblem
+     * @return ApiProblemResponse|ViewModel
      * @since 1.0.0
      */
     public function referralAction()
@@ -91,10 +91,13 @@ class ReferralController extends AbstractActionController
         }
         $me = $this->mSecTools->getSecuredUserSession($this->getIdentity()->getName());
         if(get_class($me) == 'Laminas\\ApiTools\\ApiProblem\\ApiProblem') {
-            return new ApiProblemResponse(new ApiProblemResponse($me));
+            return new ApiProblemResponse($me);
         }
 
         $page = (isset($_REQUEST['page'])) ? filter_var($_REQUEST['page'], FILTER_SANITIZE_NUMBER_INT) : 1;
+        if($page <= 0) {
+            return new ApiProblemResponse(new ApiProblem(400, 'Invalid Page'));
+        }
         $pageSize = 25;
         $myRefs = [];
         $myRefWithdrawn = 0;

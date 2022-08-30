@@ -16,6 +16,7 @@ namespace Offerwall\V1\Rest\Offerwall;
 
 use Faucet\Tools\SecurityTools;
 use Laminas\ApiTools\ApiProblem\ApiProblem;
+use Laminas\ApiTools\ApiProblem\ApiProblemResponse;
 use Laminas\ApiTools\Rest\AbstractResourceListener;
 use Laminas\ApiTools\ContentNegotiation\ViewModel;
 use Laminas\Db\Sql\Select;
@@ -204,6 +205,9 @@ class OfferwallResource extends AbstractResourceListener
         }
 
         $page = (isset($_REQUEST['page'])) ? filter_var($_REQUEST['page'], FILTER_SANITIZE_NUMBER_INT) : 1;
+        if($page <= 0) {
+            return new ApiProblem(400, 'Invalid Page');
+        }
         $pageSize = 10;
 
         # Compile history

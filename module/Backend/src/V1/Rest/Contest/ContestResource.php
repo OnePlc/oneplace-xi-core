@@ -161,6 +161,9 @@ class ContestResource extends AbstractResourceListener
         if((int)$me->is_employee !== 1) {
             return new ApiProblem(403, 'You have no permission to do that ('.$me->is_employee.')');
         }
+        if($this->mSecTools->checkIpRestrictedAccess() !== true) {
+            return new ApiProblem(400, 'You are not allowed this access this api');
+        }
 
         $month = date('m', strtotime($data->date));
         $year = date('Y', strtotime($data->date));
@@ -685,6 +688,9 @@ class ContestResource extends AbstractResourceListener
         if((int)$me->is_employee !== 1) {
             return new ApiProblem(403, 'You have no permission to do that ('.$me->is_employee.')');
         }
+        if($this->mSecTools->checkIpRestrictedAccess() !== true) {
+            return new ApiProblem(400, 'You are not allowed this access this api');
+        }
 
         $id = filter_var($id, FILTER_SANITIZE_NUMBER_INT);
 
@@ -778,6 +784,9 @@ class ContestResource extends AbstractResourceListener
 
         if((int)$me->is_employee !== 1) {
             return new ApiProblem(403, 'You have no permission to do that ('.$me->is_employee.')');
+        }
+        if($this->mSecTools->checkIpRestrictedAccess() !== true) {
+            return new ApiProblem(400, 'You are not allowed this access this api');
         }
 
         $contests = [];
@@ -1179,6 +1188,9 @@ class ContestResource extends AbstractResourceListener
         if((int)$me->is_employee !== 1) {
             return new ApiProblem(403, 'You have no permission to do that ('.$me->is_employee.')');
         }
+        if($this->mSecTools->checkIpRestrictedAccess() !== true) {
+            return new ApiProblem(400, 'You are not allowed this access this api');
+        }
 
         $openPays = $this->mWinnerTbl->select(['status' => 'new']);
 
@@ -1254,6 +1266,9 @@ class ContestResource extends AbstractResourceListener
 
         if((int)$me->is_employee !== 1) {
             return new ApiProblem(403, 'You have no permission to do that ('.$me->is_employee.')');
+        }
+        if($this->mSecTools->checkIpRestrictedAccess() !== true) {
+            return new ApiProblem(400, 'You are not allowed this access this api');
         }
 
         $username = filter_var($data->username, FILTER_SANITIZE_STRING);

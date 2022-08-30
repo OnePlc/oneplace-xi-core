@@ -691,6 +691,9 @@ class GuildResource extends AbstractResourceListener
          * Load Guild Members List (paginated)
          */
         $page = (isset($_REQUEST['page'])) ? filter_var($_REQUEST['page'], FILTER_SANITIZE_NUMBER_INT) : 1;
+        if($page <= 0) {
+            return new ApiProblem(400, 'Invalid Page');
+        }
         $guildMembers = [];
         $memberSel = new Select($this->mGuildUserTbl->getTable());
         $memberSel->join(['user' => 'user'], 'user.User_ID = faucet_guild_user.user_idfs');
@@ -973,50 +976,6 @@ class GuildResource extends AbstractResourceListener
             return $me;
         }
 
-        /**
-        if($me->User_ID == 335874987) {
-            $guilds = $this->mGuildTbl->select();
-            foreach($guilds as $g) {
-                $focusOld = (array)json_decode($g->focus);
-                if($focusOld['f'] == 1) {
-                    $this->mGuildFocusTbl->insert([
-                        'guild_idfs' => $g->Guild_ID,
-                        'focus_idfs' => 1
-                    ]);
-                }
-                if($focusOld['sl'] == 1) {
-                    $this->mGuildFocusTbl->insert([
-                        'guild_idfs' => $g->Guild_ID,
-                        'focus_idfs' => 2
-                    ]);
-                }
-                if($focusOld['of'] == 1) {
-                    $this->mGuildFocusTbl->insert([
-                        'guild_idfs' => $g->Guild_ID,
-                        'focus_idfs' => 3
-                    ]);
-                }
-                if($focusOld['lt'] == 1) {
-                    $this->mGuildFocusTbl->insert([
-                        'guild_idfs' => $g->Guild_ID,
-                        'focus_idfs' => 4
-                    ]);
-                }
-                if($focusOld['m'] == 1) {
-                    $this->mGuildFocusTbl->insert([
-                        'guild_idfs' => $g->Guild_ID,
-                        'focus_idfs' => 5
-                    ]);
-                }
-                if($focusOld['p'] == 1) {
-                    $this->mGuildFocusTbl->insert([
-                        'guild_idfs' => $g->Guild_ID,
-                        'focus_idfs' => 6
-                    ]);
-                }
-            }
-        } **/
-
         $page = (isset($_REQUEST['page'])) ? filter_var($_REQUEST['page'], FILTER_SANITIZE_NUMBER_INT) : 1;
         $focusFilter = (isset($_REQUEST['focus'])) ? filter_var($_REQUEST['focus'], FILTER_SANITIZE_NUMBER_INT) : 0;
         $sizeFilter = (isset($_REQUEST['size'])) ? filter_var($_REQUEST['size'], FILTER_SANITIZE_STRING) : 'all';
@@ -1203,73 +1162,6 @@ class GuildResource extends AbstractResourceListener
      */
     public function patch($id, $data)
     {
-        # Prevent 500 error
-        if(!$this->getIdentity()) {
-            return new ApiProblem(401, 'Not logged in');
-        }
-        $me = $this->mSecTools->getSecuredUserSession($this->getIdentity()->getName());
-        if(get_class($me) == 'Laminas\\ApiTools\\ApiProblem\\ApiProblem') {
-            return $me;
-        }
-
-        # check if user is guildmaster of a guild
-        $checkWh = new Where();
-        $checkWh->equalTo('user_idfs', $me->User_ID);
-        $checkWh->equalTo('rank', 0);
-        $checkWh->notLike('date_joined', '0000-00-00 00:00:00');
-        $userHasGuild = $this->mGuildUserTbl->select($checkWh);
-
-        if(count($userHasGuild) == 0) {
-            return new ApiProblem(404, 'You are not guildmaster of any guild');
-        } else {
-            $userGuildRole = $userHasGuild->current();
-            # double check we have no 0 guild id
-            if($userGuildRole->guild_idfs == 0) {
-                return new ApiProblem(400, 'Seems like you are guildmaster of an invalid guild. Please contact admin.');
-            }
-            # check if name should be updated
-            if(isset($data->name)) {
-                $secResult = $this->mSecTools->basicInputCheck([$data->name]);
-                if($secResult !== 'ok') {
-                    # ban user and force logout on client
-                    $this->mUserSetTbl->insert([
-                        'user_idfs' => $me->User_ID,
-                        'setting_name' => 'user-tempban',
-                        'setting_value' => 'Potential '.$secResult.' Attack @ '.date('Y-m-d H:i:s').' Guild Rename',
-                    ]);
-                    return new ApiProblem(418, 'Potential '.$secResult.' Attack - Goodbye');
-                }
-                $newName = filter_var($data->name, FILTER_SANITIZE_STRING);
-                $this->mGuildTbl->update([
-                    'label' => $newName,
-                ],[
-                    'Guild_ID' => $userGuildRole->guild_idfs,
-                ]);
-            }
-            # check if name should be updated
-            if(isset($data->icon)) {
-                $secResult = $this->mSecTools->basicInputCheck([$data->icon]);
-                if($secResult !== 'ok') {
-                    # ban user and force logout on client
-                    $this->mUserSetTbl->insert([
-                        'user_idfs' => $me->User_ID,
-                        'setting_name' => 'user-tempban',
-                        'setting_value' => 'Potential '.$secResult.' Attack @ '.date('Y-m-d H:i:s').' Guild Icon Change',
-                    ]);
-                    return new ApiProblem(418, 'Potential '.$secResult.' Attack - Goodbye');
-                }
-                $newIcon = filter_var($data->icon, FILTER_SANITIZE_STRING);
-                $this->mGuildTbl->update([
-                    'icon' => $newIcon,
-                ],[
-                    'Guild_ID' => $userGuildRole->guild_idfs,
-                ]);
-            }
-
-            return $this->mGuildTbl->select(['Guild_ID' => $userGuildRole->guild_idfs])->current();
-
-        }
-
         return new ApiProblem(405, 'The PATCH method has not been defined for individual resources');
     }
 
@@ -1333,7 +1225,7 @@ class GuildResource extends AbstractResourceListener
                     return new ApiProblem(400, 'Seems like you are guildmaster of an invalid guild. Please contact admin.');
                 }
                 $guild = $this->mGuildTbl->select(['Guild_ID' => $userGuildRole->guild_idfs]);
-                if(count($guild) == 0) {
+                if($guild->count() == 0) {
                     return new ApiProblem(404, 'Guild not found');
                 }
                 $guild = $guild->current();
@@ -1357,6 +1249,9 @@ class GuildResource extends AbstractResourceListener
 
                     # get new name
                     $newLink = strtolower(filter_var($data->link, FILTER_SANITIZE_STRING));
+                    if(strlen($newLink) < 5) {
+                        return new ApiProblem(418, 'Invalid link');
+                    }
                     # check if there is already a guild with a likely name
                     $likeWh = new Where();
                     $likeWh->like('page_url', $newLink.'%');
@@ -1409,10 +1304,13 @@ class GuildResource extends AbstractResourceListener
 
                     # get new name
                     $newName = filter_var($data->name, FILTER_SANITIZE_STRING);
+                    if(strlen($newName) < 5) {
+                        return new ApiProblem(400, 'Invalid guild name');
+                    }
 
                     # check if there is already a guild with a likely name
                     $likeWh = new Where();
-                    $likeWh->like('label', utf8_encode($newName).'%');
+                    $likeWh->like('label', $newName.'%');
                     $nameUsed = $this->mGuildTbl->select($likeWh);
                     if(count($nameUsed) > 0) {
                         return new ApiProblem(400, 'There is already a guild with that name. Please choose another one');
@@ -1428,7 +1326,7 @@ class GuildResource extends AbstractResourceListener
                         # rename
                         if($newBalance !== false) {
                             $this->mGuildTbl->update([
-                                'label' => utf8_encode($newName),
+                                'label' => $newName,
                             ],[
                                 'Guild_ID' => $userGuildRole->guild_idfs,
                             ]);
@@ -1484,6 +1382,9 @@ class GuildResource extends AbstractResourceListener
 
                     # get new name
                     $newName = filter_var($data->rank_name, FILTER_SANITIZE_STRING);
+                    if(strlen($newName) < 5) {
+                        return new ApiProblem(418, 'Invalid rank name');
+                    }
                     $rankId = filter_var($data->rank_id, FILTER_SANITIZE_NUMBER_INT);
 
                     # check if there is already a guild with a likely name
@@ -1567,8 +1468,13 @@ class GuildResource extends AbstractResourceListener
                         # rename
                         if ($newBalance !== false) {
                             $newShield = filter_var($data->emblem_shield, FILTER_SANITIZE_NUMBER_INT);
+                            if($newShield <= 0 || $newShield > 5) {
+                                return new ApiProblem(400, 'invalid icon');
+                            }
                             $newIcon = filter_var($data->emblem_icon, FILTER_SANITIZE_NUMBER_INT);
-
+                            if($newIcon <= 0 || $newIcon > 10) {
+                                return new ApiProblem(400, 'invalid icon');
+                            }
                             $this->mGuildTbl->update([
                                 'emblem_shield' => $newShield,
                                 'emblem_icon' => $newIcon,
@@ -1671,89 +1577,6 @@ class GuildResource extends AbstractResourceListener
                             'guild_idfs' => $userGuildRole->guild_idfs,
                             'focus_idfs' => 5
                         ]);
-                    }
-                }
-
-                # check if name should be updated
-                if(isset($data->icon)) {
-                    $secResult = $this->mSecTools->basicInputCheck([$data->icon]);
-                    if($secResult !== 'ok') {
-                        # ban user and force logout on client
-                        $this->mUserSetTbl->insert([
-                            'user_idfs' => $me->User_ID,
-                            'setting_name' => 'user-tempban',
-                            'setting_value' => 'Potential '.$secResult.' Attack @ '.date('Y-m-d H:i:s').' Guild Icon Change',
-                        ]);
-                        return new ApiProblem(418, 'Potential '.$secResult.' Attack - Goodbye');
-                    }
-
-                    $newIcon = filter_var($data->icon, FILTER_SANITIZE_STRING);
-
-                    $renamePrice = 500;
-                    if($this->mTransaction->checkGuildBalance($renamePrice, $userGuildRole->guild_idfs)) {
-
-                        $newBalance = $this->mTransaction->executeGuildTransaction($renamePrice, true,
-                            $userGuildRole->guild_idfs, $userGuildRole->guild_idfs,
-                            'guild-reicon', 'Change Guild Icon from '.$guild->icon.' to '.$newIcon, $me->User_ID);
-
-                        # rename
-                        if($newBalance !== false) {
-                            $this->mGuildTbl->update([
-                                'icon' => $newIcon,
-                            ],[
-                                'Guild_ID' => $userGuildRole->guild_idfs,
-                            ]);
-                            return [
-                                'token_balance' => $newBalance,
-                                'icon' => $newIcon,
-                            ];
-                        } else {
-                            return new ApiProblem(500, 'Transaction error. Please contact support.');
-                        }
-                    } else {
-                        return new ApiProblem(400, 'Guild Balance is too low for icon change');
-                    }
-                }
-
-                # check if name should be updated
-                if(isset($data->vip_upgrade)) {
-                    $secResult = $this->mSecTools->basicInputCheck([$data->icon]);
-                    if($secResult !== 'ok') {
-                        # ban user and force logout on client
-                        $this->mUserSetTbl->insert([
-                            'user_idfs' => $me->User_ID,
-                            'setting_name' => 'user-tempban',
-                            'setting_value' => 'Potential '.$secResult.' Attack @ '.date('Y-m-d H:i:s').' Guild VIP Upgrade',
-                        ]);
-                        return new ApiProblem(418, 'Potential '.$secResult.' Attack - Goodbye');
-                    }
-
-                    if($guild->is_vip == 1) {
-                        return new ApiProblem(400, 'Guild is already VIP');
-                    }
-
-                    $renamePrice = 5000;
-                    if($this->mTransaction->checkGuildBalance($renamePrice, $userGuildRole->guild_idfs)) {
-                        $newBalance = $this->mTransaction->executeGuildTransaction($renamePrice, true,
-                            $userGuildRole->guild_idfs, $userGuildRole->guild_idfs,
-                            'guild-vip', 'Unlock VIP Guild Icon', $me->User_ID);
-                        # rename
-                        if($newBalance !== false) {
-                            $this->mGuildTbl->update([
-                                'is_vip' => 1,
-                            ],[
-                                'Guild_ID' => $userGuildRole->guild_idfs,
-                            ]);
-                            return [
-                                'token_balance' => $newBalance,
-                                'icon' => $guild->icon,
-                                'is_vip' => 1
-                            ];
-                        } else {
-                            return new ApiProblem(500, 'Transaction error. Please contact support.');
-                        }
-                    } else {
-                        return new ApiProblem(400, 'Guild Balance is too low for unlocking VIP icon');
                     }
                 }
 

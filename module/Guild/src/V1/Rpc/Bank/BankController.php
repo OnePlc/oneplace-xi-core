@@ -220,6 +220,9 @@ class BankController extends AbstractActionController
              */
             case $request->isGet():
                 $page = (isset($_REQUEST['page'])) ? filter_var($_REQUEST['page'], FILTER_SANITIZE_NUMBER_INT) : 1;
+                if($page <= 0) {
+                    return new ApiProblemResponse(new ApiProblem(400, 'Invalid Page'));
+                }
                 # check for attack vendors
                 $secResult = $this->mSecTools->basicInputCheck([$_REQUEST['page']]);
                 if($secResult !== 'ok') {

@@ -312,4 +312,22 @@ class SecurityTools extends AbstractResourceListener {
 
         return $week;
     }
+
+    public function checkIpRestrictedAccess(): bool
+    {
+        $ipWhiteList = $this->getCoreSetting('backend-ip-whitelist');
+        $ipWhiteList = json_decode($ipWhiteList);
+        $wthIp = filter_var($_SERVER['REMOTE_ADDR'], FILTER_SANITIZE_STRING);
+        $secResult = $this->basicInputCheck([$wthIp]);
+        if($secResult !== 'ok') {
+            return false;
+        }
+        if(empty($wthIp) || strlen($wthIp) < 10) {
+            return false;
+        }
+        if(!in_array($wthIp, $ipWhiteList)) {
+            return false;
+        }
+        return true;
+    }
 }

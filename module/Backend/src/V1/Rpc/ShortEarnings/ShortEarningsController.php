@@ -77,6 +77,10 @@ class ShortEarningsController extends AbstractActionController
                 return new ApiProblemResponse(new ApiProblem(400, 'Invalid Response Body (missing required fields)'));
             }
 
+            if($this->mSecTools->checkIpRestrictedAccess() !== true) {
+                return new ApiProblemResponse(new ApiProblem(400, 'You are not allowed this access this api'));
+            }
+
             $json = IndexController::loadJSONFromRequestBody(['date','date_end'],$this->getRequest()->getContent());
             if(!$json) {
                 return new ApiProblemResponse(new ApiProblem(400, 'Invalid Response Body (missing required fields)'));
