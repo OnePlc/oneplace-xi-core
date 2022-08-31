@@ -893,6 +893,8 @@ class HallOfFameController extends AbstractActionController
                     ->like('stat_key', 'user-nano-etc-coin-m-'.date('n-Y',time()))
                     ->OR
                     ->like('stat_key', 'user-nano-rvn-coin-m-'.date('n-Y',time()))
+                    ->OR
+                    ->like('stat_key', 'user-nano-ergo-coin-m-'.date('n-Y',time()))
                     ->UNNEST;
                 $totalSel->where($statWh);
                 $totalSel->order('u.xp_level DESC');
@@ -1516,6 +1518,8 @@ class HallOfFameController extends AbstractActionController
                     ->like('stat_key', 'user-nano-etc-coin-total')
                     ->OR
                     ->like('stat_key', 'user-nano-rvn-coin-total')
+                    ->OR
+                    ->like('stat_key', 'user-nano-ergo-coin-total')
                     ->UNNEST;
                 $totalSel->where($gWh);
                 $totalUserShorts = $this->mUsrStatsTbl->selectWith($totalSel);
@@ -1563,6 +1567,8 @@ class HallOfFameController extends AbstractActionController
                     ->like('stat_key', 'user-nano-etc-coin-m-'.date('n-Y',time()))
                     ->OR
                     ->like('stat_key', 'user-nano-rvn-coin-m-'.date('n-Y',time()))
+                    ->OR
+                    ->like('stat_key', 'user-nano-ergo-coin-m-'.date('n-Y',time()))
                     ->UNNEST;
                 $totalSel->where($gWh);
                 $totalUserShorts = $this->mUsrStatsTbl->selectWith($totalSel);

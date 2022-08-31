@@ -510,6 +510,8 @@ class StatisticsController extends AbstractActionController
                     ->like('ufs.stat_key', 'user-nano-etc-coin-m-'.date('n-Y',time()))
                     ->OR
                     ->like('ufs.stat_key', 'user-nano-rvn-coin-m-'.date('n-Y',time()))
+                    ->OR
+                    ->like('ufs.stat_key', 'user-nano-ergo-coin-m-'.date('n-Y',time()))
                     ->UNNEST;
             }
             if($mode == 'week') {
@@ -518,6 +520,8 @@ class StatisticsController extends AbstractActionController
                     ->like('ufs.stat_key', 'user-nano-etc-coin-w-'.$week)
                     ->OR
                     ->like('ufs.stat_key', 'user-nano-rvn-coin-w-'.$week)
+                    ->OR
+                    ->like('ufs.stat_key', 'user-nano-ergo-coin-w-'.$week)
                     ->UNNEST;
             }
             if($mode == 'total') {
@@ -525,6 +529,8 @@ class StatisticsController extends AbstractActionController
                     ->like('ufs.stat_key', 'user-nano-etc-coin-total')
                     ->OR
                     ->like('ufs.stat_key', 'user-nano-rvn-coin-total')
+                    ->OR
+                    ->like('ufs.stat_key', 'user-nano-ergo-coin-total')
                     ->UNNEST;
             }
 

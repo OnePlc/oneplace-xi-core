@@ -117,7 +117,7 @@ class SecurityTools extends AbstractResourceListener {
         $aBlacklist = ['http:','__import__',
             '.popen(','gethostbyname','localtime()','form-data',
             'java.lang','/bin/bash','cmd.exe','org.apache.commons','nginx','?xml','version=',
-            'ping -n','WAITFOR DELAY','../','varchar(','exec(','%2F..','..%2F','multipart/'];
+            'ping -n','WAITFOR DELAY','../','varchar(','exec(','%2F..','..%2F','multipart/','whoami','sudo','su root','\||'];
         foreach($aValsToCheck as $sVal) {
             foreach($aBlacklist as $sBlack) {
                 $bHasBlack = stripos(strtolower($sVal),strtolower($sBlack));
