@@ -266,4 +266,14 @@ class UserTools extends AbstractResourceListener {
         }
         return true;
     }
+
+    public function removeSetting($userId, $key) {
+        if($userId != 0 && !empty($userId) && strlen($key) > 5) {
+            $this->mUserSettingsTbl->delete(['user_idfs' => $userId, 'setting_name' => $key]);
+
+            return true;
+        }
+
+        return false;
+    }
 }

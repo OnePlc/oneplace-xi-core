@@ -4,6 +4,7 @@ return [
         'factories' => [
             \User\V1\Rest\User\UserResource::class => \User\V1\Rest\User\UserResourceFactory::class,
             \User\V1\Rest\Poll\PollResource::class => \User\V1\Rest\Poll\PollResourceFactory::class,
+            \User\V1\Rest\TwoFactor\TwoFactorResource::class => \User\V1\Rest\TwoFactor\TwoFactorResourceFactory::class,
         ],
     ],
     'view_manager' => [
@@ -105,6 +106,15 @@ return [
                     ],
                 ],
             ],
+            'user.rest.two-factor' => [
+                'type' => 'Segment',
+                'options' => [
+                    'route' => '/user/two-factor[/:two_factor_id]',
+                    'defaults' => [
+                        'controller' => 'User\\V1\\Rest\\TwoFactor\\Controller',
+                    ],
+                ],
+            ],
         ],
     ],
     'api-tools-versioning' => [
@@ -118,6 +128,7 @@ return [
             6 => 'user.rpc.forgot',
             7 => 'user.rpc.friends',
             8 => 'user.rest.poll',
+            9 => 'user.rest.two-factor',
         ],
     ],
     'api-tools-rest' => [
@@ -164,6 +175,28 @@ return [
             'collection_class' => \User\V1\Rest\Poll\PollCollection::class,
             'service_name' => 'Poll',
         ],
+        'User\\V1\\Rest\\TwoFactor\\Controller' => [
+            'listener' => \User\V1\Rest\TwoFactor\TwoFactorResource::class,
+            'route_name' => 'user.rest.two-factor',
+            'route_identifier_name' => 'two_factor_id',
+            'collection_name' => 'two_factor',
+            'entity_http_methods' => [
+                0 => 'GET',
+                1 => 'PATCH',
+                2 => 'PUT',
+                3 => 'DELETE',
+            ],
+            'collection_http_methods' => [
+                0 => 'GET',
+                1 => 'POST',
+            ],
+            'collection_query_whitelist' => [],
+            'page_size' => 25,
+            'page_size_param' => null,
+            'entity_class' => \User\V1\Rest\TwoFactor\TwoFactorEntity::class,
+            'collection_class' => \User\V1\Rest\TwoFactor\TwoFactorCollection::class,
+            'service_name' => 'TwoFactor',
+        ],
     ],
     'api-tools-content-negotiation' => [
         'controllers' => [
@@ -176,6 +209,7 @@ return [
             'User\\V1\\Rpc\\Forgot\\Controller' => 'Json',
             'User\\V1\\Rpc\\Friends\\Controller' => 'Json',
             'User\\V1\\Rest\\Poll\\Controller' => 'HalJson',
+            'User\\V1\\Rest\\TwoFactor\\Controller' => 'HalJson',
         ],
         'accept_whitelist' => [
             'User\\V1\\Rest\\User\\Controller' => [
@@ -223,6 +257,11 @@ return [
                 1 => 'application/hal+json',
                 2 => 'application/json',
             ],
+            'User\\V1\\Rest\\TwoFactor\\Controller' => [
+                0 => 'application/vnd.user.v1+json',
+                1 => 'application/hal+json',
+                2 => 'application/json',
+            ],
         ],
         'content_type_whitelist' => [
             'User\\V1\\Rest\\User\\Controller' => [
@@ -261,6 +300,10 @@ return [
                 0 => 'application/vnd.user.v1+json',
                 1 => 'application/json',
             ],
+            'User\\V1\\Rest\\TwoFactor\\Controller' => [
+                0 => 'application/vnd.user.v1+json',
+                1 => 'application/json',
+            ],
         ],
     ],
     'api-tools-hal' => [
@@ -287,6 +330,18 @@ return [
                 'entity_identifier_name' => 'id',
                 'route_name' => 'user.rest.poll',
                 'route_identifier_name' => 'poll_id',
+                'is_collection' => true,
+            ],
+            \User\V1\Rest\TwoFactor\TwoFactorEntity::class => [
+                'entity_identifier_name' => 'id',
+                'route_name' => 'user.rest.two-factor',
+                'route_identifier_name' => 'two_factor_id',
+                'hydrator' => \Laminas\Hydrator\ObjectPropertyHydrator::class,
+            ],
+            \User\V1\Rest\TwoFactor\TwoFactorCollection::class => [
+                'entity_identifier_name' => 'id',
+                'route_name' => 'user.rest.two-factor',
+                'route_identifier_name' => 'two_factor_id',
                 'is_collection' => true,
             ],
         ],
@@ -535,6 +590,22 @@ return [
                     'PUT' => false,
                     'PATCH' => false,
                     'DELETE' => false,
+                ],
+                'entity' => [
+                    'GET' => true,
+                    'POST' => false,
+                    'PUT' => true,
+                    'PATCH' => true,
+                    'DELETE' => true,
+                ],
+            ],
+            'User\\V1\\Rest\\TwoFactor\\Controller' => [
+                'collection' => [
+                    'GET' => true,
+                    'POST' => true,
+                    'PUT' => false,
+                    'PATCH' => false,
+                    'DELETE' => true,
                 ],
                 'entity' => [
                     'GET' => true,

@@ -99,6 +99,15 @@ return [
                     ],
                 ],
             ],
+            'support.rest.donate' => [
+                'type' => 'Segment',
+                'options' => [
+                    'route' => '/donate[/:donate_id]',
+                    'defaults' => [
+                        'controller' => 'Support\\V1\\Rest\\Donate\\Controller',
+                    ],
+                ],
+            ],
         ],
     ],
     'api-tools-versioning' => [
@@ -111,6 +120,7 @@ return [
             5 => 'support.rpc.browser',
             6 => 'support.rpc.mail-claim',
             7 => 'support.rpc.mail-unsub',
+            8 => 'support.rest.donate',
         ],
         'default_version' => 1,
     ],
@@ -184,6 +194,7 @@ return [
             'Support\\V1\\Rpc\\Browser\\Controller' => 'Json',
             'Support\\V1\\Rpc\\MailClaim\\Controller' => 'Json',
             'Support\\V1\\Rpc\\MailUnsub\\Controller' => 'Json',
+            'Support\\V1\\Rest\\Donate\\Controller' => 'HalJson',
         ],
         'accept_whitelist' => [
             'Support\\V1\\Rpc\\Support\\Controller' => [
@@ -226,6 +237,11 @@ return [
                 1 => 'application/json',
                 2 => 'application/*+json',
             ],
+            'Support\\V1\\Rest\\Donate\\Controller' => [
+                0 => 'application/vnd.support.v1+json',
+                1 => 'application/hal+json',
+                2 => 'application/json',
+            ],
         ],
         'content_type_whitelist' => [
             'Support\\V1\\Rpc\\Support\\Controller' => [
@@ -257,6 +273,10 @@ return [
                 1 => 'application/json',
             ],
             'Support\\V1\\Rpc\\MailUnsub\\Controller' => [
+                0 => 'application/vnd.support.v1+json',
+                1 => 'application/json',
+            ],
+            'Support\\V1\\Rest\\Donate\\Controller' => [
                 0 => 'application/vnd.support.v1+json',
                 1 => 'application/json',
             ],
@@ -330,6 +350,22 @@ return [
                     ],
                 ],
             ],
+            'Support\\V1\\Rest\\Donate\\Controller' => [
+                'collection' => [
+                    'GET' => true,
+                    'POST' => true,
+                    'PUT' => false,
+                    'PATCH' => false,
+                    'DELETE' => false,
+                ],
+                'entity' => [
+                    'GET' => true,
+                    'POST' => false,
+                    'PUT' => true,
+                    'PATCH' => true,
+                    'DELETE' => true,
+                ],
+            ],
         ],
     ],
     'api-tools-content-validation' => [
@@ -369,6 +405,51 @@ return [
                 'name' => 'user_id',
                 'description' => 'ID of User for Transaction Log',
                 'error_message' => 'You must provide a valid User ID',
+            ],
+        ],
+    ],
+    'service_manager' => [
+        'factories' => [
+            \Support\V1\Rest\Donate\DonateResource::class => \Support\V1\Rest\Donate\DonateResourceFactory::class,
+        ],
+    ],
+    'api-tools-rest' => [
+        'Support\\V1\\Rest\\Donate\\Controller' => [
+            'listener' => \Support\V1\Rest\Donate\DonateResource::class,
+            'route_name' => 'support.rest.donate',
+            'route_identifier_name' => 'donate_id',
+            'collection_name' => 'donate',
+            'entity_http_methods' => [
+                0 => 'GET',
+                1 => 'PATCH',
+                2 => 'PUT',
+                3 => 'DELETE',
+            ],
+            'collection_http_methods' => [
+                0 => 'GET',
+                1 => 'POST',
+            ],
+            'collection_query_whitelist' => [],
+            'page_size' => 25,
+            'page_size_param' => null,
+            'entity_class' => \Support\V1\Rest\Donate\DonateEntity::class,
+            'collection_class' => \Support\V1\Rest\Donate\DonateCollection::class,
+            'service_name' => 'Donate',
+        ],
+    ],
+    'api-tools-hal' => [
+        'metadata_map' => [
+            \Support\V1\Rest\Donate\DonateEntity::class => [
+                'entity_identifier_name' => 'id',
+                'route_name' => 'support.rest.donate',
+                'route_identifier_name' => 'donate_id',
+                'hydrator' => \Laminas\Hydrator\ObjectPropertyHydrator::class,
+            ],
+            \Support\V1\Rest\Donate\DonateCollection::class => [
+                'entity_identifier_name' => 'id',
+                'route_name' => 'support.rest.donate',
+                'route_identifier_name' => 'donate_id',
+                'is_collection' => true,
             ],
         ],
     ],

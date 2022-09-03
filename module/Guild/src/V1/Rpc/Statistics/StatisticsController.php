@@ -88,8 +88,8 @@ class StatisticsController extends AbstractActionController
             if(isset($_REQUEST['mode'])) {
                 $modeSet = filter_var($_REQUEST['mode'], FILTER_SANITIZE_STRING);
                 switch($modeSet) {
-                    case 'month':
-                        $mode = 'month';
+                    case 'lastmonth':
+                        $mode = 'lastmonth';
                         break;
                     case 'week':
                         $mode = 'week';
@@ -132,6 +132,9 @@ class StatisticsController extends AbstractActionController
             $gWh->equalTo('guild_idfs', $guildId);
             if($mode == 'month') {
                 $gWh->like('ufs.stat_key', 'user-shortlink-m-'.date('n-Y', time()));
+            }
+            if($mode == 'lastmonth') {
+                $gWh->like('ufs.stat_key', 'user-shortlink-m-'.date('n-Y', strtotime('-1 month')));
             }
             if($mode == 'week') {
                 $week = $this->getCurrentWeekNumber();
@@ -189,6 +192,9 @@ class StatisticsController extends AbstractActionController
             if($mode == 'month') {
                 $gWh->like('ufs.stat_key', 'user-offerbig-m-'.date('n-Y', time()));
             }
+            if($mode == 'lastmonth') {
+                $gWh->like('ufs.stat_key', 'user-offerbig-m-'.date('n-Y', strtotime('-1 month')));
+            }
             if($mode == 'week') {
                 $week = $this->getCurrentWeekNumber();
                 $gWh->like('ufs.stat_key', 'user-offerbig-w-'.$week);
@@ -243,6 +249,9 @@ class StatisticsController extends AbstractActionController
             if($mode == 'month') {
                 $gWh->like('ufs.stat_key', 'user-offermed-m-'.date('n-Y', time()));
             }
+            if($mode == 'lastmonth') {
+                $gWh->like('ufs.stat_key', 'user-offermed-m-'.date('n-Y', strtotime('-1 month')));
+            }
             if($mode == 'week') {
                 $week = $this->getCurrentWeekNumber();
                 $gWh->like('ufs.stat_key', 'user-offermed-w-'.$week);
@@ -295,6 +304,9 @@ class StatisticsController extends AbstractActionController
             $gWh->equalTo('guild_idfs', $guildId);
             if($mode == 'month') {
                 $gWh->like('ufs.stat_key', 'user-offersmall-m-'.date('n-Y', time()));
+            }
+            if($mode == 'lastmonth') {
+                $gWh->like('ufs.stat_key', 'user-offersmall-m-'.date('n-Y', strtotime('-1 month')));
             }
             if($mode == 'week') {
                 $week = $this->getCurrentWeekNumber();
@@ -349,6 +361,9 @@ class StatisticsController extends AbstractActionController
             if($mode == 'month') {
                 $gWh->like('ufs.stat_key', 'user-offertiny-m-'.date('n-Y', time()));
             }
+            if($mode == 'lastmonth') {
+                $gWh->like('ufs.stat_key', 'user-offertiny-m-'.date('n-Y', strtotime('-1 month')));
+            }
             if($mode == 'week') {
                 $week = $this->getCurrentWeekNumber();
                 $gWh->like('ufs.stat_key', 'user-offertiny-w-'.$week);
@@ -402,6 +417,9 @@ class StatisticsController extends AbstractActionController
             if($mode == 'month') {
                 $gWh->like('ufs.stat_key', 'user-dailys-m-'.date('n-Y', time()));
             }
+            if($mode == 'lastmonth') {
+                $gWh->like('ufs.stat_key', 'user-dailys-m-'.date('n-Y', strtotime('-1 month')));
+            }
             if($mode == 'week') {
                 $week = $this->getCurrentWeekNumber();
                 $gWh->like('ufs.stat_key', 'user-dailys-w-'.$week);
@@ -454,6 +472,9 @@ class StatisticsController extends AbstractActionController
             $gWh->equalTo('guild_idfs', $guildId);
             if($mode == 'month') {
                 $gWh->like('ufs.stat_key', 'user-nano-xmr-coin-m-'.date('n-Y', time()));
+            }
+            if($mode == 'lastmonth') {
+                $gWh->like('ufs.stat_key', 'user-nano-xmr-coin-m-'.date('n-Y', strtotime('-1 month')));
             }
             if($mode == 'week') {
                 $week = $this->getCurrentWeekNumber();
@@ -512,6 +533,15 @@ class StatisticsController extends AbstractActionController
                     ->like('ufs.stat_key', 'user-nano-rvn-coin-m-'.date('n-Y',time()))
                     ->OR
                     ->like('ufs.stat_key', 'user-nano-ergo-coin-m-'.date('n-Y',time()))
+                    ->UNNEST;
+            }
+            if($mode == 'lastmonth') {
+                $gWh->NEST
+                    ->like('ufs.stat_key', 'user-nano-etc-coin-m-'.date('n-Y',strtotime('-1 month')))
+                    ->OR
+                    ->like('ufs.stat_key', 'user-nano-rvn-coin-m-'.date('n-Y',strtotime('-1 month')))
+                    ->OR
+                    ->like('ufs.stat_key', 'user-nano-ergo-coin-m-'.date('n-Y',strtotime('-1 month')))
                     ->UNNEST;
             }
             if($mode == 'week') {
@@ -584,6 +614,9 @@ class StatisticsController extends AbstractActionController
             if($mode == 'month') {
                 $gWh->like('ufs.stat_key', 'user-claims-m-'.date('n-Y', time()));
             }
+            if($mode == 'lastmonth') {
+                $gWh->like('ufs.stat_key', 'user-claims-m-'.date('n-Y', strtotime('-1 month')));
+            }
             if($mode == 'week') {
                 $week = $this->getCurrentWeekNumber();
                 $gWh->like('ufs.stat_key', 'user-claims-w-'.$week);
@@ -637,7 +670,7 @@ class StatisticsController extends AbstractActionController
                 'faucet' => $top10Cl,
                 'dailys' => $top10OD,
                 'miner_cpu' => $top10OCPU,
-                'miner_gpu' => $top10OGPU
+                'miner_gpu' => $top10OGPU,
             ];
         }
         return new ApiProblemResponse(new ApiProblem(403, 'Not allowed'));

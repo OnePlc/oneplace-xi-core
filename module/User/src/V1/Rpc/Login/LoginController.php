@@ -16,6 +16,8 @@
 namespace User\V1\Rpc\Login;
 
 use Application\Controller\IndexController;
+use Faucet\Tools\SecurityTools;
+use Faucet\Tools\UserTools;
 use Laminas\Http\ClientStatic;
 use Laminas\Mvc\Controller\AbstractActionController;
 use Laminas\ApiTools\ContentNegotiation\ViewModel;
@@ -60,6 +62,16 @@ class LoginController extends AbstractActionController
     protected $mSessionTbl;
 
     /**
+     * @var SecurityTools
+     */
+    private $mSecTools;
+
+    /**
+     * @var UserTools
+     */
+    private $mUserTools;
+
+    /**
      * Constructor
      *
      * LoginController constructor.
@@ -73,6 +85,9 @@ class LoginController extends AbstractActionController
         $this->mUserSetTbl = new TableGateway('user_setting', $mapper);
         $this->mSettingsTbl = new TableGateway('settings', $mapper);
         $this->mSessionTbl = new TableGateway('user_session', $mapper);
+
+        $this->mSecTools = new SecurityTools($mapper);
+        $this->mUserTools = new UserTools($mapper);
     }
 
     /**
@@ -98,14 +113,13 @@ class LoginController extends AbstractActionController
         }
 
         $captcha = filter_var($json->captcha, FILTER_SANITIZE_STRING);
+        if(strlen($captcha) < 5) {
+            return new ApiProblemResponse(new ApiProblem(400, 'Please use captcha'));
+        }
         $captchaMode = filter_var($json->captcha_mode, FILTER_SANITIZE_STRING);
 
         # Check which captcha secret key we should load
         $captchaKey = 'recaptcha-secret-login';
-        if($captchaMode == 'app') {
-            $captchaKey = 'recaptcha-app-secretkey';
-        }
-
         if($captchaMode == 'app') {
             return new ApiProblemResponse(new ApiProblem(403, 'The Android app is disabled. Please use our website swissfaucet.io in your browser, you can login with your existing user.'));
         }
@@ -130,14 +144,23 @@ class LoginController extends AbstractActionController
             }
         }
 
+        $username = filter_var($json->username, FILTER_SANITIZE_STRING);
+        if(strlen($username) < 3) {
+            return new ApiProblemResponse(new ApiProblem(400, 'Invalid Username'));
+        }
+        $secResult = $this->mSecTools->basicInputCheck([$username]);
+        if($secResult !== 'ok') {
+            return new ApiProblemResponse(new ApiProblem(418, 'Potential '.$secResult.' Attack - Goodbye'));
+        }
+
         # Try to find user by username
-        $oUserByName = $this->mUserTbl->select(['username' => $json->username]);
+        $oUserByName = $this->mUserTbl->select(['username' => $username]);
         $oUser = false;
         if(count($oUserByName) > 0) {
             $oUser = $oUserByName->current();
         } else {
             # Try to find user by email
-            $oUserByEmail = $this->mUserTbl->select(['email' => $json->username]);
+            $oUserByEmail = $this->mUserTbl->select(['email' => $username]);
             if(count($oUserByEmail) > 0) {
                 $oUser = $oUserByEmail->current();
             }
@@ -164,6 +187,28 @@ class LoginController extends AbstractActionController
 
         if($oUser->User_ID <= 0) {
             return new ApiProblemResponse(new ApiProblem(400, 'Invalid user id'));
+        }
+
+        # 2 Factor
+        $tfaEnabled = $this->mUserTools->getSetting($oUser->User_ID, '2fa-enabled-code');
+        if($tfaEnabled) {
+            $extraJson = IndexController::loadJSONFromRequestBody(['two_factor'],$this->getRequest()->getContent());
+            if(!$extraJson) {
+                return new ApiProblemResponse(new ApiProblem(400, 'Please enter the Code of your 2FA App'));
+            }
+            $secResult = $this->mSecTools->basicInputCheck([$extraJson->two_factor]);
+            if($secResult !== 'ok') {
+                return new ApiProblemResponse(new ApiProblem(418, 'Potential '.$secResult.' Attack - Goodbye'));
+            }
+            $code = trim(filter_var($extraJson->two_factor, FILTER_SANITIZE_STRING));
+            $code = preg_replace('/\s+/', '', $code);
+
+            $tfaSecret = $this->mUserTools->getSetting($oUser->User_ID, '2fa-secret');
+
+            $google2fa = new \PragmaRX\Google2FA\Google2FA();
+            if (!$google2fa->verifyKey($tfaSecret, $code)) {
+                return new ApiProblemResponse(new ApiProblem(400, 'Invalid 2FA Code. Please try again.'));
+            }
         }
 
         # Create user session

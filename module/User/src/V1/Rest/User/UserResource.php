@@ -147,14 +147,6 @@ class UserResource extends AbstractResourceListener
     protected $mTransaction;
 
     /**
-     * Inventory Helper
-     *
-     * @var InventoryHelper $mInventory
-     * @since 1.0.0
-     */
-    protected $mInventory;
-
-    /**
      * User Inbox Table
      *
      * @var TableGateway $mInboxTbl
@@ -209,7 +201,6 @@ class UserResource extends AbstractResourceListener
         $this->mTransaction = new TransactionHelper($mapper);
         $this->mSecTools = new SecurityTools($mapper);
         $this->mUserTools = new UserTools($mapper);
-        $this->mInventory = new InventoryHelper($mapper);
         $this->mMailTools = new EmailTools($mapper, $viewRenderer);
     }
 
@@ -681,10 +672,6 @@ class UserResource extends AbstractResourceListener
             return $user;
         }
 
-        if($user->User_ID == 335892443) {
-            return new ApiProblem(418, 'YOU MUST UPGRADE YOUR APP');
-        }
-
         # get user next level xp
         $oNextLvl = $this->mXPLvlTbl->select(['Level_ID' => ($user->xp_level + 1)])->current();
         $dPercent = 0;
@@ -769,7 +756,6 @@ class UserResource extends AbstractResourceListener
         /**
          * Public User Object
          */
-        //$userInventory = $this->mInventory->getInventory($user->User_ID);
 
         $inboxMessages = $this->mInboxTbl->select(['to_idfs' => $user->User_ID,'is_read' => 0])->count();
 
@@ -844,17 +830,10 @@ class UserResource extends AbstractResourceListener
             'prefcoin_text' => $prefText,
             'guild' => $guild,
             'withdrawals' => $withdrawals, // remove v2
-            'inventory' => [], // remove v2
-            //'inventory_bags' => $this->mInventory->getUserBags($user->User_ID),
-            'inventory_bags' => [], // remove v2
-            'inventory_slots' => 0, // remove v2
-            'inventory_slots_used' => 0, // remove v2
-            //'inventory_slots' => $this->mInventory->getInventorySlots($user->User_ID),
-            //'inventory_slots_used' => count($userInventory),
             'inbox_count' => $inboxMessages
         ];
 
-        $forceUpdateTo = '2.0.18';
+        $forceUpdateTo = '2.0.19';
         if(isset($_REQUEST['v'])) {
             $clientVersion = substr(filter_var($_REQUEST['v'], FILTER_SANITIZE_STRING),0, 6);
 
