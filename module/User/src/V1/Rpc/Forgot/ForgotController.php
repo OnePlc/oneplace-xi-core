@@ -195,16 +195,17 @@ class ForgotController extends AbstractActionController
                     ],[
                         'User_ID' => $user->User_ID
                     ]);
-                    /**
+
                     $this->mMailTools->sendMail('email_forgot', [
                         'sEmailTitle' => 'Reset your Password',
                         'footerInfo' => 'Swissfaucet.io - Faucet #1',
                         'link' => $confirmLink
                     ], $this->mMailTools->getAdminEmail(), $user->email, 'Reset your Password');
-                    **/
 
+                    /**
                     $mjKey = $this->mSecTools->getCoreSetting('mailjet-key');
                     $mjSecret = $this->mSecTools->getCoreSetting('mailjet-secret');
+
 
                     if($mjKey && $mjSecret) {
                         $mj = new \Mailjet\Client($mjKey,$mjSecret,true,['version' => 'v3.1']);
@@ -234,7 +235,7 @@ class ForgotController extends AbstractActionController
                         } catch (Exception $e) {
 
                         }
-                    }
+                    } **/
 
                     return [
                         'status' => 'sent',

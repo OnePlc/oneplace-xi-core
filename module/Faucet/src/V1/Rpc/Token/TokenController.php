@@ -511,7 +511,7 @@ class TokenController extends AbstractActionController
 
                     $response = ClientStatic::post(
                         'https://cryptounifier.io/api/v1/merchant/create-invoice', [
-                        'cryptocurrencies' => json_encode(["bch", "ltc", "doge", "zen"]),
+                        'cryptocurrencies' => json_encode(["bch", "ltc", "doge", "zen", "rvn", "btc"]),
                         'currency' => 'usd',
                         'target_value' => $amount * 0.1,
                         'title' => 'Buy Swissfaucet Token',

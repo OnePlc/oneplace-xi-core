@@ -946,6 +946,9 @@ class UserResource extends AbstractResourceListener
         if(isset($data->ships_unlock)) {
             $checkFields[] = $data->ships_unlock;
         }
+        if(isset($data->verify)) {
+            $checkFields[] = $data->verify;
+        }
         if(isset($data->passwordCheck)) {
             $checkFields[] = $data->passwordCheck;
             $checkFields[] = $data->passwordNew;
@@ -978,6 +981,7 @@ class UserResource extends AbstractResourceListener
         $rpsUnlock = filter_var($data->rps_unlock, FILTER_SANITIZE_NUMBER_INT);
         $shipsUnlock = filter_var($data->ships_unlock, FILTER_SANITIZE_NUMBER_INT);
         $favCoin = filter_var($data->favCoin, FILTER_SANITIZE_STRING);
+        $verify = filter_var($data->verify, FILTER_SANITIZE_EMAIL);
 
         $tokenBalance = $user->token_balance;
 
@@ -1056,6 +1060,36 @@ class UserResource extends AbstractResourceListener
         $checkSetting = $this->mUserTools->getSetting($user->User_ID, 'game-ships-unlock-multi');
         if($checkSetting) {
             $shipsGameLimit = $checkSetting;
+        }
+
+        if ($verify !== '') {
+            if((int)$user->is_employee !== 1) {
+                return new ApiProblem(403, 'You have no permission to do that ('.$user->is_employee.')');
+            }
+
+            if($this->mSecTools->checkIpRestrictedAccess() !== true) {
+                return new ApiProblem(400, 'You are not allowed this access this api');
+            }
+
+            $verifyUser = $this->mapper->select(['email' => $verify]);
+            if ($verifyUser->count() === 0) {
+                return new ApiProblem(404, 'User not found');
+            }
+            $verifyUser = $verifyUser->current();
+            if ((int)$verifyUser->email_verified !== 0) {
+                return new ApiProblem(400, 'User already verified');
+
+            }
+            $this->mapper->update(['email_verified' => 1], ['User_ID' => $verifyUser->User_ID]);
+
+            $this->mMailTools->sendMail('email_welcome', [
+                'email_new' => $email,
+                'footerInfo' => 'Swissfaucet.io - Faucet #1',
+            ], $this->mMailTools->getAdminEmail(), $verifyUser->email, 'Welcome - Your Account is verified now');
+
+            return [
+                'state' => 'done'
+            ];
         }
 
         if($shipsUnlock != '' && $shipsUnlock != 0) {

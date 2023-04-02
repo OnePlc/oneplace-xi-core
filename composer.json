@@ -9,6 +9,13 @@
         "api",
         "framework"
     ],
+    "repositories": [
+        {
+            "type": "path",
+            "url": "/full/or/relative/path/to/development/package"
+        }
+    ],
+
     "homepage": "https://api-tools.getlaminas.org",
     "support": {
         "docs": "https://api-tools.getlaminas.org/documentation",

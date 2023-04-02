@@ -110,6 +110,8 @@ class WithdrawResource extends AbstractResourceListener
         $wthSel = new Select($this->mWithdrawTbl->getTable());
         $wthSel->join(['u' => 'user'],'u.User_ID = faucet_withdraw.user_idfs', ['username', 'token_balance']);
         $wthSel->where(['state' => 'new', 'currency' => $currency]);
+        $wthSel->order('date_requested ASC');
+        //$wthSel->limit(300);
         $openWithdraws = $this->mWithdrawTbl->selectWith($wthSel);
         $withdrawalsByWallet = [];
         $withdrawals = [];

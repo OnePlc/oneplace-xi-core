@@ -623,7 +623,7 @@ class WithdrawController extends AbstractActionController
                 /**
                  * Check if Wallet is a valid address
                  */
-                $wallet = filter_var($json->wallet, FILTER_SANITIZE_STRING);
+                $wallet = trim(filter_var($json->wallet, FILTER_SANITIZE_STRING));
                 switch($coinInfo->coin_sign) {
                     case 'BCH':
                         $addrCheck = str_replace(['bitcoincash:'],[''],$wallet);

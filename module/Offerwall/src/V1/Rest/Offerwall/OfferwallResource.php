@@ -179,7 +179,10 @@ class OfferwallResource extends AbstractResourceListener
         if($me->User_ID == 335874987) {
             //$ofWh = [];
         }
-        $offerwallsDB = $this->mOfferwallTbl->select($ofWh);
+        $ofSel = new Select($this->mOfferwallTbl->getTable());
+        $ofSel->where($ofWh);
+        $ofSel->order('sortid ASC');
+        $offerwallsDB = $this->mOfferwallTbl->selectWith($ofSel);
         foreach($offerwallsDB as $offerwall) {
             $rDetail = [];
             $rTotal = 0;

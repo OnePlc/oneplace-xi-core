@@ -117,7 +117,7 @@ class TokenStakingResource extends AbstractResourceListener
             return new ApiProblem(400, 'There is already a payment for that date');
         }
 
-        if($activeBonus <= 0 || $totalIn <= 0 || $totalOut <= 0 || $paymentTotal <= 0 || $tokensCirculating <= 0 || $paymentPerToken <= 0 || $coinsPerToken <= 0) {
+        if($activeBonus <= 0 || $totalIn <= 0 || $totalOut <= 0 || $paymentTotal < 0 || $tokensCirculating <= 0 || $paymentPerToken <= 0 || $coinsPerToken <= 0) {
             return new ApiProblem(400, 'Invalid Payment Data');
         }
 
