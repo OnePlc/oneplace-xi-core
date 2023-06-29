@@ -227,6 +227,14 @@ class SecurityTools extends AbstractResourceListener {
         return $blackIndex;
     }
 
+    public function getEmailProviderBlackist() {
+        $blacklist = $this->mSettingsTbl->select(['settings_key' => 'email_provider_blacklist']);
+        if(count($blacklist) == 0) {
+            return [];
+        }
+        return json_decode($blacklist->current()->settings_value);
+    }
+
     public function usernameBlacklistCheck($username) {
         $blacklist = $this->mSettingsTbl->select(['settings_key' => 'username-blacklist']);
         if(count($blacklist) == 0) {

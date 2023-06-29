@@ -6,6 +6,7 @@ use Faucet\Transaction\TransactionHelper;
 use Laminas\ApiTools\ApiProblem\ApiProblem;
 use Laminas\ApiTools\Rest\AbstractResourceListener;
 use Laminas\Db\Sql\Select;
+use Laminas\Db\Sql\Where;
 use Laminas\Db\TableGateway\TableGateway;
 use Laminas\ApiTools\ContentNegotiation\ViewModel;
 
@@ -107,11 +108,20 @@ class WithdrawResource extends AbstractResourceListener
             $bannedUsersByUserId['ban-'.$ban->user_idfs] = 1;
         }
 
+        $wthWh = new Where();
+        $wthWh->equalTo('state','new');
+        $wthWh->equalTo('currency', $currency);
+        //$wthWh->equalTo('stat_key', 'user-wth-amount-total');
+        //$wthWh->greaterThanOrEqualTo('stat_data', 5);
+        $wthWh->lessThanOrEqualTo('amount', 50000);
+
         $wthSel = new Select($this->mWithdrawTbl->getTable());
         $wthSel->join(['u' => 'user'],'u.User_ID = faucet_withdraw.user_idfs', ['username', 'token_balance']);
-        $wthSel->where(['state' => 'new', 'currency' => $currency]);
+        //$wthSel->join(['ufs' => 'user_faucet_stat'],'ufs.user_idfs = faucet_withdraw.user_idfs', ['stat_key', 'stat_data']);
+        //$wthSel->where(['state' => 'new', 'currency' => $currency]);
+        $wthSel->where($wthWh);
         $wthSel->order('date_requested ASC');
-        //$wthSel->limit(300);
+        //$wthSel->limit(500);
         $openWithdraws = $this->mWithdrawTbl->selectWith($wthSel);
         $withdrawalsByWallet = [];
         $withdrawals = [];
@@ -124,7 +134,7 @@ class WithdrawResource extends AbstractResourceListener
         }
         foreach($openWithdraws as $wth) {
             if (!array_key_exists('ban-' . $wth->user_idfs, $bannedUsersByUserId)) {
-                if(!in_array($wth->wallet, $withdrawalsByWallet)) {
+                if(!in_array($wth->wallet, $withdrawalsByWallet) && count($withdrawals) < 30) {
                     $withdrawalsByWallet[] = $wth->wallet;
 
                     $totalWth = 0;
@@ -275,9 +285,16 @@ class WithdrawResource extends AbstractResourceListener
             $bannedUsersByUserId['ban-'.$ban->user_idfs] = 1;
         }
 
+        $wthWh = new Where();
+        $wthWh->equalTo('state','new');
+        $wthWh->equalTo('stat_key', 'user-wth-amount-total');
+        $wthWh->greaterThanOrEqualTo('stat_data', 5);
+
         $wthSel = new Select($this->mWithdrawTbl->getTable());
         $wthSel->join(['u' => 'user'],'u.User_ID = faucet_withdraw.user_idfs', ['username','xp_level']);
+        //$wthSel->join(['ufs' => 'user_faucet_stat'],'ufs.user_idfs = faucet_withdraw.user_idfs', ['stat_key', 'stat_data']);
         $wthSel->where(['state' => 'new']);
+       // $wthSel->where($wthWh);
         $openWithdraws = $this->mWithdrawTbl->selectWith($wthSel);
         $withdrawals = [];
         $riskyWithdrawals = [];
@@ -407,9 +424,26 @@ class WithdrawResource extends AbstractResourceListener
             return new ApiProblem(400, 'Invalid Currency');
         }
 
+        /**
         $wthSel = new Select($this->mWithdrawTbl->getTable());
         $wthSel->join(['u' => 'user'],'u.User_ID = faucet_withdraw.user_idfs', ['username', 'ref_user_idfs']);
-        $wthSel->where(['state' => 'new', 'currency' => strtoupper($currency)]);
+        $wthSel->where(['state' => 'new', 'currency' => strtoupper($currency)]); **/
+
+        $wthWh = new Where();
+        $wthWh->equalTo('state','new');
+        $wthWh->equalTo('currency', $currency);
+        //$wthWh->equalTo('stat_key', 'user-wth-amount-total');
+        //$wthWh->greaterThanOrEqualTo('stat_data', 5);
+        $wthWh->lessThanOrEqualTo('amount', 50000);
+
+        $wthSel = new Select($this->mWithdrawTbl->getTable());
+        $wthSel->join(['u' => 'user'],'u.User_ID = faucet_withdraw.user_idfs', ['username', 'token_balance']);
+        //$wthSel->join(['ufs' => 'user_faucet_stat'],'ufs.user_idfs = faucet_withdraw.user_idfs', ['stat_key', 'stat_data']);
+        //$wthSel->where(['state' => 'new', 'currency' => $currency]);
+        $wthSel->where($wthWh);
+        $wthSel->order('date_requested ASC');
+        //$wthSel->limit(200);
+
         $openWithdraws = $this->mWithdrawTbl->selectWith($wthSel);
 
         $checkIdsTmp = (array)$data[0]->ids;

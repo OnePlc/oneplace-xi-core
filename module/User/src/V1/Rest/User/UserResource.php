@@ -305,10 +305,10 @@ class UserResource extends AbstractResourceListener
                     $lastTime = $time;
                 }
             }
-            if(count($aUsersByIp) > 10) {
+            if(count($aUsersByIp) > 3) {
                 return new ApiProblem(400, 'It is not allowed to have multiple accounts per household / ip. Please contact admin@swissfaucet.io if this is your first account.');
             } else {
-                if(time()-$lastTime <= 3600) {
+                if(time()-$lastTime <= 600) {
                     return new ApiProblem(400, 'There is already an account created from this ip. Please contact support if you think this is wrong. admin@swissfaucet.io');
                 }
             }
@@ -366,6 +366,9 @@ class UserResource extends AbstractResourceListener
             if(count($existingUser) > 0) {
                 return new ApiProblem(400, 'There is already an account with that e-mail. please use login.');
             }
+        }
+        if (in_array($tmp[1], $this->mSecTools->getEmailProviderBlackist())) {
+            return new ApiProblem(400, 'You cannot use this e-mail address. please use another one or contact admin@swissfaucet.io');
         }
 
         $referal = 0;
@@ -514,6 +517,7 @@ class UserResource extends AbstractResourceListener
             }
              **/
 
+            /**
             $mjKey = $this->mSecTools->getCoreSetting('mailjet-key');
             $mjSecret = $this->mSecTools->getCoreSetting('mailjet-secret');
 
@@ -545,7 +549,13 @@ class UserResource extends AbstractResourceListener
                 } catch (Exception $e) {
 
                 }
-            }
+            } **/
+
+            $this->mMailTools->sendMail('email_verify', [
+                'link' => $confirmLink,
+                'footerInfo' => 'Swissfaucet.io - Faucet #1',
+            ], $this->mMailTools->getAdminEmail(), $email, 'Welcome - Please activate your account');
+
         }
 
         return [
@@ -833,7 +843,7 @@ class UserResource extends AbstractResourceListener
             'inbox_count' => $inboxMessages
         ];
 
-        $forceUpdateTo = '2.0.19';
+        $forceUpdateTo = '2.0.21';
         if(isset($_REQUEST['v'])) {
             $clientVersion = substr(filter_var($_REQUEST['v'], FILTER_SANITIZE_STRING),0, 6);
 
