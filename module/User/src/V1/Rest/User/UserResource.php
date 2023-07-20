@@ -843,7 +843,7 @@ class UserResource extends AbstractResourceListener
             'inbox_count' => $inboxMessages
         ];
 
-        $forceUpdateTo = '2.0.21';
+        $forceUpdateTo = '2.0.22';
         if(isset($_REQUEST['v'])) {
             $clientVersion = substr(filter_var($_REQUEST['v'], FILTER_SANITIZE_STRING),0, 6);
 

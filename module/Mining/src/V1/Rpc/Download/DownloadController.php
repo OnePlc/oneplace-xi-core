@@ -98,7 +98,7 @@ class DownloadController extends AbstractActionController
                 $xmVer = '6.17.0';
                 $this->mUserTools->setSetting($me->User_ID, 'cpuminer-download', date('Y-m-d H:i:s', time()));
                 if(file_exists('/var/nanominer/xmrminer-'.$me->User_ID.'.zip')) {
-                    $sLink = $this->mApiTools->getSystemURL().'/miner-download/xmrminer-'.$me->User_ID.'.zip';
+                    $sLink = $this->mApiTools->getApiURL().'/miner-download/xmrminer-'.$me->User_ID.'.zip';
                 } else {
                     $sConfig = file_get_contents('/var/xmr-config.json');
                     $sLink = '';
@@ -113,7 +113,7 @@ class DownloadController extends AbstractActionController
                         $zip->addFromString('xmrig-'.$xmVer.'/config.json', $newContents);
                         //And write back to the filesystem.
                         $zip->close();
-                        $sLink = $this->mApiTools->getSystemURL().'/miner-download/xmrminer-'.$me->User_ID.'.zip';
+                        $sLink = $this->mApiTools->getApiURL().'/miner-download/xmrminer-'.$me->User_ID.'.zip';
                     }
 
                     if($sLink == '') {
@@ -125,7 +125,7 @@ class DownloadController extends AbstractActionController
                     $nanoVer = '3.6.1';
                     $this->mUserTools->setSetting($me->User_ID, 'gpuminer-download', date('Y-m-d H:i:s', time()));
                     if(file_exists('/var/nanominer/nanominer-'.$me->User_ID.'-'.$platform.'.zip')) {
-                        $sLink = $this->mApiTools->getSystemURL().'/miner-download/nanominer-'.$me->User_ID.'-'.$platform.'.zip';
+                        $sLink = $this->mApiTools->getApiURL().'/miner-download/nanominer-'.$me->User_ID.'-'.$platform.'.zip';
                     } else {
                         $sConfig = file_get_contents('/var/nano-config.ini');
                         $sLink = '';
@@ -140,7 +140,7 @@ class DownloadController extends AbstractActionController
                             $zip->addFromString('nanominer-' . $platform . '-'.$nanoVer.'/config.ini', $newContents);
                             //And write back to the filesystem.
                             $zip->close();
-                            $sLink = $this->mApiTools->getSystemURL() . '/miner-download/nanominer-' . $me->User_ID . '-' . $platform . '.zip';
+                            $sLink = $this->mApiTools->getApiURL() . '/miner-download/nanominer-' . $me->User_ID . '-' . $platform . '.zip';
                         }
 
                         if ($sLink == '') {
@@ -150,7 +150,7 @@ class DownloadController extends AbstractActionController
                 } else {
                     $this->mUserTools->setSetting($me->User_ID, 'gpuminer-download', date('Y-m-d H:i:s', time()));
                     if(file_exists('/var/nanominer/gminer_2_70-'.$me->User_ID.'-'.$platform.'.zip')) {
-                        $sLink = $this->mApiTools->getSystemURL().'/miner-download/gminer_2_70-'.$me->User_ID.'-'.$platform.'.zip';
+                        $sLink = $this->mApiTools->getApiURL().'/miner-download/gminer_2_70-'.$me->User_ID.'-'.$platform.'.zip';
                     } else {
                         $sConfig = file_get_contents('/var/mine_etc.bat');
                         $sLink = '';
@@ -165,7 +165,7 @@ class DownloadController extends AbstractActionController
                             $zip->addFromString('mine_etc.bat', $newContents);
                             //And write back to the filesystem.
                             $zip->close();
-                            $sLink = $this->mApiTools->getSystemURL().'/miner-download/gminer_2_70-'.$me->User_ID.'-'.$platform.'.zip';
+                            $sLink = $this->mApiTools->getApiURL().'/miner-download/gminer_2_70-'.$me->User_ID.'-'.$platform.'.zip';
                         }
 
                         if($sLink == '') {
